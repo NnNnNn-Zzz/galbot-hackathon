@@ -79,9 +79,15 @@ class MockNavigation:
                     "(blocking=%s, timeout=%.1f) → 累计位姿 (%.2f, %.2f, %.1f°)",
                     x, math.degrees(yaw), is_blocking, timeout,
                     self.pose["x"], self.pose["y"], math.degrees(self.pose["yaw"]))
-        return (True, "MOCK OK")
+        return (True, "SUCCESS")
+
+    def get_navigation_status(self):
+        """返回一个带 .name 的对象，对齐真机 NavigationTaskStatus.SUCCESS。"""
+        class _St:
+            name = "SUCCESS"
+        return _St()
 
     def stop_navigation(self):
         self.call_history.append(("stop_navigation", {}))
         logger.info("[MOCK] stop_navigation()")
-        return (True, "MOCK OK")
+        return (True, "SUCCESS")
