@@ -124,6 +124,14 @@ def _get_robot():
             from galbot_sdk.g1 import GalbotRobot
             _robot = GalbotRobot()
         _robot.init()
+        # 底盘运动需要先切到 CHASSIS_POSE_CTRL（仅真机）
+        if not _mock_mode:
+            from galbot_sdk.g1 import ControlStatus, G1ControllerName
+            res = _robot.switch_controller(G1ControllerName.CHASSIS_POSE_CTRL)
+            if res != ControlStatus.SUCCESS:
+                logger.warning("切换底盘控制器失败: %s（继续，set_base_pose 可能不生效）", res)
+            else:
+                logger.info("底盘控制器已切换到 CHASSIS_POSE_CTRL")
         logger.info("机器人实例已初始化 (mock=%s)", _mock_mode)
     return _robot
 
@@ -211,49 +219,22 @@ def _wait_nav_done(nav, timeout_s: float):
 
 
 def _move_straight(x_m: float, yaw_rad: float) -> dict:
-    """相对当前位姿走直线 + 转角（用 navigate_with_velocity 速度指令）。
+    """相对当前位姿走直线 + 转角（用 GalbotRobot.set_base_pose 直接底盘控制）。
 
-    move_straight_to（位姿规划）在无地图/定位时返回 FAILED，改用速度指令：
-    匀速走指定时间 = 距离/速度，更底层更可靠（官方 velocity 示例不需要定位）。
+    不经过 GalbotNavigation / 导航规划服务，直接命令底盘控制器，
+    不需要 localization / map / service_navigation_plan。
 
     Args:
         x_m:     沿当前朝向的位移（米），正值向前
         yaw_rad: 相对转角（弧度），正值左转
     """
-    cfg = load_safety()
-    nav = _get_nav()
-    # 限速 0.15 m/s（比 safety 上限 0.3 慢一半，保证精度和安全）
-    lin_speed = min(cfg["max_base_speed_mps"], 0.15)
-    ang_speed = 0.2  # rad/s，约 11.5°/s
-
-    # 前进/后退
-    if abs(x_m) > 1e-4:
-        vx = lin_speed if x_m > 0 else -lin_speed
-        duration = abs(x_m) / lin_speed
-        ok, st = nav.navigate_with_velocity(vx, 0.0, 0.0, duration, True)
-        if not ok:
-            return {"success": False, "status": str(st),
-                    "message": f"navigate_with_velocity: {st}"}
-        final = _wait_nav_done(nav, duration + 5.0)
-        if final != "SUCCESS":
-            return {"success": False, "status": final,
-                    "message": f"nav forward: {final}"}
-
-    # 转向
-    if abs(yaw_rad) > 1e-4:
-        vyaw = ang_speed if yaw_rad > 0 else -ang_speed
-        duration = abs(yaw_rad) / ang_speed
-        ok, st = nav.navigate_with_velocity(0.0, 0.0, vyaw, duration, True)
-        if not ok:
-            return {"success": False, "status": str(st),
-                    "message": f"navigate_with_velocity: {st}"}
-        final = _wait_nav_done(nav, duration + 5.0)
-        if final != "SUCCESS":
-            return {"success": False, "status": final,
-                    "message": f"nav turn: {final}"}
-
-    nav.stop_navigation()
-    return {"success": True, "status": "SUCCESS", "message": "ok"}
+    robot = _get_robot()
+    # set_base_pose(x, y, yaw, frame_id='rel(0)'=相对当前位置, is_blocking=True)
+    res = robot.set_base_pose(x_m, 0.0, yaw_rad,
+                               frame_id='rel(0)', is_blocking=True, timeout_s=15.0)
+    ok = str(res) == "ControlStatus.SUCCESS" or res == "SUCCESS" or bool(res)
+    return {"success": ok, "status": str(res),
+            "message": "ok" if ok else f"set_base_pose: {res}"}
 
 
 # ---------------------------------------------------------------------------

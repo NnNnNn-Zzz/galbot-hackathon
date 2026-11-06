@@ -22,6 +22,7 @@ class MockRobot:
         self.initialized = False
         self.call_history = []  # 记录所有调用，便于测试断言
         self.controller = None
+        self.pose = {"x": 0.0, "y": 0.0, "yaw": 0.0}  # 累计位姿
 
     def init(self):
         self.initialized = True
@@ -32,6 +33,19 @@ class MockRobot:
         self.controller = str(controller_name)
         self.call_history.append(("switch_controller", {"name": self.controller}))
         logger.info("[MOCK] switch_controller(%s)", self.controller)
+        return MOCK_SUCCESS
+
+    def set_base_pose(self, x=0, y=0, yaw=0, frame_id='rel(0)',
+                      reference_frame_id='odom', is_blocking=True, timeout_s=15.0,
+                      **kwargs):
+        """直接底盘位姿控制（对齐 GalbotRobot.set_base_pose）。"""
+        self.call_history.append(("set_base_pose", {"x": x, "yaw": yaw, "frame": frame_id}))
+        self.pose["x"] += x * math.cos(self.pose["yaw"])
+        self.pose["y"] += x * math.sin(self.pose["yaw"])
+        self.pose["yaw"] += yaw
+        logger.info("[MOCK] set_base_pose x=%.3f yaw=%.3f (%s) → 累计位姿 (%.2f, %.2f, %.1f°)",
+                    x, yaw, frame_id,
+                    self.pose["x"], self.pose["y"], math.degrees(self.pose["yaw"]))
         return MOCK_SUCCESS
 
     def request_shutdown(self):
