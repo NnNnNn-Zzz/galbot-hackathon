@@ -16,8 +16,7 @@ params（全部可选）：
     io              后端 "wrapper" | "mock"，默认取环境变量 MED_IO，再默认 wrapper
     item_name       播报用药品名
     pause_s         播报后停顿秒数
-    turn_deg        转身角度（覆盖配置里的 default_deg）
-    drive_cm        直行距离
+    shift_m         左移距离，米（覆盖配置里的 distance_m；侧移不转身）
     bin_turn_deg    到桌前转向角度（负=右转）
     objects         mock 后端的桌面物体（不传则用内置三盒默认表）
     dry_run         True 时只打印编排，不动硬件
@@ -63,6 +62,7 @@ GRIPPER_CLOSE_M = tuning.GRIPPER_CLOSE_M
 GRIPPER_VELOCITY_MPS = tuning.GRIPPER_VELOCITY_MPS
 GRIPPER_EFFORT_N = tuning.GRIPPER_EFFORT_N
 TURN_AROUND_DEG = tuning.TURN_AROUND_DEG
+SHIFT_LEFT_M = tuning.SHIFT_LEFT_M
 DRIVE_DISTANCE_CM = tuning.DRIVE_DISTANCE_CM
 TURN_RIGHT_TO_BIN_DEG = tuning.TURN_RIGHT_TO_BIN_DEG
 ITEM_NAME = tuning.ITEM_NAME

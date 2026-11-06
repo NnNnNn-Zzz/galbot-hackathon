@@ -143,7 +143,7 @@ run({"io": "mock",
 **只改一处**：`run({"io": "wrapper"})`，或设环境变量 `MED_IO=wrapper`（默认就是它）。
 stage 一行都不用动。
 
-前提是 `sdk_wrapper/wrapper.py` 的 12 个接口已补齐（清单见仓库根 `to朱宁11.6.md`）。
+前提是 `sdk_wrapper/wrapper.py` 的 13 个接口已补齐（清单见仓库根 `to朱宁11.6.md`）。
 没补齐也能跑，只是缺的接口会返回 `DEP_MISSING` 并记进 `details.io_missing`。
 
 ---
@@ -152,10 +152,10 @@ stage 一行都不用动。
 
 | # | 事项 | 现状 |
 |---|---|---|
-| V1 | wrapper 12 个接口 | 未实现 → wrapper 后端只能跑到"依赖缺失"降级 |
+| V1 | wrapper 13 个接口 | 未实现 → wrapper 后端只能跑到"依赖缺失"降级 |
 | V2 | `move_backward` 方向 | 实测逻辑 bug（`abs()` 吞负号），drawer 模式后退会变前进 |
 | V3 | 抓取/投放/归位位姿 | 全是官方 example6 占位值，必须现场示教 |
 | V4 | 夹爪是否真夹住 | 真机无位置反馈时 `picked=null`，只靠"闭合指令成功"推断 |
-| V5 | 直行 3m 的定位精度 | mock 是理想积分，真机会有轮滑/打滑累积误差 |
+| V5 | 左移 0.5m 的横移精度与可行性 | mock 是理想积分；侧移要求底盘支持横向运动（全向轮），真机若不支持需改回「转90°→前进→转回」 |
 | V6 | 语音播报 | 需要预生成 16kHz/16bit/mono 裸 PCM，SDK 无 TTS |
 | V7 | `reset_to_baseline` | 目前只 `stop_base()`，手臂回折叠位仍是 TODO；mock 下不验证它 |

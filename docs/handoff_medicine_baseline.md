@@ -38,7 +38,7 @@ print(bf.run({'io':'mock','pipeline':'medicine.expiry_demo','pause_s':0})['feedb
 | 过期比对 + 选目标 | 同一个 policy 类里（示例已给：按"最左优先"选第一盒过期药） | 无过期 → `failed(NO_TARGET)`；全读不出 → `unknown` |
 | 过期目标夹取 | 复用示例里的动作序列（attach→开爪→预抓→逼近→闭爪→抬起→抱持） | 产出 `ctx.target` + `ctx.picked` |
 | 抽屉操作（新能力） | 新建 `pipeline/stages/` 或 `policies/` 下一个 stage，`@register_stage("...")` 注册，配置文件里插到 `preflight` 之后 | 遵守同一契约 |
-| **接回后续流程** | **零改动**：播报→转身→直行→投放→归位由 runner 按配置自动接在你 stage 后面 | — |
+| **接回后续流程** | **零改动**：播报→左移→右转→投放→归位由 runner 按配置自动接在你 stage 后面 | — |
 
 切换方式 = 只改配置 JSON 里对应步骤的 `"stage"` 字段，runner 和其他 stage 不动。
 
@@ -102,15 +102,15 @@ ret = io.speak("该药品已过期，帮你清理掉")
 
 ## 7. 已验证与待补数据
 
-**已验证（mock，9/9 通过）**：正常 8 步全流程；抓取失败仍归位；直行超时归位；起始里程计读不到非致命；不可判定立即全停（不发归位）；stage 抛异常 runner 兜底归位；升级版选中过期盒/无过期/日期全读不出。
+**已验证（mock，9/9 通过）**：正常 7 步全流程；抓取失败仍归位；左移超时归位；起始里程计读不到非致命；不可判定立即全停（不发归位）；stage 抛异常 runner 兜底归位；升级版选中过期盒/无过期/日期全读不出。
 
 **待补（真机前必须落实，详见 `to朱宁11.6.md`）**：
 
 | 缺口 | 影响 |
 |---|---|
-| wrapper 12 个接口未实现（attach_tool/set_arm_pose/move_line_to/set_gripper/set_joints/get_odom/move_to_pose/speak/capture_image 等） | 真机后端会软降级 `DEP_MISSING`；补齐前只能 mock |
+| wrapper 13 个接口未实现（attach_tool/set_arm_pose/move_line_to/set_gripper/set_joints/get_odom/move_to_pose/move_left/speak/capture_image 等） | 真机后端会软降级 `DEP_MISSING`；补齐前只能 mock |
 | 抓取/投放/归位位姿全是官方 example6 占位值 | **必须现场示教实测替换**（`pipeline/tuning.py`） |
-| `places` / 直行 3 m 的实际里程 | mock 不校验，真机要标定 |
+| `places` / 左移 0.5 m 的实际里程 | mock 不校验，真机要标定；**侧移要求底盘支持横向运动，真机待确认** |
 | PCM 语音素材未生成 | 真机播报会静音降级 |
 | 真机 `completion` 语义 | wrapper 实现时按 `is_blocking` 填 |
 
@@ -118,6 +118,6 @@ ret = io.speak("该药品已过期，帮你清理掉")
 
 ```
 S0 preflight → S1 grasp(你的：读日期+判过期+选目标+夹取) → S2 announce
-→ S3 turn(180°) → S4 drive(直行3m) → S5 drop → S6 return_home → 反馈
+→ S3 shift_left(左移0.5m) → turn(右转30°) → drop → return_home → 反馈
 任何一步 unknown → 立即全停（不发归位）；failed → 归位后终止
 ```

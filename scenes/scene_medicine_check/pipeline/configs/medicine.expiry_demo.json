@@ -1,7 +1,7 @@
 {
   "name": "medicine.expiry_demo",
   "description": "示例升级版：把 grasp 换成「读日期 → 判过期 → 选最左的过期盒 → 夹取」。只有 grasp 这一步和 baseline 不同",
-  "version": 1,
+  "version": 2,
   "steps": [
     {
       "id": "preflight",
@@ -22,17 +22,11 @@
       "stage": "announce"
     },
     {
-      "id": "turn_around",
-      "stage": "turn",
+      "id": "shift_left",
+      "stage": "shift_left",
       "params": {
-        "deg_key": "turn_deg",
-        "default_deg": 180.0,
-        "label": "转身"
+        "distance_m": 0.5
       }
-    },
-    {
-      "id": "drive",
-      "stage": "drive"
     },
     {
       "id": "turn_bin",

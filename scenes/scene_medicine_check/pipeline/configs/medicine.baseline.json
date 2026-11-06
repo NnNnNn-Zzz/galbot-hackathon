@@ -1,7 +1,7 @@
 {
   "name": "medicine.baseline",
-  "description": "基线：桌面最左（第一盒）药 → 播报 → 转身 180° → 直行 3m → 右转 30° → 投放 → 归位",
-  "version": 2,
+  "description": "基线：桌面最左（第一盒）药 → 播报 → 左移 0.5m → 右转 30° → 投放 → 归位",
+  "version": 3,
   "steps": [
     {
       "id": "preflight",
@@ -21,17 +21,11 @@
       "stage": "announce"
     },
     {
-      "id": "turn_around",
-      "stage": "turn",
+      "id": "shift_left",
+      "stage": "shift_left",
       "params": {
-        "deg_key": "turn_deg",
-        "default_deg": 180.0,
-        "label": "转身"
+        "distance_m": 0.5
       }
-    },
-    {
-      "id": "drive",
-      "stage": "drive"
     },
     {
       "id": "turn_bin",

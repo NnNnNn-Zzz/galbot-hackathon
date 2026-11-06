@@ -289,7 +289,7 @@ def run(params: dict) -> dict:
                 return result
         else:
             # table 模式 = 基线版 v2，已独立成 baseline_flow.py：
-            # 桌面固定摆位、无视觉识别、固定转向与直行距离，最后回初始位姿。
+            # 桌面固定摆位、无视觉识别、固定侧移距离与转向角，最后回初始位姿。
             logger.info("table 模式：委托给 baseline_flow 执行基线流程")
             from scenes.scene_medicine_check import baseline_flow
             delegated = True

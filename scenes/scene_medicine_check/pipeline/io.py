@@ -39,6 +39,7 @@ IO_METHODS: Tuple[str, ...] = (
     "set_gripper",
     "turn",
     "move_forward",
+    "move_left",
     "move_to_pose",
     "speak",
     "capture_image",
@@ -102,6 +103,10 @@ class RobotIO:
         raise NotImplementedError
 
     def move_forward(self, distance_cm: float) -> Dict[str, Any]:
+        raise NotImplementedError
+
+    def move_left(self, distance_m: float) -> Dict[str, Any]:
+        """底盘侧移（左 = base_link +y），朝向不变。单位：米。"""
         raise NotImplementedError
 
     def move_to_pose(self, x: float, y: float, yaw: float) -> Dict[str, Any]:
@@ -189,6 +194,9 @@ class WrapperIO(RobotIO):
 
     def move_forward(self, distance_cm: float) -> Dict[str, Any]:
         return self._call("move_forward", distance_cm)
+
+    def move_left(self, distance_m: float) -> Dict[str, Any]:
+        return self._call("move_left", distance_m)
 
     def move_to_pose(self, x: float, y: float, yaw: float) -> Dict[str, Any]:
         return self._call("move_to_pose", x, y, yaw)
@@ -397,6 +405,18 @@ class MockIO(RobotIO):
         self.y += d * math.sin(self.yaw)
         return {"success": True, "message": "ok",
                 "actual_distance_cm": float(distance_cm), "completion": "completed"}
+
+    def move_left(self, distance_m: float) -> Dict[str, Any]:
+        self.calls.append("move_left")
+        bad = self._guard("move_left")
+        if bad:
+            return bad
+        d = float(distance_m)
+        # base_link 系：左 = +y。朝向 yaw 时，左侧方向 = yaw + 90°
+        self.x += -d * math.sin(self.yaw)
+        self.y += d * math.cos(self.yaw)
+        return {"success": True, "message": "ok",
+                "actual_distance_m": d, "completion": "completed"}
 
     def move_to_pose(self, x: float, y: float, yaw: float) -> Dict[str, Any]:
         self.calls.append("move_to_pose")

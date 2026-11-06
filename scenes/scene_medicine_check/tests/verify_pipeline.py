@@ -5,9 +5,9 @@
 不需要任何第三方依赖，不需要 pytest。
 
 覆盖的场景：
-  1. 正常流程（8 步全 ok，抓到药盒，归位成功）
+  1. 正常流程（7 步全 ok，抓到药盒，归位成功）
   2. 抓取失败（夹爪动不了）→ failed，仍执行归位
-  3. 直行超时 → failed + TIMEOUT，仍执行归位
+  3. 左移超时 → failed + TIMEOUT，仍执行归位
   4. 起始里程计读不到 → 非致命，流程照常走完
   5. 逼近抓取时状态不可判定 → unknown，立即全停，**不执行归位**
   6. stage 抛异常 → runner 兜住，failed，仍执行归位
@@ -56,9 +56,9 @@ def main() -> int:
     # ---------------------------------------------------------------- 1 正常
     r = run({})
     d = r.get("details") or {}
-    check(1, "正常流程 8 步全 ok，抓到并投出，归位成功",
+    check(1, "正常流程 7 步全 ok，抓到并投出，归位成功",
           r.get("success") is True
-          and d.get("steps_ok") == 8
+          and d.get("steps_ok") == 7
           and d.get("picked") is True
           and d.get("home_arm_ok") is True and d.get("home_base_ok") is True,
           f"success={r.get('success')} steps_ok={d.get('steps_ok')} picked={d.get('picked')} "
@@ -78,12 +78,12 @@ def main() -> int:
           f"home={home.get('status')}")
 
     # ---------------------------------------------------------------- 3 超时
-    r = run({"mock_faults": [{"method": "move_forward", "behavior": "timeout", "delay_s": 0.1}]})
-    drv = step_of(r, "drive")
+    r = run({"mock_faults": [{"method": "move_left", "behavior": "timeout", "delay_s": 0.1}]})
+    shf = step_of(r, "shift_left")
     home = step_of(r, "home")
-    check(3, "直行超时 → failed + TIMEOUT，且仍执行归位",
-          r.get("success") is False and drv.get("code") == "TIMEOUT" and home.get("status") != "skipped",
-          f"drive.status={drv.get('status')} code={drv.get('code')} home={home.get('status')}")
+    check(3, "左移超时 → failed + TIMEOUT，且仍执行归位",
+          r.get("success") is False and shf.get("code") == "TIMEOUT" and home.get("status") != "skipped",
+          f"shift_left.status={shf.get('status')} code={shf.get('code')} home={home.get('status')}")
 
     # ---------------------------------------------------------------- 4 非致命
     r = run({"mock_faults": [{"method": "get_odom", "behavior": "unknown",
@@ -105,12 +105,13 @@ def main() -> int:
           f"home={home.get('status')} feedback={r.get('feedback')}")
 
     # ---------------------------------------------------------------- 6 抛异常
+    # turn 接口现在只被 turn_bin（右转 30°）使用，异常注入打在这里
     r = run({"mock_faults": [{"method": "turn", "behavior": "raise", "message": "驱动掉线"}]})
     home = step_of(r, "home")
     check(6, "stage 抛异常 → runner 兜住，failed，且仍执行归位",
-          r.get("success") is False and step_of(r, "turn_around").get("status") == "failed"
+          r.get("success") is False and step_of(r, "turn_bin").get("status") == "failed"
           and home.get("status") != "skipped",
-          f"turn={step_of(r, 'turn_around').get('message')} home={home.get('status')}")
+          f"turn_bin={step_of(r, 'turn_bin').get('message')} home={home.get('status')}")
 
     # ---------------------------------------------------------------- 7 升级版
     r = run({"pipeline": "medicine.expiry_demo"})
