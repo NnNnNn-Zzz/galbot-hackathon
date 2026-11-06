@@ -1,0 +1,16 @@
+# 感知层（B）的 Python 依赖。
+#
+# 真机 / Ubuntu 上：跑 GalbotSDK 的 install.sh 会顺带装好 numpy、opencv 等，
+#                  通常**不需要**再手动装。若缺，再执行本文件。
+# 仅做离线演示时：只需要下面两个，就能跑完整的 Mock 链路。
+#
+#   pip install -r requirements.txt
+
+numpy>=1.26
+# 锁在 4.x：真机 / Ubuntu 上用的是 GalbotSDK 自带的 OpenCV 4.x，
+# 本地若装到 5.0 会出现"本地过、真机炸"。已验证 numpy 1.26/2.5 + OpenCV 4.9/4.14。
+# 无桌面环境可用 opencv-python-headless 替代（API 相同）。
+opencv-python>=4.8,<5
+#
+# 说明：HTTP 调用模型、JPEG 编码、base64 等全部用标准库实现，
+#      因此**不需要** requests / openai / pydantic。

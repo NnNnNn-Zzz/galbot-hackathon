@@ -1,0 +1,178 @@
+{
+  "status": "succeeded",
+  "mode": "mock",
+  "message": "head_left: 检测到 6 个目标：blue（像素 [81.4, 81.4]，距离未知）；blue（像素 [375.7, 46.7]，距离未知）；white（像素 [749.3, 457.8]，距离未知）；white（像素 [43.0, 580.4]，距离未知）；white（像素 [691.0, 314.1]，距离未知）；blue（像素 [81.3, 324.2]，距离未知）",
+  "task_id": null,
+  "data": {
+    "width": 1280,
+    "height": 992,
+    "depth_unit": null,
+    "coordinate_frame": "local_photo_frame",
+    "objects": [
+      {
+        "label": "blue",
+        "source": "color",
+        "bbox_xywh": [
+          0,
+          0,
+          258,
+          249
+        ],
+        "centroid_uv": [
+          81.4,
+          81.4
+        ],
+        "area_px": 27136,
+        "aspect": 1.036,
+        "fill_ratio": 0.422,
+        "area_ratio": 0.02137,
+        "depth_m": null,
+        "center_cam_m": null,
+        "coordinate_frame": null,
+        "depth_stats": null,
+        "fusion": "no_depth_sensor",
+        "id": "obj1"
+      },
+      {
+        "label": "blue",
+        "source": "color",
+        "bbox_xywh": [
+          297,
+          0,
+          166,
+          98
+        ],
+        "centroid_uv": [
+          375.7,
+          46.7
+        ],
+        "area_px": 8502,
+        "aspect": 1.694,
+        "fill_ratio": 0.523,
+        "area_ratio": 0.0067,
+        "depth_m": null,
+        "center_cam_m": null,
+        "coordinate_frame": null,
+        "depth_stats": null,
+        "fusion": "no_depth_sensor",
+        "id": "obj2"
+      },
+      {
+        "label": "white",
+        "source": "color",
+        "bbox_xywh": [
+          656,
+          415,
+          234,
+          109
+        ],
+        "centroid_uv": [
+          749.3,
+          457.8
+        ],
+        "area_px": 6576,
+        "aspect": 2.147,
+        "fill_ratio": 0.258,
+        "area_ratio": 0.00518,
+        "depth_m": null,
+        "center_cam_m": null,
+        "coordinate_frame": null,
+        "depth_stats": null,
+        "fusion": "no_depth_sensor",
+        "id": "obj3"
+      },
+      {
+        "label": "white",
+        "source": "color",
+        "bbox_xywh": [
+          11,
+          546,
+          67,
+          75
+        ],
+        "centroid_uv": [
+          43.0,
+          580.4
+        ],
+        "area_px": 2624,
+        "aspect": 0.893,
+        "fill_ratio": 0.522,
+        "area_ratio": 0.00207,
+        "depth_m": null,
+        "center_cam_m": null,
+        "coordinate_frame": null,
+        "depth_stats": null,
+        "fusion": "no_depth_sensor",
+        "id": "obj4"
+      },
+      {
+        "label": "white",
+        "source": "color",
+        "bbox_xywh": [
+          653,
+          296,
+          78,
+          37
+        ],
+        "centroid_uv": [
+          691.0,
+          314.1
+        ],
+        "area_px": 1525,
+        "aspect": 2.108,
+        "fill_ratio": 0.528,
+        "area_ratio": 0.0012,
+        "depth_m": null,
+        "center_cam_m": null,
+        "coordinate_frame": null,
+        "depth_stats": null,
+        "fusion": "no_depth_sensor",
+        "id": "obj5"
+      },
+      {
+        "label": "blue",
+        "source": "color",
+        "bbox_xywh": [
+          37,
+          299,
+          88,
+          54
+        ],
+        "centroid_uv": [
+          81.3,
+          324.2
+        ],
+        "area_px": 1137,
+        "aspect": 1.63,
+        "fill_ratio": 0.239,
+        "area_ratio": 0.0009,
+        "depth_m": null,
+        "center_cam_m": null,
+        "coordinate_frame": null,
+        "depth_stats": null,
+        "fusion": "no_depth_sensor",
+        "id": "obj6"
+      }
+    ],
+    "depth_summary": null,
+    "warnings": [
+      "head_left 无深度相机（kind=stereo_rgb_left）"
+    ],
+    "intrinsics": {
+      "fx": 1280.0,
+      "fy": 1280.0,
+      "cx": 640.0,
+      "cy": 496.0,
+      "width": 1280,
+      "height": 992,
+      "frame_id": "local_photo_frame",
+      "distortion_model": "plumb_bob"
+    },
+    "summary": "检测到 6 个目标：blue（像素 [81.4, 81.4]，距离未知）；blue（像素 [375.7, 46.7]，距离未知）；white（像素 [749.3, 457.8]，距离未知）；white（像素 [43.0, 580.4]，距离未知）；white（像素 [691.0, 314.1]，距离未知）；blue（像素 [81.3, 324.2]，距离未知）",
+    "capture_id": "cap_20261107T030240_head_left_a8e8",
+    "rgb_ref": null,
+    "depth_ref": null,
+    "camera_id": "head_left"
+  },
+  "error_code": null
+}

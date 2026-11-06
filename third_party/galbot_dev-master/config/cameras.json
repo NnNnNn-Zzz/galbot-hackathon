@@ -1,0 +1,113 @@
+{
+  "version": "0.1",
+  "note": [
+    "相机白名单。capture_scene 只接受这里登记的 camera_id（别名或 SDK SensorType 名均可）。",
+    "sensor 字段必须是 galbot_sdk.g1.SensorType 的成员名，已对照 g1/__init__.pyi 核实：",
+    "HEAD_LEFT_CAMERA=0 HEAD_RIGHT_CAMERA=1 LEFT_ARM_CAMERA=2 RIGHT_ARM_CAMERA=3",
+    "LEFT_ARM_DEPTH_CAMERA=6 RIGHT_ARM_DEPTH_CAMERA=7",
+    "LEFT_ARM_INFRA_CAMERA_1=8 LEFT_ARM_INFRA_CAMERA_2=9 RIGHT_ARM_INFRA_CAMERA_1=10 RIGHT_ARM_INFRA_CAMERA_2=11",
+    "LEFT_FRONT_SURROUND_CAMERA=22 RIGHT_FRONT_SURROUND_CAMERA=23 LEFT_REAR_SURROUND_CAMERA=24 RIGHT_REAR_SURROUND_CAMERA=25",
+    "⚠️ SDK 没有'查询本机装了哪几路相机'的接口，实际可用机位只能在真机上试探；",
+    "   未装配的机位调用会返回 not_ready，不会静默成功。"
+  ],
+  "default_camera": "left_arm",
+  "cameras": {
+    "left_arm": {
+      "sensor": "LEFT_ARM_CAMERA",
+      "depth_sensor": "LEFT_ARM_DEPTH_CAMERA",
+      "kind": "arm_rgbd",
+      "depth_alignment": "unverified",
+      "scale_hint": "近距（0.1-1.5 m），适合作抓取目标定位",
+      "risk": "深度与彩色是否为同一光心尚未验证；跨相机融合前必须先比对 width/height 并做对齐检查"
+    },
+    "right_arm": {
+      "sensor": "RIGHT_ARM_CAMERA",
+      "depth_sensor": "RIGHT_ARM_DEPTH_CAMERA",
+      "kind": "arm_rgbd",
+      "depth_alignment": "unverified",
+      "scale_hint": "近距（0.1-1.5 m），适合作抓取目标定位",
+      "risk": "同 left_arm"
+    },
+    "left_arm_depth": {
+      "sensor": "LEFT_ARM_DEPTH_CAMERA",
+      "depth_sensor": "LEFT_ARM_DEPTH_CAMERA",
+      "kind": "depth_only",
+      "depth_alignment": "self",
+      "scale_hint": "0.1-3 m",
+      "risk": "无彩色通道"
+    },
+    "right_arm_depth": {
+      "sensor": "RIGHT_ARM_DEPTH_CAMERA",
+      "depth_sensor": "RIGHT_ARM_DEPTH_CAMERA",
+      "kind": "depth_only",
+      "depth_alignment": "self",
+      "scale_hint": "0.1-3 m",
+      "risk": "无彩色通道"
+    },
+    "head_left": {
+      "sensor": "HEAD_LEFT_CAMERA",
+      "depth_sensor": null,
+      "kind": "stereo_rgb_left",
+      "depth_alignment": "none",
+      "scale_hint": "广角，适合作全局场景描述",
+      "risk": "无深度；头立体相机需自己跑视差才有深度"
+    },
+    "head_right": {
+      "sensor": "HEAD_RIGHT_CAMERA",
+      "depth_sensor": null,
+      "kind": "stereo_rgb_right",
+      "depth_alignment": "none",
+      "scale_hint": "广角（与 head_left 构成双目）",
+      "risk": "无深度；双目基线/外参需真机标定后才可三角测量"
+    },
+    "front_left": {
+      "sensor": "LEFT_FRONT_SURROUND_CAMERA",
+      "depth_sensor": null,
+      "kind": "surround",
+      "depth_alignment": "none",
+      "scale_hint": "环视，约 1-5 m",
+      "risk": "无深度"
+    },
+    "front_right": {
+      "sensor": "RIGHT_FRONT_SURROUND_CAMERA",
+      "depth_sensor": null,
+      "kind": "surround",
+      "depth_alignment": "none",
+      "scale_hint": "环视，约 1-5 m",
+      "risk": "无深度"
+    },
+    "rear_left": {
+      "sensor": "LEFT_REAR_SURROUND_CAMERA",
+      "depth_sensor": null,
+      "kind": "surround",
+      "depth_alignment": "none",
+      "scale_hint": "环视，约 1-5 m",
+      "risk": "无深度"
+    },
+    "rear_right": {
+      "sensor": "RIGHT_REAR_SURROUND_CAMERA",
+      "depth_sensor": null,
+      "kind": "surround",
+      "depth_alignment": "none",
+      "scale_hint": "环视，约 1-5 m",
+      "risk": "无深度"
+    }
+  },
+  "aliases": {
+    "左臂": "left_arm",
+    "左臂相机": "left_arm",
+    "左手": "left_arm",
+    "right": "right_arm",
+    "右臂": "right_arm",
+    "右臂相机": "right_arm",
+    "头部": "head_left",
+    "头": "head_left",
+    "头左": "head_left",
+    "头右": "head_right",
+    "前方": "head_left",
+    "head": "head_left",
+    "depth": "left_arm_depth",
+    "深度": "left_arm_depth",
+    "深度相机": "left_arm_depth"
+  }
+}

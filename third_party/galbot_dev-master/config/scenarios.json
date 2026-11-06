@@ -1,0 +1,31 @@
+{
+  "version": "0.1",
+  "note": [
+    "推杯子场景的全部可调参数。改这里不需要改代码。",
+    "unsafe_threshold_m：d ≤ 这个值判为不安全（杯子到桌沿的距离，米）。",
+    "target_m：目标距离。故意比“绝对安全 10cm”多 2cm（迟滞），否则会在阈值附近反复推。",
+    "push_step_m：每次推的距离。小步 + 复测才有闭环，一次推 10cm 是不可控的。",
+    "max_pushes：最多推几次。次数用完仍不达标就喊人，不硬试。",
+    "min_progress_m：一次推完后 d 只增加不到这个值 → 判定“推不动”，切抓取兜底。"
+  ],
+  "push_cup": {
+    "unsafe_threshold_m": 0.03,
+    "target_m": 0.12,
+    "push_step_m": 0.025,
+    "max_pushes": 5,
+    "min_progress_m": 0.005,
+    "chain": "left_arm",
+    "gripper": "left_gripper",
+    "gripper_closed_width_m": 0.0,
+    "gripper_effort": 10.0,
+    "gripper_velocity_mps": 0.05,
+    "camera_id": "left_arm",
+    "prompts": {
+      "unsafe": "cup_unsafe",
+      "moving": "moving",
+      "safe": "safe",
+      "need_help": "need_help"
+    },
+    "celebrate_gesture": "clap"
+  }
+}
