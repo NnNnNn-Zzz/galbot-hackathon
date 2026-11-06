@@ -53,7 +53,18 @@ def _yaw_to_quat(yaw: float) -> List[float]:
 
 
 class RobotIO:
-    """硬件访问基类。子类必须实现全部白名单方法。"""
+    """硬件访问基类。子类必须实现全部白名单方法。
+
+    返回契约（所有动作/感知方法共用，写死在这里便于队友对接）：
+      success     bool   —— 调用是否成功
+      message     str    —— 人类可读说明（失败原因写这里）
+      code        str    —— 失败/不可判定时的原因码（contracts.Code 的 value）
+      completion  str    —— "completed"=返回时动作**已完成**；
+                           "dispatched"=仅**已下发**，完成要靠后续查询确认。
+                           mock 全部是同步执行，恒为 "completed"；
+                           真机（wrapper）由各接口实现时按 is_blocking 如实填写，
+                           在 wrapper 落地前真机语义**未定**，调用方不得假设。
+    """
 
     backend = "abstract"
 
@@ -305,7 +316,8 @@ class MockIO(RobotIO):
             return {"success": False, "message": f"位姿应为 7 维，收到 {len(pose)} 维",
                     "code": Code.STAGE_FAILED.value}
         self.ee_pose = [float(v) for v in pose]
-        return {"success": True, "message": "ok", "pose": list(self.ee_pose)}
+        return {"success": True, "message": "ok", "pose": list(self.ee_pose),
+                "completion": "completed"}
 
     def move_line_to(self, pose: List[float]) -> Dict[str, Any]:
         self.calls.append("move_line_to")
@@ -316,7 +328,8 @@ class MockIO(RobotIO):
             return {"success": False, "message": f"位姿应为 7 维，收到 {len(pose)} 维",
                     "code": Code.STAGE_FAILED.value}
         self.ee_pose = [float(v) for v in pose]
-        return {"success": True, "message": "ok", "pose": list(self.ee_pose)}
+        return {"success": True, "message": "ok", "pose": list(self.ee_pose),
+                "completion": "completed"}
 
     def set_joints(self, positions: List[float], names: List[str],
                    speed_rad_s: float = 0.2) -> Dict[str, Any]:
@@ -329,7 +342,8 @@ class MockIO(RobotIO):
                     "message": f"关节名 {len(names)} 个、位置 {len(positions)} 个，数量不一致",
                     "code": Code.STAGE_FAILED.value}
         self.joints = [float(v) for v in positions]
-        return {"success": True, "message": "ok", "n": len(self.joints)}
+        return {"success": True, "message": "ok", "n": len(self.joints),
+                "completion": "completed"}
 
     def set_gripper(self, width_m: float, side: str = "left",
                     velocity_mps: float = 0.05, effort: float = 10.0) -> Dict[str, Any]:
@@ -347,7 +361,7 @@ class MockIO(RobotIO):
             self.dropped.append(self.holding)
             self.holding = None
         return {"success": True, "message": "ok", "width_m": self.gripper_width,
-                "holding": (self.holding or {}).get("id")}
+                "holding": (self.holding or {}).get("id"), "completion": "completed"}
 
     def _nearest_object(self) -> Optional[Dict[str, Any]]:
         best, best_d = None, 1e9
@@ -368,7 +382,8 @@ class MockIO(RobotIO):
         if bad:
             return bad
         self.yaw += math.radians(float(deg))
-        return {"success": True, "message": "ok", "actual_angle_deg": float(deg)}
+        return {"success": True, "message": "ok", "actual_angle_deg": float(deg),
+                "completion": "completed"}
 
     def move_forward(self, distance_cm: float) -> Dict[str, Any]:
         self.calls.append("move_forward")
@@ -380,7 +395,8 @@ class MockIO(RobotIO):
         # 这样"后退变前进"这类 bug 在 mock 上就能暴露，不会被掩盖。
         self.x += d * math.cos(self.yaw)
         self.y += d * math.sin(self.yaw)
-        return {"success": True, "message": "ok", "actual_distance_cm": float(distance_cm)}
+        return {"success": True, "message": "ok",
+                "actual_distance_cm": float(distance_cm), "completion": "completed"}
 
     def move_to_pose(self, x: float, y: float, yaw: float) -> Dict[str, Any]:
         self.calls.append("move_to_pose")
@@ -394,7 +410,8 @@ class MockIO(RobotIO):
         self.y += fy
         self.yaw += float(yaw)
         return {"success": True, "message": "ok",
-                "position": [self.x, self.y, 0.0], "yaw": self.yaw}
+                "position": [self.x, self.y, 0.0], "yaw": self.yaw,
+                "completion": "completed"}
 
     def speak(self, text: str) -> Dict[str, Any]:
         self.calls.append("speak")
@@ -405,7 +422,7 @@ class MockIO(RobotIO):
             return {"success": False, "message": "空文案", "code": Code.STAGE_FAILED.value}
         self.spoken.append(str(text))
         return {"success": True, "message": "ok", "played": True,
-                "bytes": len(str(text).encode("utf-8"))}
+                "bytes": len(str(text).encode("utf-8")), "completion": "completed"}
 
     def capture_image(self, tag: str = "") -> Dict[str, Any]:
         self.calls.append("capture_image")
@@ -413,7 +430,8 @@ class MockIO(RobotIO):
         if bad:
             return bad
         return {"success": True, "message": "ok",
-                "path": f"/tmp/mock_{tag or 'frame'}.jpg", "mock": True}
+                "path": f"/tmp/mock_{tag or 'frame'}.jpg", "mock": True,
+                "frame_id": "mock_frame_0", "completion": "completed"}
 
     def is_holding(self) -> Optional[bool]:
         return self.holding is not None
@@ -435,13 +453,27 @@ def default_table() -> List[Dict[str, Any]]:
 
     expiry_date 是给队友的过期判定用的**离线固定数据**，
     真机上日期要靠 OCR/VLM 自己读，不是 io 提供的。
+
+    感知字段契约（队友交接三要素，详见 docs/handoff_medicine_baseline.md）：
+      id         —— 实例编号（稳定唯一）
+      image_ref  —— 图像关联：bbox 所在的帧标识（与 capture_image 返回的 frame_id 对应）
+      bbox       —— 该帧内的像素框 [x, y, w, h]
+      position_m —— 三维位置 [x, y, z]，单位米，坐标系 frame 字段指定（默认 base_link：
+                     x 向前、y 向左、z 向上）。ee_pose 是历史别名，语义相同，新代码用 position_m
+      expiry_date —— 仅 mock 固定数据；真机无此字段，读不到就是 None
     """
     return [
         {"id": "box_left", "label": "white", "ee_pose": [0.40, 0.30, 0.65],
+         "position_m": [0.40, 0.30, 0.65], "frame": "base_link", "unit": "m",
+         "image_ref": "mock_frame_0",
          "bbox": [0, 0, 60, 40], "score": 0.9, "expiry_date": "2026-08-01"},
         {"id": "box_mid", "label": "white", "ee_pose": [0.40, 0.10, 0.65],
+         "position_m": [0.40, 0.10, 0.65], "frame": "base_link", "unit": "m",
+         "image_ref": "mock_frame_0",
          "bbox": [80, 0, 60, 40], "score": 0.9, "expiry_date": "2027-12-01"},
         {"id": "box_right", "label": "white", "ee_pose": [0.40, -0.10, 0.65],
+         "position_m": [0.40, -0.10, 0.65], "frame": "base_link", "unit": "m",
+         "image_ref": "mock_frame_0",
          "bbox": [160, 0, 60, 40], "score": 0.9, "expiry_date": "2028-05-01"},
     ]
 
