@@ -24,6 +24,7 @@ import logging
 import math
 import os
 import platform
+import subprocess
 import sys
 import time
 
@@ -86,6 +87,31 @@ def _sdk_bootstrap() -> str:
     return pkg_dir
 
 
+def _ensure_nav_service():
+    """确保导航规划服务 service_navigation_plan 在跑。
+
+    launcher.service 有时没启动它（实测场地机器人就没起），导致所有导航命令
+    返回 WAIT_INITIALIZED。本函数检测缺失则自动拉起（仅 HPU 真机模式生效）。
+    """
+    nav_svc = "/data/galbot/bin/service_navigation_plan"
+    if not os.path.exists(nav_svc):
+        return  # 不在 HPU 上（PC 开发模式），跳过
+    try:
+        r = subprocess.run(["pgrep", "-f", "service_navigation_plan"],
+                           capture_output=True, timeout=5)
+        if r.returncode == 0:
+            return  # 已在跑
+    except Exception:
+        pass
+    env = os.environ.copy()
+    env["LD_LIBRARY_PATH"] = "/data/galbot/lib:" + env.get("LD_LIBRARY_PATH", "")
+    subprocess.Popen([nav_svc], env=env,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                     start_new_session=True)
+    logger.info("已启动 service_navigation_plan（launcher 未自动拉起，手动补启）")
+    time.sleep(3)  # 等它初始化（日志显示 ~2s 进入主循环）
+
+
 def _get_robot():
     """获取全局机器人单例。mock 模式下返回 MockRobot。"""
     global _robot
@@ -114,6 +140,7 @@ def _get_nav():
             _sdk_bootstrap()
             from galbot_sdk.g1 import (ControlStatus, G1ControllerName,
                                        GalbotNavigation)
+            _ensure_nav_service()  # 导航后端没跑的话先拉起，否则 WAIT_INITIALIZED
             _nav = GalbotNavigation()
             _nav.init()
             robot = _get_robot()
