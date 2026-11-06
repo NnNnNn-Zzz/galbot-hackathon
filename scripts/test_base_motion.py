@@ -18,6 +18,7 @@
     python3 scripts/test_base_motion.py --distance 0 --turn 30      # 只左转 30°
 """
 
+from __future__ import annotations
 import argparse
 import logging
 import os

@@ -4,6 +4,7 @@
 因此这里用 importlib 直接加载，不起子进程。
 """
 
+from __future__ import annotations
 import importlib.util
 import logging
 import os

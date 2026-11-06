@@ -1,5 +1,6 @@
 """task_log 会话记忆：JSONL 追加写，Agent 每轮决策和执行结果都留痕。"""
 
+from __future__ import annotations
 import json
 import os
 import time

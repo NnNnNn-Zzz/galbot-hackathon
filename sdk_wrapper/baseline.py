@@ -3,6 +3,7 @@
 基线状态定义：底盘停止运动、手臂处于折叠安全位、夹爪释放。
 """
 
+from __future__ import annotations
 import logging
 
 from sdk_wrapper.wrapper import _get_robot

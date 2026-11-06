@@ -3,6 +3,7 @@
 负责人: (填名字)
 """
 
+from __future__ import annotations
 import logging
 
 from sdk_wrapper import baseline, wrapper

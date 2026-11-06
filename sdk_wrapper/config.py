@@ -3,6 +3,7 @@
 注意：场景脚本不得在运行时修改 safety_config.json。
 """
 
+from __future__ import annotations
 import json
 import os
 

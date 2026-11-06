@@ -18,6 +18,7 @@
   或 source scripts/env.sh 设置 LD_LIBRARY_PATH。
 """
 
+from __future__ import annotations
 import glob
 import logging
 import math
@@ -62,9 +63,14 @@ def _sdk_bootstrap() -> str:
     """把 GalbotSDK 的 Python 包目录注入 sys.path，返回包目录路径。
 
     环境变量 GALBOT_SDK_ROOT 可覆盖 SDK 位置（默认 ~/GalbotSDK）。
-    注意：本函数只解决 Python 包可见性；libfastcdr 等原生依赖请提前用
-    install.sh 安装或 source scripts/env.sh（LD_LIBRARY_PATH 须在进程启动前生效）。
+    如果 galbot_sdk 已可通过 PYTHONPATH 导入（如 HPU 机器人端部署：
+    PYTHONPATH=~/g1_runtime），则直接跳过注入。
+    注意：本函数只解决 Python 包可见性；原生依赖请提前用 install.sh 安装
+    或 source scripts/env.sh / env_hpu.sh（LD_LIBRARY_PATH 须进程启动前生效）。
     """
+    import importlib.util
+    if importlib.util.find_spec('galbot_sdk') is not None:
+        return ''  # 已可用（PYTHONPATH 提供）
     sdk_root = os.environ.get("GALBOT_SDK_ROOT", os.path.expanduser("~/GalbotSDK"))
     arch = platform.machine()  # x86_64 / aarch64
     candidates = sorted(glob.glob(

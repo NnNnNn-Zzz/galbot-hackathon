@@ -18,6 +18,7 @@
   捕获并降级为"仅文本 + 图片占位描述"，保证主循环不崩。
 """
 
+from __future__ import annotations
 import base64
 import json
 import logging

@@ -7,6 +7,7 @@
 记录所有调用并返回成功。场景负责人应先用 mock 测试自己的 run() 和归位逻辑。
 """
 
+from __future__ import annotations
 import logging
 import math
 

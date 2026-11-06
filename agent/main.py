@@ -24,6 +24,7 @@
     4. Agent 架构不固定，后续按比赛实际改本文件即可；LLM 提供方在 llm_client.py 换。
 """
 
+from __future__ import annotations
 import argparse
 import logging
 import os
