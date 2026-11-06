@@ -1,0 +1,24 @@
+{
+  "version": "0.1",
+  "match_threshold": 0.72,
+  "note": [
+    "导航目标点白名单。协议 §0：config/ 管合法目标点 ID，不要把不存在的 G1 能力写成支持。",
+    "pose 必须是 [x, y, z, qx, qy, qz, qw]，长度单位米，四元数 scalar-last（与 get_transform 一致）。",
+    "pose 为 null 或 verified=false 时，真机适配器会返回 rejected + not_ready，**不会下发任何运动指令**。",
+    "在机器人上实测记录位姿后填入 pose 并把 verified 改成 true，才允许真机导航。",
+    "Mock（adapters/mock_adapter.py）只校验 place_id 是否在白名单里，不使用 pose。",
+    "同一份文件也被 algorithms/place_resolver.py 读取（aliases 用于中文地名解析）。"
+  ],
+  "places": {
+    "demo_table": {
+      "description": "演示用工作台（Mock 可用；真机需现场标定）",
+      "aliases": ["演示桌", "工作台", "桌子", "台面", "demo_table"],
+      "frame": "map",
+      "pose": null,
+      "verified": false,
+      "speed_ratio": 0.3,
+      "enable_collision_check": true,
+      "note": "示例条目：pose 留空是刻意的，避免凭空编造坐标把机器人开到墙里"
+    }
+  }
+}

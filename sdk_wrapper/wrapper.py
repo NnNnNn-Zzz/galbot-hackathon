@@ -34,6 +34,7 @@ logger = logging.getLogger("sdk_wrapper")
 
 _robot = None
 _nav = None
+_motion = None
 _mock_mode = os.environ.get("GALBOT_MOCK", "0") == "1"
 
 
@@ -59,6 +60,11 @@ def get_nav():
     请自觉遵守 safety_config.json 的量级。
     """
     return _get_nav()
+
+
+def get_motion():
+    """Return the shared GalbotMotion instance for SDK tool adapters."""
+    return _get_motion()
 
 
 def _sdk_bootstrap() -> str:
@@ -163,13 +169,28 @@ def _get_nav():
     return _nav
 
 
+def _get_motion():
+    """Create the SDK motion interface once, alongside the shared robot/nav."""
+    global _motion
+    if _motion is None:
+        if _mock_mode:
+            raise NotImplementedError("GalbotMotion is unavailable in wrapper mock mode")
+        _sdk_bootstrap()
+        from galbot_sdk.g1 import GalbotMotion
+        motion = GalbotMotion()
+        if not motion.init():
+            raise RuntimeError("GalbotMotion.init() returned False")
+        _motion = motion
+    return _motion
+
+
 def shutdown():
     """真机 SDK 清理（程序退出时必须调用）。mock 模式下仅记录日志。
 
     注意：SDK destroy() 后同进程无法再 init()，重启 agent 请重新起进程。
     """
-    global _robot, _nav
-    if _robot is None and _nav is None:
+    global _robot, _nav, _motion
+    if _robot is None and _nav is None and _motion is None:
         return
     try:
         if _mock_mode:
@@ -189,6 +210,7 @@ def shutdown():
     finally:
         _robot = None
         _nav = None
+        _motion = None
 
 
 def _clamp(value: float, limit: float, name: str) -> float:

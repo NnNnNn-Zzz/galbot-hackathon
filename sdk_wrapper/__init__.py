@@ -5,6 +5,9 @@
 """
 
 from sdk_wrapper.wrapper import (  # noqa: F401
+    get_robot,
+    get_nav,
+    get_motion,
     move_forward,
     move_backward,
     turn,

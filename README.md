@@ -26,7 +26,9 @@ galbot_hackathon/
 │   ├── wrapper.py              #   move_forward / turn / read_sensor ...
 │   ├── safety_config.json      #   ★ 安全限幅参数（人工可调）
 │   ├── baseline.py             #   归位函数 + 基线检查
-│   └── mock_robot.py           #   无真机时的模拟机器人
+│   ├── mock_robot.py           #   无真机时的模拟机器人
+│   └── galbot_dev_bridge.py    #   接入 galbot_dev 工具层，复用共享 SDK 实例
+├── third_party/galbot_dev-master/ # 原样保留的另一套 SDK 工具项目
 ├── scenes/                     # 场景脚本（各负责人各管各的文件夹，可自己组装 SDK 封装）
 │   ├── scene_patrol/           #   示例：巡逻
 │   └── scene_greet/            #   示例：打招呼
@@ -37,6 +39,8 @@ galbot_hackathon/
 ```
 
 ## 快速开始
+
+额外的相机、末端运动、夹爪、导航和音频工具见 [galbot_dev 接入说明](docs/galbot_dev_integration.md)。
 
 ```bash
 cd ~/galbot_hackathon
