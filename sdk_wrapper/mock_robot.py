@@ -81,6 +81,19 @@ class MockNavigation:
                     self.pose["x"], self.pose["y"], math.degrees(self.pose["yaw"]))
         return (True, "SUCCESS")
 
+    def navigate_with_velocity(self, vx, vy, vyaw, duration_s, enable_collision_check=True):
+        self.call_history.append(("navigate_with_velocity",
+                                  {"vx": vx, "vyaw": vyaw, "duration": duration_s}))
+        # 简易位姿积分：按速度×时间走
+        self.pose["x"] += vx * duration_s * math.cos(self.pose["yaw"])
+        self.pose["y"] += vx * duration_s * math.sin(self.pose["yaw"])
+        self.pose["yaw"] += vyaw * duration_s
+        logger.info("[MOCK] navigate_with_velocity vx=%.3f vyaw=%.3f dur=%.1fs"
+                    " → 累计位姿 (%.2f, %.2f, %.1f°)",
+                    vx, vyaw, duration_s,
+                    self.pose["x"], self.pose["y"], math.degrees(self.pose["yaw"]))
+        return (True, "SUCCESS")
+
     def get_navigation_status(self):
         """返回一个带 .name 的对象，对齐真机 NavigationTaskStatus.SUCCESS。"""
         class _St:

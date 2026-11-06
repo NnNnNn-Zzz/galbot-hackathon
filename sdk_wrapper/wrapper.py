@@ -194,11 +194,27 @@ def _yaw_to_quaternion(yaw_rad: float) -> tuple:
     return (0.0, 0.0, math.sin(yaw_rad / 2.0), math.cos(yaw_rad / 2.0))
 
 
-def _move_straight(x_m: float, yaw_rad: float) -> dict:
-    """相对当前位姿走直线 + 转角的公共实现（阻塞等待完成）。
+def _wait_nav_done(nav, timeout_s: float):
+    """轮询导航状态直到终态或超时。"""
+    deadline = time.time() + timeout_s
+    while time.time() < deadline:
+        try:
+            ns = nav.get_navigation_status()
+            name = ns.name if hasattr(ns, "name") else str(ns)
+        except Exception:
+            name = "UNKNOWN"
+        if name in ("SUCCESS", "FAILED", "INTERRUPTED",
+                    "COLLISION", "CLOSE_TO_OBSTACLE", "OCCUPIED"):
+            return name
+        time.sleep(0.2)
+    return "TIMEOUT"
 
-    用 is_blocking=False + 轮询 get_navigation_status()，遵循官方示例模式
-   （is_blocking=True 在部分固件上会超时且不报告到达）。
+
+def _move_straight(x_m: float, yaw_rad: float) -> dict:
+    """相对当前位姿走直线 + 转角（用 navigate_with_velocity 速度指令）。
+
+    move_straight_to（位姿规划）在无地图/定位时返回 FAILED，改用速度指令：
+    匀速走指定时间 = 距离/速度，更底层更可靠（官方 velocity 示例不需要定位）。
 
     Args:
         x_m:     沿当前朝向的位移（米），正值向前
@@ -206,47 +222,38 @@ def _move_straight(x_m: float, yaw_rad: float) -> dict:
     """
     cfg = load_safety()
     nav = _get_nav()
-    qx, qy, qz, qw = _yaw_to_quaternion(yaw_rad)
-    speed = max(cfg["max_base_speed_mps"], 0.05)
-    # 理论耗时 + 10s 余量（启动加速 + 轮询开销）
-    motion_timeout = abs(x_m) / speed + 10.0
-    try:
-        import numpy as np
-        goal = np.array([x_m, 0.0, 0.0, qx, qy, qz, qw], dtype=np.float64)
-    except ImportError:
-        goal = [x_m, 0.0, 0.0, qx, qy, qz, qw]
+    # 限速 0.15 m/s（比 safety 上限 0.3 慢一半，保证精度和安全）
+    lin_speed = min(cfg["max_base_speed_mps"], 0.15)
+    ang_speed = 0.2  # rad/s，约 11.5°/s
 
-    # 发送移动指令（non-blocking），然后轮询状态直到完成
-    ok, status = nav.move_straight_to(goal, is_blocking=False,
-                                       timeout=motion_timeout)
-    if not ok and "WAIT_INITIALIZED" in str(status):
-        # 导航栈偶尔未就绪，等一下重发
-        for retry in range(5):
-            logger.info("导航未就绪(WAIT_INITIALIZED)，等待重试 %d/5", retry + 1)
-            time.sleep(1.0)
-            ok, status = nav.move_straight_to(goal, is_blocking=False,
-                                               timeout=motion_timeout)
-            if ok or "WAIT_INITIALIZED" not in str(status):
-                break
+    # 前进/后退
+    if abs(x_m) > 1e-4:
+        vx = lin_speed if x_m > 0 else -lin_speed
+        duration = abs(x_m) / lin_speed
+        ok, st = nav.navigate_with_velocity(vx, 0.0, 0.0, duration, True)
+        if not ok:
+            return {"success": False, "status": str(st),
+                    "message": f"navigate_with_velocity: {st}"}
+        final = _wait_nav_done(nav, duration + 5.0)
+        if final != "SUCCESS":
+            return {"success": False, "status": final,
+                    "message": f"nav forward: {final}"}
 
-    # 轮询导航状态直到终态
-    deadline = time.time() + motion_timeout
-    final_name = str(status)
-    while time.time() < deadline:
-        try:
-            ns = nav.get_navigation_status()
-            final_name = ns.name if hasattr(ns, "name") else str(ns)
-        except Exception:
-            pass
-        if final_name in ("SUCCESS", "FAILED", "INTERRUPTED",
-                          "COLLISION", "CLOSE_TO_OBSTACLE", "OCCUPIED"):
-            break
-        time.sleep(0.2)
+    # 转向
+    if abs(yaw_rad) > 1e-4:
+        vyaw = ang_speed if yaw_rad > 0 else -ang_speed
+        duration = abs(yaw_rad) / ang_speed
+        ok, st = nav.navigate_with_velocity(0.0, 0.0, vyaw, duration, True)
+        if not ok:
+            return {"success": False, "status": str(st),
+                    "message": f"navigate_with_velocity: {st}"}
+        final = _wait_nav_done(nav, duration + 5.0)
+        if final != "SUCCESS":
+            return {"success": False, "status": final,
+                    "message": f"nav turn: {final}"}
 
     nav.stop_navigation()
-    success = final_name == "SUCCESS"
-    return {"success": success, "status": final_name,
-            "message": "ok" if success else f"move_straight_to: {final_name}"}
+    return {"success": True, "status": "SUCCESS", "message": "ok"}
 
 
 # ---------------------------------------------------------------------------
