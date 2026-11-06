@@ -195,7 +195,10 @@ def _yaw_to_quaternion(yaw_rad: float) -> tuple:
 
 
 def _move_straight(x_m: float, yaw_rad: float) -> dict:
-    """相对当前位姿走直线 + 转角的公共实现（阻塞执行）。
+    """相对当前位姿走直线 + 转角的公共实现（阻塞等待完成）。
+
+    用 is_blocking=False + 轮询 get_navigation_status()，遵循官方示例模式
+   （is_blocking=True 在部分固件上会超时且不报告到达）。
 
     Args:
         x_m:     沿当前朝向的位移（米），正值向前
@@ -204,24 +207,46 @@ def _move_straight(x_m: float, yaw_rad: float) -> dict:
     cfg = load_safety()
     nav = _get_nav()
     qx, qy, qz, qw = _yaw_to_quaternion(yaw_rad)
-    # 按限速估一个超时：理论耗时 ×2 再加 5s 余量，防止慢速时误判超时
     speed = max(cfg["max_base_speed_mps"], 0.05)
-    timeout = abs(x_m) / speed * 2 + 5.0
+    # 理论耗时 + 10s 余量（启动加速 + 轮询开销）
+    motion_timeout = abs(x_m) / speed + 10.0
     try:
         import numpy as np
         goal = np.array([x_m, 0.0, 0.0, qx, qy, qz, qw], dtype=np.float64)
     except ImportError:
         goal = [x_m, 0.0, 0.0, qx, qy, qz, qw]
-    # 导航栈刚就绪时可能仍返回 WAIT_INITIALIZED，自动等待重试
-    ok, status = nav.move_straight_to(goal, is_blocking=True, timeout=timeout)
-    retries = 0
-    while not ok and "WAIT_INITIALIZED" in str(status) and retries < 5:
-        retries += 1
-        logger.info("导航未就绪(WAIT_INITIALIZED)，等待 1s 后重试 %d/5", retries)
-        time.sleep(1.0)
-        ok, status = nav.move_straight_to(goal, is_blocking=True, timeout=timeout)
-    return {"success": bool(ok), "status": str(status),
-            "message": "ok" if ok else f"move_straight_to: {status}"}
+
+    # 发送移动指令（non-blocking），然后轮询状态直到完成
+    ok, status = nav.move_straight_to(goal, is_blocking=False,
+                                       timeout=motion_timeout)
+    if not ok and "WAIT_INITIALIZED" in str(status):
+        # 导航栈偶尔未就绪，等一下重发
+        for retry in range(5):
+            logger.info("导航未就绪(WAIT_INITIALIZED)，等待重试 %d/5", retry + 1)
+            time.sleep(1.0)
+            ok, status = nav.move_straight_to(goal, is_blocking=False,
+                                               timeout=motion_timeout)
+            if ok or "WAIT_INITIALIZED" not in str(status):
+                break
+
+    # 轮询导航状态直到终态
+    deadline = time.time() + motion_timeout
+    final_name = str(status)
+    while time.time() < deadline:
+        try:
+            ns = nav.get_navigation_status()
+            final_name = ns.name if hasattr(ns, "name") else str(ns)
+        except Exception:
+            pass
+        if final_name in ("SUCCESS", "FAILED", "INTERRUPTED",
+                          "COLLISION", "CLOSE_TO_OBSTACLE", "OCCUPIED"):
+            break
+        time.sleep(0.2)
+
+    nav.stop_navigation()
+    success = final_name == "SUCCESS"
+    return {"success": success, "status": final_name,
+            "message": "ok" if success else f"move_straight_to: {final_name}"}
 
 
 # ---------------------------------------------------------------------------
