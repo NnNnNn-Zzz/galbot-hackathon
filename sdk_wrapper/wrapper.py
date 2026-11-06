@@ -25,6 +25,7 @@ import math
 import os
 import platform
 import sys
+import time
 
 from sdk_wrapper.config import load_safety
 
@@ -120,6 +121,9 @@ def _get_nav():
             if res != ControlStatus.SUCCESS:
                 raise RuntimeError(f"切换底盘控制器失败: {res}")
             logger.info("底盘控制器已切换到 CHASSIS_POSE_CTRL")
+            # 控制器切换后底盘进入初始化，立即下令会返回 WAIT_INITIALIZED，
+            # 给 2 秒就绪窗口（实测足够；不够的话 _move_straight 还有重试兜底）
+            time.sleep(2.0)
         logger.info("导航实例已初始化 (mock=%s)", _mock_mode)
     return _nav
 
@@ -181,7 +185,14 @@ def _move_straight(x_m: float, yaw_rad: float) -> dict:
         goal = np.array([x_m, 0.0, 0.0, qx, qy, qz, qw], dtype=np.float64)
     except ImportError:
         goal = [x_m, 0.0, 0.0, qx, qy, qz, qw]
+    # 导航栈刚就绪时可能仍返回 WAIT_INITIALIZED，自动等待重试
     ok, status = nav.move_straight_to(goal, is_blocking=True, timeout=timeout)
+    retries = 0
+    while not ok and "WAIT_INITIALIZED" in str(status) and retries < 5:
+        retries += 1
+        logger.info("导航未就绪(WAIT_INITIALIZED)，等待 1s 后重试 %d/5", retries)
+        time.sleep(1.0)
+        ok, status = nav.move_straight_to(goal, is_blocking=True, timeout=timeout)
     return {"success": bool(ok), "status": str(status),
             "message": "ok" if ok else f"move_straight_to: {status}"}
 
