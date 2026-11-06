@@ -27,3 +27,17 @@
     failure: "未检测到人，或手臂运动被阻挡"
   recovery_on_failure: "回到巡逻，10 秒后重试"
   expected_exit_state: "手臂折叠，底盘静止"
+
+- name: scene_medicine_check
+  path: scenes/scene_medicine_check/scene.py
+  when_to_call: "主 Agent 收到「检查药箱 / 清理过期药」指令时调用；机器人走到药箱前、抽屉把手在当前高度可夹取时执行"
+  params:
+    mode: "drawer（默认，桌面固定小抽屉）| table（药品直接摆桌面，基线兜底）"
+    confirm_wait_s: "播报后停顿等人类回应的秒数，默认 5.0"
+    max_items: "本次最多检查件数，默认 4"
+    perception_url: "感知服务地址，也可用环境变量 MEDICINE_PERCEPTION_URL"
+  expected_feedback:
+    success: "药检完成：共检查 N 件，清理过期 N 件，放回 N 件，待人工复核 N 件"
+    failure: "抽屉未能拉开，或本次未成功检查任何药品（取图/抓取失败）"
+  recovery_on_failure: "先切 table 模式把药品摆到桌面重试一次；仍失败则归位并报告感知服务与夹爪状态，不要反复硬拉抽屉"
+  expected_exit_state: "抽屉推回原位，手臂折叠，夹爪释放，底盘停止"
