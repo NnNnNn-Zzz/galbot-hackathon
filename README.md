@@ -60,9 +60,11 @@ uv run python agent/main.py --mock
 uv run python agent/main.py
 ```
 
-## 顶层 Agent 的 LLM 接口（预留，可换）
+## 顶层 Agent 的模型接口（支持多模态，可换）
 
-`agent/llm_client.py` 定义了 `LLMClient` 基类，只要实现 `decide(system_prompt, observation, history) -> dict` 就能接入任意模型。默认 `OpenAICompatibleClient` 零依赖走 HTTP，兼容 OpenAI / DeepSeek / 通义 / 本地 vLLM，用环境变量切换。未配 Key 时降级为规则模式（只待机，用于调通流程）。Agent 主循环本身也会按比赛实际迭代，接口保持稳定即可。
+`agent/llm_client.py` 定义了 `LLMClient` 基类，只要实现 `decide(system_prompt, observation, history) -> dict` 就能接入任意模型。默认 `OpenAICompatibleClient` 零依赖走 HTTP，兼容 OpenAI GPT-4o / Qwen-VL / GLM-4V / DeepSeek / 本地 vLLM，用环境变量切换。未配 Key 时降级为规则模式（只待机，用于调通流程）。
+
+**多模态**：`observe()` 返回 `{"text": str, "images": [本地图片路径, ...]}`，客户端自动把图片转 base64 按 OpenAI vision 格式发送。接纯文本模型时 images 留空即可；模型不支持图片时自动降级为纯文本重试，主循环不崩。接入 G1 相机后，只需在 `observe()` 里抓帧存临时 jpg 填进 `images`。单图大小上限由 `LLM_MAX_IMAGE_BYTES`（默认 4MB）控制。
 
 ## 给机器人"立人设"
 
