@@ -89,18 +89,25 @@ def build_system_prompt() -> str:
   "reason": "决策理由"}}"""
 
 
-def observe(user_task: str | None = None) -> dict:
+def observe(user_task: str | None = None, one_shot: bool = False) -> dict:
     """采集当前观察（多模态：文本 + 相机帧路径列表）。
 
     返回格式固定为 {"text": str, "images": [图片路径, ...]}，
     llm_client 会把 images 里的本地图片按多模态消息格式发给模型；
     images 为空时自动退化为纯文本，纯文本模型也能跑。
 
+    one_shot=True（--task 一次性任务模式）时，无新任务的轮次提示 LLM
+    finish/wait 而不是默认巡逻——防止验证任务跑完后机器人自主乱动。
+
     TODO(负责人A): 接入 G1 相机后，在这里抓帧存成临时 jpg 放进 images，
     例如 wrapper.read_sensor('front_camera') → 存 /tmp/agent_frame.jpg。
     """
     if user_task:
         text = f"【用户下达的任务】{user_task}。请规划并执行该任务，完成后输出 finish。"
+    elif one_shot:
+        text = ("此前下达的任务已处理。若任务已完成，请输出 finish 结束程序；"
+                "若还在执行中可继续调用接口；无事可做就 wait。"
+                "禁止自主巡逻或执行其他场景。")
     else:
         text = "暂无感知输入（mock/待接入感知），请按提示词默认策略行动。"
     return {
@@ -166,7 +173,7 @@ def main():
             # 任务优先级：启动参数 > task.txt 文件
             task = pending_task or poll_user_task()
             pending_task = None
-            observation = observe(task)
+            observation = observe(task, one_shot=args.task is not None)
             try:
                 decision = llm.decide(system_prompt, observation,
                                       memory.read_history(10))

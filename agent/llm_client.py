@@ -123,7 +123,17 @@ class OpenAICompatibleClient(LLMClient):
                      "Authorization": f"Bearer {self.api_key}"})
         with urllib.request.urlopen(req, timeout=60) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-        return json.loads(data["choices"][0]["message"]["content"])
+        content = data["choices"][0]["message"]["content"]
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError:
+            # 模型偶尔在 JSON 前后多吐文字/多个 JSON：取第一个完整 JSON 对象
+            logger.warning("模型输出非纯 JSON，尝试截取首个 JSON 对象")
+            start = content.find("{")
+            if start < 0:
+                raise
+            obj, _ = json.JSONDecoder().raw_decode(content[start:])
+            return obj
 
     def decide(self, system_prompt: str, observation, history: list) -> dict:
         user_msg = _build_user_message(observation)
