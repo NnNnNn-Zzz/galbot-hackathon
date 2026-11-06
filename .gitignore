@@ -1,0 +1,11 @@
+.venv/
+**/.venv/
+__pycache__/
+**/__pycache__/
+.uv-cache/
+*.pt
+*.pth
+*.onnx
+datasets/
+*.egg-info/
+task_log.jsonl

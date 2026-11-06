@@ -1,0 +1,15 @@
+[project]
+name = "galbot-hackathon"
+version = "0.1.0"
+description = "银河通用 G1 黑客松：顶层 Agent + SDK 封装层 + 即插即用场景脚本"
+requires-python = ">=3.10"
+dependencies = [
+    "pyyaml>=6.0",
+    "numpy>=1.24",
+    "opencv-python>=4.8",
+]
+
+# 统一依赖管理规则（见 docs/DEVELOPMENT_RULES.md 第六节）：
+# - 仅负责人 A 可修改本文件
+# - 场景负责人需要新依赖时，向 A 申请，由 A 执行 `uv add <pkg>` 并提交 uv.lock
+# - 其他人执行 `uv sync` 同步环境

@@ -1,0 +1,8 @@
+{
+  "max_base_speed_mps": 0.3,
+  "max_base_distance_m": 2.0,
+  "max_turn_deg": 180.0,
+  "max_joint_speed_rad_s": 0.5,
+  "max_gripper_force": 0.5,
+  "safe_margin_m": 0.1
+}

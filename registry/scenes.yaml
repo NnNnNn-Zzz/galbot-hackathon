@@ -1,0 +1,29 @@
+# 场景注册表
+#
+# 每个场景负责人只追加自己的条目，不要改别人的（见 docs/DEVELOPMENT_RULES.md）。
+# 字段说明：
+#   name:                场景唯一名（与文件夹名一致）
+#   path:                场景入口 .py 相对项目根的路径
+#   when_to_call:        告诉顶层 Agent 什么时候该调用（自然语言）
+#   params:              调用时可传的参数说明（可选）
+#   expected_feedback:   Agent 会收到的反馈
+#   recovery_on_failure: 失败后 Agent 应该怎么做
+#   expected_exit_state: 场景退出时的机器人状态（用于基线检查）
+
+- name: scene_patrol
+  path: scenes/scene_patrol/scene.py
+  when_to_call: "常规巡逻：无其他任务时周期性调用，让机器人沿预设路线走一圈"
+  expected_feedback:
+    success: "巡逻完成，沿途未发现异常"
+    failure: "巡逻中断（被阻挡或传感器异常）"
+  recovery_on_failure: "归位后等待 10 秒重试；连续 3 次失败则停止巡逻并报告"
+  expected_exit_state: "底盘停止，回到出发位置，手臂折叠"
+
+- name: scene_greet
+  path: scenes/scene_greet/scene.py
+  when_to_call: "当检测到有人接近（距离 < 2m）时调用，向人挥手打招呼"
+  expected_feedback:
+    success: "已挥手打招呼"
+    failure: "未检测到人，或手臂运动被阻挡"
+  recovery_on_failure: "回到巡逻，10 秒后重试"
+  expected_exit_state: "手臂折叠，底盘静止"
