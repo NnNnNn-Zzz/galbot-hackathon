@@ -16,7 +16,7 @@
 
 ```bash
 cd galbot-hackathon
-# 1) 只看编排（不发任何"动作"，打印 8 步计划）
+# 1) 只看编排（不发任何"动作"，打印 7 步计划）
 python3 scenes/scene_medicine_check/baseline_flow.py
 # 2) mock 全链路（纯内存仿真，不接任何硬件）
 MED_IO=mock python3 -c "from scenes.scene_medicine_check import baseline_flow as bf; \
