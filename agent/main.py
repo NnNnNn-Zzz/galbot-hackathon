@@ -10,9 +10,16 @@
     export LLM_MODEL="deepseek-chat"                     # 可选
     uv run python agent/main.py
 
+    # 带一次性任务启动（进入循环后第一轮就带着该任务决策）
+    uv run python agent/main.py --task "往前走50cm"
+
+    # 运行中随时下新任务：往项目根目录 task.txt 写入任务文本即可，
+    # agent 下一轮读到后会执行并清空该文件
+    echo "左转90度" > task.txt
+
 架构说明：
     1. 启动时加载 prompt.txt + registry/scenes.yaml，拼出 system prompt。
-    2. 每轮：观察 → LLM 决策 → 执行（调封装层或场景）→ 写 task_log。
+    2. 每轮：观察（含用户任务）→ LLM 决策 → 执行（调封装层或场景）→ 写 task_log。
     3. 场景返回后做基线检查（记录不阻塞）。
     4. Agent 架构不固定，后续按比赛实际改本文件即可；LLM 提供方在 llm_client.py 换。
 """
@@ -35,6 +42,26 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger("agent.main")
 
 _ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+# 运行中下达任务的通道：往这个文件写入任务文本，agent 下一轮读取并清空
+_TASK_FILE = os.path.join(_ROOT, "task.txt")
+
+
+def poll_user_task() -> str | None:
+    """读取 task.txt 里的用户任务。读到即清空文件，防止重复执行。"""
+    if not os.path.exists(_TASK_FILE):
+        return None
+    try:
+        with open(_TASK_FILE, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+        if content:
+            with open(_TASK_FILE, "w", encoding="utf-8") as f:
+                f.write("")
+            logger.info("收到用户任务: %s", content)
+            return content
+    except OSError as e:
+        logger.warning("读取任务文件失败: %s", e)
+    return None
 
 
 def build_system_prompt() -> str:
@@ -62,7 +89,7 @@ def build_system_prompt() -> str:
   "reason": "决策理由"}}"""
 
 
-def observe() -> dict:
+def observe(user_task: str | None = None) -> dict:
     """采集当前观察（多模态：文本 + 相机帧路径列表）。
 
     返回格式固定为 {"text": str, "images": [图片路径, ...]}，
@@ -72,8 +99,12 @@ def observe() -> dict:
     TODO(负责人A): 接入 G1 相机后，在这里抓帧存成临时 jpg 放进 images，
     例如 wrapper.read_sensor('front_camera') → 存 /tmp/agent_frame.jpg。
     """
+    if user_task:
+        text = f"【用户下达的任务】{user_task}。请规划并执行该任务，完成后输出 finish。"
+    else:
+        text = "暂无感知输入（mock/待接入感知），请按提示词默认策略行动。"
     return {
-        "text": "暂无感知输入（mock/待接入感知），请按提示词默认策略行动。",
+        "text": text,
         "images": [],  # 接入相机后填本地图片路径，如 ["/tmp/agent_frame.jpg"]
     }
 
@@ -111,6 +142,8 @@ def main():
     parser.add_argument("--mock", action="store_true", help="mock 模式（无真机调试）")
     parser.add_argument("--interval", type=float, default=5.0, help="决策间隔秒数")
     parser.add_argument("--max-loops", type=int, default=0, help="最大循环数，0=不限")
+    parser.add_argument("--task", type=str, default=None,
+                        help="启动时下达的一次性任务，如 \"往前走50cm\"")
     args = parser.parse_args()
 
     if args.mock:
@@ -120,14 +153,20 @@ def main():
     llm = create_llm_client()
     system_prompt = build_system_prompt()
     logger.info("Agent 已启动，决策间隔 %.1fs", args.interval)
+    if args.task:
+        logger.info("启动任务: %s", args.task)
 
+    pending_task = args.task  # 首轮注入的一次性任务
     loop = 0
     try:
         while True:
             loop += 1
             if args.max_loops and loop > args.max_loops:
                 break
-            observation = observe()
+            # 任务优先级：启动参数 > task.txt 文件
+            task = pending_task or poll_user_task()
+            pending_task = None
+            observation = observe(task)
             try:
                 decision = llm.decide(system_prompt, observation,
                                       memory.read_history(10))
@@ -151,6 +190,7 @@ def main():
         logger.info("收到 Ctrl+C，正在归位...")
     finally:
         baseline.reset_to_baseline()
+        wrapper.shutdown()  # 真机模式必须走 SDK 关机序列
         logger.info("Agent 退出")
 
 
