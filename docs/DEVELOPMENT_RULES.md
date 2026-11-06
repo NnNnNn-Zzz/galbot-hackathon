@@ -4,7 +4,7 @@
 
 ## 〇、四条核心纪律（最重要）
 
-1. **底层封装层（`sdk_wrapper/`）和统一依赖只由负责人 A 修改。** 但场景开发者可以在自己场景文件夹内自由定义自己的接口层（组合 `sdk_wrapper` 公开函数）；只有需要**新的底层封装函数 / 新依赖**时才向 A 提需求，A 实施。
+1. **场景开发者可以自由组装 SDK、包装成自己想要的封装**：在自己文件夹里 `import galbot_sdk` 或组合 `sdk_wrapper` 均可，接口形态自己定，无需 A 审批。硬约束只有三条：①机器人/导航实例必须从 `sdk_wrapper.get_robot()` / `get_nav()` 拿共享单例，**禁止自己 `GalbotRobot()` init，禁止 destroy/shutdown**；②不得写 `safety_config.json`；③归位纪律不变。`sdk_wrapper/` 目录本身与统一依赖仍由负责人 A 维护。
 2. **场景必须归位。** 场景返回后，机器人必须处于基线状态（底盘停、手臂折叠、夹爪释放）。
 3. **安全参数不可被场景运行时覆盖。** `safety_config.json` 只能人工改。
 4. **所有场景与 Agent 共享同一个 Python 进程和环境。** 禁止场景内 `uv init`、禁止起子进程跑机器人控制。
@@ -31,12 +31,14 @@ Galbot SDK 的控制器、相机订阅、急停监听是**机器人级单例资�
 
 ## 三、SDK 封装层规范
 
-- 所有硬件调用必须**最终收敛到** `sdk_wrapper`（`move_forward` / `turn` / `read_sensor` / ...），**禁止在场景里 `import galbot_sdk`**。
-- **场景开发者可以在自己场景文件夹内自由定义自己的接口层**（如 `scenes/scene_xxx/api.py`）：函数名、参数、返回格式全部自己定，不需要向 A 申请。唯一约束：底层只允许调用 `sdk_wrapper` 的公开函数。
-- 场景内自定义接口是"组合层"，不是"绕过层"——安全限幅依然生效（截断发生在 `sdk_wrapper` 内部），自己写接口不等于绕开安全参数。
-- 封装层按 `sdk_wrapper/safety_config.json` 自动限幅，超限静默截断并记日志。
+- `sdk_wrapper` 提供带安全限幅的高层接口（`move_forward` / `turn` / `read_sensor` / ...），**推荐优先使用**。
+- **场景开发者可以自己组装 SDK 包装成自己想要的封装**：在自己文件夹里随便 `import galbot_sdk` 原生接口或组合 `sdk_wrapper`，函数名、参数、返回格式全部自己定，不需要向 A 申请。
+- 直接用 SDK 原生接口时的三条硬约束：
+  1. 机器人/导航实例必须用 `sdk_wrapper.get_robot()` / `sdk_wrapper.get_nav()` 拿共享单例，**禁止自己 `GalbotRobot()` init，禁止 destroy/shutdown**（会打死主进程单例和急停监听）。
+  2. 若切换了控制器（`switch_controller`），场景 `finally` 归位前必须停运动、恢复底盘控制。
+  3. `safety_config.json` 不得写入。注意：自动限幅截断只发生在 `sdk_wrapper` 高层函数里，直接调 SDK 原生接口**没有自动限幅**，请自觉遵守限幅量级（速度 ≤0.3 m/s、单次距离 ≤2m、转向 ≤180°）。
 - `safety_config.json` 仅负责人 A 可改；比赛期间临时放宽须在群里说明原因和时间，赛后恢复。
-- 需要新的**底层**封装函数（现有 `sdk_wrapper` 函数组合不出来的能力）→ 群里发：“场景 X 需要 `函数名(参数)`，返回 `...`”，A 确认后实施。
+- 需要修改/新增 `sdk_wrapper` 底层封装函数（目录本身仍仅 A 改）→ 群里发："场景 X 需要 `函数名(参数)`，返回 `...`"，A 确认后实施。
 
 ## 四、场景脚本规范
 
@@ -68,27 +70,29 @@ def run(params: dict) -> dict:
 
 场景之间禁止互相 import、禁止共享全局状态。需要协作时通过 Agent 调度或 task_log 传递信息。
 
-### 4.5 场景内自定义接口（可选但推荐）
+### 4.5 场景内自定义封装（可选但推荐）
 
 - 建议把场景专用的接口函数收在自己文件夹的单独模块里（如 `api.py` / `actions.py`），`scene.py` 只留编排逻辑。
-- 只允许 `import sdk_wrapper`；命名建议语义化动词（如 `wave_hand` / `go_to_charger`），避免与底层 `move_forward` 等撞名造成阅读混淆。
-- 自定义接口**跨场景不可复用**（场景间零调用原则不变）。如果某个接口被多个场景需要 → 告诉 A，由 A 下沉到 `sdk_wrapper` 成为公共函数。
+- `import galbot_sdk` 和 `import sdk_wrapper` 都可以，实例从 `sdk_wrapper.get_robot()` / `get_nav()` 拿（硬约束见第三节）；命名建议语义化动词（如 `wave_hand` / `go_to_charger`），避免与底层 `move_forward` 等撞名造成阅读混淆。
+- 直接调 SDK 原生接口的代码在 mock 模式下不可测（MockRobot 只实现最小接口），建议自定义封装里对 mock 做兼容或标注"仅真机"。
+- 自定义封装**跨场景不可复用**（场景间零调用原则不变）。如果某个封装被多个场景需要 → 告诉 A，由 A 下沉到 `sdk_wrapper` 成为公共函数。
 
 ## 五、依赖管理
 
-- 所有依赖声明在根目录 `pyproject.toml`，统一由 A 执行 `uv add`。
-- 场景文件夹**禁止**出现 `pyproject.toml` / `.venv`。
-- 需要新依赖 → 群里发：“场景 X 需要 `包名==版本`，用途是……”，A 评估后统一添加，其他人 `uv sync`。
-- 版本冲突时协商统一版本，不拆环境。
+- **不强制 uv**：环境统一用 WSL 系统 `python3`（Ubuntu 22.04 自带 3.10），依赖直接 `pip` 安装。
+- 所有依赖记录在根目录 `pyproject.toml`（作为清单），由负责人 A 执行 `python3 -m pip install <pkg>` 安装并同步更新清单。
+- 场景文件夹**禁止**出现 `pyproject.toml` / `.venv` / `requirements.txt`（避免各装各的）。
+- 需要新依赖 → 群里发：“场景 X 需要 `包名==版本`，用途是……”，A 评估后统一安装并提交 pyproject.toml。
+- 版本冲突时协商统一版本，不拆环境（同进程原则，见第一节）。
 
 ## 六、修改权限
 
 | 区域 | 谁可以改 | 规则 |
 |---|---|---|
-| `pyproject.toml` / `uv.lock` | 仅负责人 A | 其他人提需求，A 统一 `uv add` |
+| `pyproject.toml` | 仅负责人 A | 其他人提需求，A 统一 pip install 并更新清单 |
 | `sdk_wrapper/` | 仅负责人 A | 提需求，A 评估后统一加 |
 | `agent/` | 仅负责人 A | 场景开发者不改调度逻辑 |
-| `scenes/自己文件夹/` | 该场景负责人 | 自由修改（含自定义场景内接口，但底层只能调 `sdk_wrapper`） |
+| `scenes/自己文件夹/` | 该场景负责人 | 自由修改，可自己组装 SDK 封装（实例从 sdk_wrapper 单例拿） |
 | `registry/scenes.yaml` | 该场景负责人 | 只追加自己的条目 |
 | `docs/` | 任何人 | 修改后群里通知 |
 
@@ -102,7 +106,7 @@ def run(params: dict) -> dict:
 
 - [ ] SDK v1.10.0 已克隆到 WSL，机器人环境版本确认为 V1.18
 - [ ] `install_python_deps.sh` 已执行
-- [ ] 根目录 `uv sync` 完成，`uv.lock` 已提交
+- [ ] 系统 python3 已装 `pyproject.toml` 清单里的依赖（`python3 -m pip install pyyaml numpy opencv-python`）
 - [ ] 封装层用 mock 测试通过
 - [ ] Agent 调度器 mock 模式跑通完整流程
 - [ ] 每个场景负责人用 mock 测试自己的 `run()` 正常路径 + 异常路径 + 归位

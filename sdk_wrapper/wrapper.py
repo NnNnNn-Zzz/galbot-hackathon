@@ -1,8 +1,10 @@
-"""SDK 封装层：所有对 galbot_sdk 的调用都必须经过这里。
+"""SDK 封装层：提供带安全限幅的高层接口 + 共享单例入口。
 
 安全策略：
-- 所有运动参数按 safety_config.json 限幅（clamp），超限不报错、静默截断并记日志。
-- galbot_sdk 全局单例，场景脚本严禁自行 init()/destroy()。
+- 高层接口（move_forward / turn / ...）按 safety_config.json 限幅（clamp），超限不报错、静默截断并记日志。
+- galbot_sdk 全局单例由本模块管理；场景脚本**允许**自己组装 SDK 封装
+  （import galbot_sdk），但实例必须从本模块的 get_robot()/get_nav() 拿，
+  严禁自行 init()/destroy()（会打死主进程单例和急停监听）。
 - 支持 MOCK 模式（无真机/无 SDK 时开发调试）：
     方式1: 命令行 `python agent/main.py --mock`
     方式2: 环境变量 `GALBOT_MOCK=1`
@@ -36,6 +38,24 @@ def set_mock_mode(enabled: bool):
     """由 agent/main.py 在启动时根据 --mock 参数调用。"""
     global _mock_mode
     _mock_mode = enabled
+
+
+def get_robot():
+    """公开入口：给场景自定义封装用的共享机器人单例。
+
+    真机返回 GalbotRobot（已 init），mock 返回 MockRobot。
+    场景禁止自己 GalbotRobot() init / destroy——必须从这里拿。
+    """
+    return _get_robot()
+
+
+def get_nav():
+    """公开入口：给场景自定义封装用的共享导航单例（已切 CHASSIS_POSE_CTRL）。
+
+    注意：直接调 nav.move_straight_to 没有 wrapper 层的自动限幅，
+    请自觉遵守 safety_config.json 的量级。
+    """
+    return _get_nav()
 
 
 def _sdk_bootstrap() -> str:

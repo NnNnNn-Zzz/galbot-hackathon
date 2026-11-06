@@ -27,7 +27,7 @@ galbot_hackathon/
 │   ├── safety_config.json      #   ★ 安全限幅参数（人工可调）
 │   ├── baseline.py             #   归位函数 + 基线检查
 │   └── mock_robot.py           #   无真机时的模拟机器人
-├── scenes/                     # 场景脚本（各负责人各管各的文件夹，可自定义场景内接口）
+├── scenes/                     # 场景脚本（各负责人各管各的文件夹，可自己组装 SDK 封装）
 │   ├── scene_patrol/           #   示例：巡逻
 │   └── scene_greet/            #   示例：打招呼
 ├── registry/
@@ -41,23 +41,20 @@ galbot_hackathon/
 ```bash
 cd ~/galbot_hackathon
 
-# 1. 安装 uv（如果没装）
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# 1. 安装依赖（WSL Ubuntu 22.04 系统 python3 即可，无需 uv）
+python3 -m pip install pyyaml numpy opencv-python
 
-# 2. 同步环境
-uv sync
+# 2. mock 模式跑通全流程（无真机、无 API Key 也能跑）
+python3 agent/main.py --mock --max-loops 3
 
-# 3. mock 模式跑通全流程（无真机、无 API Key 也能跑）
-uv run python agent/main.py --mock --max-loops 3
-
-# 4. 接入真实 LLM
+# 3. 接入真实 LLM
 export LLM_API_KEY="sk-..."
 export LLM_BASE_URL="https://api.deepseek.com/v1"   # 任选 OpenAI 兼容 API
 export LLM_MODEL="deepseek-chat"
-uv run python agent/main.py --mock
+python3 agent/main.py --mock
 
-# 5. 真机模式（赛时）
-uv run python agent/main.py
+# 4. 真机模式（赛时，SDK 原生依赖先装好或 source scripts/env.sh）
+python3 agent/main.py
 ```
 
 ## 顶层 Agent 的模型接口（支持多模态，可换）
@@ -78,9 +75,9 @@ Agent 启动时会把 prompt + 封装接口清单 + 场景注册表自动拼成 
 
 1. 复制 `scenes/scene_greet/` 为 `scenes/scene_你的名字/`。
 2. 实现 `run(params) -> dict`，**finally 里必须归位**（`baseline.reset_to_baseline()`）。
-3. 硬件调用只用 `sdk_wrapper`；可以在自己文件夹自由定义自己的接口函数（底层只能调 `sdk_wrapper`，禁止 `import galbot_sdk`）；需要新的底层封装函数/新依赖 → 群里向负责人 A 申请。
+3. **接口自己组装**：优先用 `sdk_wrapper` 高层函数（自带安全限幅）；也可以在自己文件夹 `import galbot_sdk` 直接包装成你想要的封装——机器人实例必须从 `sdk_wrapper.get_robot()` 拿（禁止自己 init/destroy）。新依赖 → 群里向负责人 A 申请。
 4. 在 `registry/scenes.yaml` 追加自己的条目。
-5. mock 测试：`GALBOT_MOCK=1 uv run python -c "from scenes.scene_你的名字.scene import run; print(run({}))"`
+5. mock 测试：`GALBOT_MOCK=1 python3 -c "from scenes.scene_你的名字.scene import run; print(run({}))"`
 
 ## 安全机制
 
@@ -93,6 +90,6 @@ Agent 启动时会把 prompt + 封装接口清单 + 场景注册表自动拼成 
 | 角色 | 负责 |
 |---|---|
 | 负责人 A（1 人） | `agent/` + `sdk_wrapper/` + `pyproject.toml` + 真机部署 |
-| 场景负责人（N 人） | 各自 `scenes/scene_*/`（含场景内自定义接口）+ `registry/scenes.yaml` 自己的条目 |
+| 场景负责人（N 人） | 各自 `scenes/scene_*/`（可自己组装 SDK 封装）+ `registry/scenes.yaml` 自己的条目 |
 
 详细规则（申请流程、不可碰清单、检查清单）见 **[docs/DEVELOPMENT_RULES.md](docs/DEVELOPMENT_RULES.md)**，开工前全员必读。

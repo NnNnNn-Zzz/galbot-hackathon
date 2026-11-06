@@ -9,7 +9,7 @@ dependencies = [
     "opencv-python>=4.8",
 ]
 
-# 统一依赖管理规则（见 docs/DEVELOPMENT_RULES.md 第六节）：
-# - 仅负责人 A 可修改本文件
-# - 场景负责人需要新依赖时，向 A 申请，由 A 执行 `uv add <pkg>` 并提交 uv.lock
-# - 其他人执行 `uv sync` 同步环境
+# 统一依赖管理规则（见 docs/DEVELOPMENT_RULES.md 第五节）：
+# - 仅负责人 A 可修改本文件；本文件只是依赖清单，环境用 WSL 系统 python3，不强制 uv
+# - 场景负责人需要新依赖时，向 A 申请，由 A 执行 `python3 -m pip install <pkg>` 并更新本清单
+# - 其他人按需 `python3 -m pip install pyyaml numpy opencv-python` 即可
