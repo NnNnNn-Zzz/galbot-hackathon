@@ -275,6 +275,7 @@ def run(params: dict) -> dict:
     stats = {"checked": 0, "discarded": 0, "kept": 0, "manual": 0, "failed": 0}
     details = []
     result = None
+    delegated = False       # table 模式把整场交给 baseline_flow，归位也由它负责
 
     try:
         # --- 阶段 1：进入可作业位置 ---
@@ -287,7 +288,12 @@ def run(params: dict) -> dict:
                 }
                 return result
         else:
-            logger.info("table 模式：跳过抽屉动作，直接在桌面作业")
+            # table 模式 = 基线版 v2，已独立成 baseline_flow.py：
+            # 桌面固定摆位、无视觉识别、固定转向与直行距离，最后回初始位姿。
+            logger.info("table 模式：委托给 baseline_flow 执行基线流程")
+            from scenes.scene_medicine_check import baseline_flow
+            delegated = True
+            return baseline_flow.run(params)
 
         # --- 阶段 2：取一件 → 拍照 → 识别 → 判定 → 处置 ---
         done = 0
@@ -331,10 +337,10 @@ def run(params: dict) -> dict:
         else:
             result = {
                 "success": True,
-                "feedback": (f"药检完成：共检查 {stats[checked]} 件，"
-                             f"清理过期 {stats[discarded]} 件，"
-                             f"放回 {stats[kept]} 件，"
-                             f"待人工复核 {stats[manual]} 件"),
+                "feedback": (f"药检完成：共检查 {stats['checked']} 件，"
+                             f"清理过期 {stats['discarded']} 件，"
+                             f"放回 {stats['kept']} 件，"
+                             f"待人工复核 {stats['manual']} 件"),
                 "suggested_adjustment": None,
                 "details": details,
             }
@@ -350,5 +356,13 @@ def run(params: dict) -> dict:
         return result
 
     finally:
-        # 硬性规范：无论成功、失败还是异常，都必须归位
-        baseline.reset_to_baseline()
+        # 硬性规范：无论成功、失败还是异常，都必须归位。
+        # 两点修正：
+        #   1) table 模式已由 baseline_flow 内部归位，这里不重复发（避免二次 stop/折叠）；
+        #   2) 封装层在没装 galbot_sdk 的纯 mock 环境会抛 ModuleNotFoundError，
+        #      不能让它在 finally 里把已经算好的返回值冲掉。
+        if not delegated:
+            try:
+                baseline.reset_to_baseline()
+            except Exception as exc:  # noqa: BLE001 - 归位失败只记日志
+                logger.error("归位调用失败：%s", exc)
