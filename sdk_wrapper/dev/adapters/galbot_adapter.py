@@ -587,25 +587,27 @@ class GalbotAdapter(RobotAdapter):
             return rejection
         try:
             gm = self._import_sdk()
-            # ⚠️ G1JointGroup 是普通常量类（ClassVar[str] 属性），不是 pybind 枚举，
-            # 没有 __members__（2026-11-07 真机实测 AttributeError）。用 vars() 取属性表。
-            groups = {
-                name: value
-                for name, value in vars(gm.G1JointGroup).items()
-                if isinstance(value, str)
-            }
-            if end_effector not in groups or "gripper" not in end_effector:
+            # ⚠️ G1JointGroup 是 pybind11 类型，静态属性是**描述符**——
+            # vars() 取到的是描述符对象而非字符串，isinstance(value,str) 会全部过滤掉
+            # 导致白名单恒空、一切夹爪被拒（2026-11-07 真机实测 rejected/未知夹爪）。
+            # 正确做法：用 getattr 取值（描述符 __get__ 返回真字符串）。
+            # 候选夹爪固定为 G1 的两个 gripper 组（dexhand/suction_cup 不是 gripper）。
+            candidate_grippers = ("left_gripper", "right_gripper")
+            groups: dict[str, str] = {}
+            for name in candidate_grippers:
+                val = getattr(gm.G1JointGroup, name, None)
+                if isinstance(val, str):
+                    groups[name] = val
+            if end_effector not in groups:
                 return rejected(
                     ErrorCode.INVALID_ARGUMENT,
                     f"未知夹爪 {end_effector!r}",
                     mode=self.mode,
-                    data={"supported_ids": sorted(
-                        v for v in groups.values() if "gripper" in v
-                    )},
+                    data={"supported_ids": sorted(groups.values())},
                 )
             robot, _m, _n = self._ensure_interfaces()
-            # set_gripper_command(end_effector: str, ...) 要字符串。
-            # groups 的值本身就是 str（如 "left_gripper"），直接下发。
+            # set_gripper_command(end_effector: str, ...) 要字符串；
+            # groups[end_effector] 就是 getattr 取到的真字符串（如 "left_gripper"）。
             status = robot.set_gripper_command(
                 groups[end_effector],
                 float(width_m),
