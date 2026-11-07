@@ -259,7 +259,7 @@ def run_part_dev(auto_yes: bool, mock: bool) -> None:
         r2 = adapter.set_gripper_width("left_gripper", 0.0)
         ok = r1.status is TaskStatus.SUCCEEDED and r2.status is TaskStatus.SUCCEEDED
         record("D5", "set_gripper_width", "PASS" if ok else "FAIL",
-               f"{r1.status.value}/{r2.status.value}")
+               f"{r1.status.value}/{r2.status.value} | {r1.message[:60]}")
 
     # D6 末端小位移 + 回位 ---------------------------------------------------- #
     if confirm("D6", f"move_ee_delta(+{EE_DELTA_M}m x) → move_ee_to 回位",

@@ -596,8 +596,11 @@ class GalbotAdapter(RobotAdapter):
                     data={"supported_ids": sorted(k for k in members if "gripper" in k)},
                 )
             robot, _m, _n = self._ensure_interfaces()
+            # ⚠️ SDK set_gripper_command(end_effector: str, ...) 要的是字符串，
+            # 不是 G1JointGroup 枚举成员——传枚举 pybind 会抛 TypeError（2026-11-07 真机实测）。
+            # members 只用于白名单校验，真正下发用原始字符串。
             status = robot.set_gripper_command(
-                members[end_effector],
+                str(end_effector),
                 float(width_m),
                 float(velocity_mps),
                 float(effort),
