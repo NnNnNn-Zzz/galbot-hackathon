@@ -26,8 +26,8 @@
     "edge_margin_px": 3,
     "min_depth_valid_ratio": 0.8,
     "max_depth_m": 1.5,
-    "min_long_dimension_m": 0.06,
-    "min_short_dimension_m": 0.04,
+    "min_long_dimension_m": 0.02,
+    "min_short_dimension_m": 0.015,
     "max_surface_tilt_deg": 30.0,
     "safe_standoff_m": 0.12,
     "depth_sample_stride": 2

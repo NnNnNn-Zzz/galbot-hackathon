@@ -173,6 +173,25 @@ class ChargerYoloGeometryTest(unittest.TestCase):
             result["rejection_reasons"],
         )
 
+    def test_compact_charger_top_above_calibrated_minimums_is_accepted(self):
+        instance = rectangle_instance(250, 200, 285, 230)
+        depth = np.full((512, 640), 0.45, dtype=np.float32)
+
+        result, _ = analyze_charger_top(
+            instance,
+            (512, 640),
+            depth_m=depth,
+            intrinsics={"fx": 520.0, "fy": 520.0, "cx": 320.0, "cy": 256.0},
+            extrinsic=[0.35, 0.12, 0.55, 0.0, 0.0, 0.0, 1.0],
+            min_long_dimension_m=0.02,
+            min_short_dimension_m=0.015,
+            max_surface_tilt_deg=30.0,
+        )
+
+        self.assertTrue(result["eligible_for_precision"])
+        self.assertGreaterEqual(result["surface"]["long_dimension_m"], 0.02)
+        self.assertGreaterEqual(result["surface"]["short_dimension_m"], 0.015)
+
 
 class ChargerYoloToolTest(unittest.TestCase):
     def test_wrist_tool_returns_structured_observation_and_artifacts(self):
