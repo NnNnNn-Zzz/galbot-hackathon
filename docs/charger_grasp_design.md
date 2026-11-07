@@ -122,7 +122,8 @@ find_power_strip
 - `CameraCalibrationTool` 可只读比较右腕 RGB/D405 内参与外参；`check_right_wrist_rgbd_calibration()` 参数不一致时直接拒绝精抓取。
 - `GalbotAdapter.get_chain_frame_pose()` 可读取 `EndEffector`、`Camera`、`TCP` 语义帧；`check_right_arm_eye_in_hand()` 会交叉验证运动学 `Camera` 帧和官方相机外参。
 - `ChargerGraspTool` 复用腕部 YOLO-seg 结果生成 base_link 下的绝对 pre-grasp 位姿；只有显式现场确认才调用现有 `MotionTool.move_ee_to()`，到位后回读 `EndEffector` 位姿并检查平移/旋转误差。该阶段不下落、不闭爪，也不声称抓取成功。
-- 初始末端轴约定为 local `+x=夹爪长轴`、local `+y=闭合轴反向`、local `+z=朝目标表面的接近轴`；长轴正负两个等价朝向中会选择更接近当前末端姿态的一个。该约定仍需用一次短距离监督动作验收。
+- 已用右腕相机与 `galbot_gripper` TCP 只读查询确认末端轴：TCP 沿 local `+X` 偏置约 `0.146 m`，相机光轴也近似 local `+X`，因此 local `+X` 是接近轴；local `Y` 是两指闭合轴，local `Z` 是夹爪长轴。两个绕接近轴的等价 180° 朝向中会选择更接近当前末端姿态的一个。
+- pre-grasp 下发前增加只读 IK/碰撞预检；不可达时 `plan` 阶段直接返回 `safety_limit`，不会再把无 IK 解的位姿交给运动服务。
 
 ### 7.1 现场分阶段测试
 

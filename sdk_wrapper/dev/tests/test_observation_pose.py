@@ -88,9 +88,9 @@ class ObservationPoseTest(unittest.TestCase):
         )
         rotation = np.column_stack(
             [
-                result["gripper_long_axis_base"],
-                np.asarray(result["jaw_closing_axis_base"], dtype=float) * -1.0,
                 result["approach_axis_base"],
+                result["jaw_closing_axis_base"],
+                result["gripper_long_axis_base"],
             ]
         )
         self.assertAlmostEqual(np.linalg.det(rotation), 1.0, places=7)
@@ -102,7 +102,7 @@ class ObservationPoseTest(unittest.TestCase):
             [1.0, 0.0, 0.0],
             standoff_m=0.12,
             current_end_effector_pose_base=[
-                0.45, -0.2, 0.85, 0.0, 1.0, 0.0, 0.0
+                0.45, -0.2, 0.85, -0.70710678, 0.0, 0.70710678, 0.0
             ],
         )
 

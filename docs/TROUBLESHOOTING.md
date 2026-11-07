@@ -105,6 +105,33 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 - **诊断**：每次只下发一个小开度变化，立即目视或手动确认两指是否接触且物体稳定；若已稳定就停止，不要继续逐级收窄或在 `TIMEOUT` 后盲目重发。需要量化夹持时，应另加力/位置反馈，不能把请求开度当成实测开口。
 - **处理与验证**：把“物体限位导致的 `TIMEOUT`”作为停止条件，记录请求开度并标记实际开度未知；程序化抓取必须通过抬起后重新检测目标是否随夹爪移动来确认抓取，不能仅凭 `TIMEOUT` 或“闭合指令已下发”报告成功。2026-11-08 本次以 1.6 cm 请求停下并由现场确认夹持足够紧；未做负载、长期夹持或实际开口尺寸验证。
 
+### 腕部 charger pre-grasp 返回 `FAULT`：目标超出右臂 IK 可达域（2026-11-08）
+
+- **现象**：腕部 YOLO-seg 检出 charger 后，`move_to_wrist_charger_pregrasp(operator_confirmed=True)` 返回 `failed/sdk_error`，消息为“末端移动失败（FAULT）”；机器人没有执行该臂目标。
+- **确认原因**：`service_motion_plan` 在 `01:32:33` 对 `right_arm` 目标 `[0.8988262, -0.4200548, 0.9301692]` 连续报 `TRAC-IK solver failed to find a solution`，随后记录 `SERVICE_STATUS_EXECUTE_FAILED`。把同一位置替换成当前末端姿态仍返回 `FAULT`，而把目标姿态放到当前末端位置则返回 `SUCCESS`，确认主因是**目标平移超出右臂可达域**，不是通信、急停或碰撞服务本身。
+- **附带问题**：首次 YOLO 框落在 charger 窄边/侧面，三维尺寸仅约 `3.6×2.4 cm`，表面法向偏离 base_link 竖直方向约 `60.9°`。末端轴映射也曾错误地假设 local `+Z` 是接近轴；只读挂载 `galbot_gripper` 后确认 TCP 沿 local `+X` 偏置约 `0.146 m`，相机光轴也近似 local `+X`，因此接近轴应为 local `+X`。
+- **诊断**：
+
+  ```bash
+  # HPU 上 source scripts/env_hpu.sh 后，对同一目标做只读 IK：
+  python3 - <<'PY'
+  from sdk_wrapper.dev.adapters.galbot_adapter import GalbotAdapter, _enum_name
+  ad = GalbotAdapter(enable_real_control=True, real_authorized=True)
+  _, motion, _ = ad._ensure_interfaces()
+  target = [0.8988262, -0.4200548, 0.9301692,
+            0.7178771, 0.4775492, -0.1712226, -0.4767411]
+  status, joints = motion.inverse_kinematics(
+      target, ["right_arm"], target_frame="EndEffector",
+      reference_frame="base_link", enable_collision_check=False)
+  print(_enum_name(status), joints)
+  PY
+
+  grep -n "TRAC-IK solver failed\|SERVICE_STATUS_EXECUTE_FAILED" \
+    /userdata/log/service_motion_plan/Info_*.log | tail -40
+  ```
+- **修复**：末端姿态改为 local `+X=接近轴`、local `Y=两指闭合轴`、local `Z=夹爪长轴`；`plan` 阶段先调用只读 `inverse_kinematics`，无解时直接返回 `rejected/safety_limit`，不再把命令送进运动服务。腕部精定位同时增加物理长/短边最小值（`0.06/0.04 m`）和表面法向相对竖直最大倾角（`30°`）门槛。
+- **验证**：2026-11-08 HPU 86 项单测通过。修正轴映射后，同一位姿的旋转量从约 `167°` 降到约 `93°`，但只读 IK 仍返回 `FAULT`，工具在运动前明确拒绝。对目标做虚拟底盘偏移采样，至少需要约前进 `0.20–0.30 m` 并向目标侧调整约 `0.10 m`，右臂 IK 才开始有解；因此下一次真机测试必须先调整底盘观察位，不能继续重发原 pose。
+
 ### 头部关节已动但姿态校验不变：测错 frame（2026-11-07）
 
 - **现象**：`HeadLookTool` 命令 `head_joint2` 增加 0.01 rad，SDK 返回 `SUCCESS`，实际关节变化约 0.00713 rad；但工具读取 `head_base_link` 的姿态几乎不变，因此错误返回“实际俯仰方向与预期不符”。

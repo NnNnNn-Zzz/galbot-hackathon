@@ -216,6 +216,20 @@ class ChargerGraspTool:
                 self.mode,
                 data=data,
             )
+        if bool(self.config.get("require_ik_reachability", True)):
+            reachable = self.motion_tool.check_ee_pose_reachable(
+                grasp_plan["pre_grasp_pose"],
+                chain=chain,
+                enable_collision_check=True,
+            )
+            data["ik_preflight"] = reachable.to_dict()
+            if not reachable.succeeded:
+                return rejected(
+                    reachable.error_code or ErrorCode.SAFETY_LIMIT,
+                    f"腕部视觉位姿未通过只读 IK 预检：{reachable.message}",
+                    self.mode,
+                    data=data,
+                )
         return ok(
             "腕部 charger 坐标已生成 pre-grasp 末端位姿；尚未下发运动",
             self.mode,

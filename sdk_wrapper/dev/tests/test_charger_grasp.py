@@ -1,7 +1,7 @@
 import unittest
 
 from sdk_wrapper.dev.adapters import MockAdapter
-from sdk_wrapper.dev.contracts import ErrorCode, TaskStatus, ok
+from sdk_wrapper.dev.contracts import ErrorCode, TaskStatus, ok, rejected
 from sdk_wrapper.dev.robot_tools.charger_grasp import ChargerGraspTool
 from sdk_wrapper.dev.robot_tools.motion import MotionTool
 from sdk_wrapper.dev.robot_tools.perception import PerceptionTool
@@ -107,6 +107,23 @@ class ChargerGraspToolTest(unittest.TestCase):
             adapter.ee_moves[0]["target"][:3],
             [0.45, -0.2, 0.82],
         )
+
+    def test_unreachable_ik_blocks_plan_before_motion(self):
+        tool, adapter, charger_tool = self.make_tool()
+        tool.motion_tool.check_ee_pose_reachable = lambda *args, **kwargs: rejected(
+            ErrorCode.SAFETY_LIMIT,
+            "target unreachable",
+            "mock",
+            data={"reachable": False},
+        )
+
+        result = tool.plan_wrist_charger_pregrasp()
+
+        self.assertEqual(result.status, TaskStatus.REJECTED)
+        self.assertEqual(result.error_code, ErrorCode.SAFETY_LIMIT)
+        self.assertFalse(result.data["ik_preflight"]["data"]["reachable"])
+        self.assertEqual(charger_tool.calls, 1)
+        self.assertEqual(adapter.ee_moves, [])
 
 
 if __name__ == "__main__":

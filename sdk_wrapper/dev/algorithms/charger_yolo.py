@@ -256,6 +256,9 @@ def analyze_charger_top(
     edge_margin_px: int = 3,
     min_depth_valid_ratio: float = 0.80,
     max_depth_m: float | None = 1.5,
+    min_long_dimension_m: float = 0.0,
+    min_short_dimension_m: float = 0.0,
+    max_surface_tilt_deg: float = 180.0,
     safe_standoff_m: float = 0.12,
     depth_sample_stride: int = 2,
 ) -> tuple[dict[str, typing.Any], np.ndarray]:
@@ -342,6 +345,23 @@ def analyze_charger_top(
                 )
                 if not surface.get("available"):
                     reasons.append("surface_3d_unavailable")
+                else:
+                    if float(surface["long_dimension_m"]) < float(
+                        min_long_dimension_m
+                    ):
+                        reasons.append("surface_long_dimension_below_minimum")
+                    if float(surface["short_dimension_m"]) < float(
+                        min_short_dimension_m
+                    ):
+                        reasons.append("surface_short_dimension_below_minimum")
+                    normal_z = max(
+                        -1.0,
+                        min(1.0, float(surface["surface_normal_base"][2])),
+                    )
+                    surface_tilt_deg = math.degrees(math.acos(normal_z))
+                    surface["tilt_from_base_up_deg"] = round(surface_tilt_deg, 6)
+                    if surface_tilt_deg > float(max_surface_tilt_deg):
+                        reasons.append("surface_normal_tilt_above_maximum")
             else:
                 reasons.append("surface_3d_intrinsics_or_extrinsics_unavailable")
     else:

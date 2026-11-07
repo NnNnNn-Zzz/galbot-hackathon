@@ -389,6 +389,37 @@ class MockAdapter(SyntheticCameraMixin, RobotAdapter):
             },
         )
 
+    def check_end_effector_reachable(
+        self,
+        chain: str,
+        pose: typing.Sequence[float],
+        *,
+        enable_collision_check: bool = True,
+    ) -> ToolResult:
+        if chain not in self._ee_pose:
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                f"Mock 未记录该链：{chain!r}",
+                mode=self.mode,
+            )
+        target = [float(v) for v in list(pose)]
+        if len(target) != 7:
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                "pose 必须是 7 个数值",
+                mode=self.mode,
+            )
+        return ok(
+            f"Mock {chain} 目标位姿可解",
+            mode=self.mode,
+            data={
+                "chain": chain,
+                "target_pose": target,
+                "reachable": True,
+                "collision_check": bool(enable_collision_check),
+            },
+        )
+
     def move_ee_delta(
         self,
         chain: str,

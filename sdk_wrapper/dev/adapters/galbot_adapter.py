@@ -561,6 +561,75 @@ class GalbotAdapter(RobotAdapter):
             timeout=float(timeout_s),
         )
 
+    def check_end_effector_reachable(
+        self,
+        chain: str,
+        pose: typing.Sequence[float],
+        *,
+        enable_collision_check: bool = True,
+    ) -> ToolResult:
+        """Run read-only IK before an absolute EndEffector motion."""
+        rejection = self._authorization_rejection()
+        if rejection is not None:
+            return rejection
+        try:
+            target = [float(v) for v in list(pose)]
+        except (TypeError, ValueError):
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                "pose 必须是 7 个数值",
+                mode=self.mode,
+            )
+        if len(target) != 7 or not all(math.isfinite(v) for v in target):
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                "pose 必须是 7 个有限数值",
+                mode=self.mode,
+                data={"pose_length": len(target)},
+            )
+        try:
+            _robot, motion, _nav = self._ensure_interfaces()
+            status, joints = motion.inverse_kinematics(
+                target,
+                [chain],
+                target_frame="EndEffector",
+                reference_frame="base_link",
+                enable_collision_check=bool(enable_collision_check),
+            )
+        except Exception as exc:  # noqa: BLE001
+            return unknown(
+                ErrorCode.STATE_UNCERTAIN,
+                f"只读 IK 预检异常：{exc}",
+                mode=self.mode,
+                data={"chain": chain, "target_pose": target},
+            )
+        name = _enum_name(status)
+        data = {
+            "chain": chain,
+            "target_pose": target,
+            "reachable": name == "SUCCESS",
+            "collision_check": bool(enable_collision_check),
+            "motion_status": name,
+        }
+        if name == "SUCCESS":
+            data["joint_positions"] = joints
+            return ok(
+                f"{chain} 目标位姿存在 IK 解",
+                mode=self.mode,
+                data=data,
+            )
+        code = (
+            ErrorCode.INVALID_ARGUMENT
+            if name == "INVALID_INPUT"
+            else ErrorCode.SAFETY_LIMIT
+        )
+        return rejected(
+            code,
+            f"{chain} 目标位姿不可达或未通过碰撞预检（{name}）",
+            mode=self.mode,
+            data=data,
+        )
+
     def _motion_result(
         self,
         status: typing.Any,

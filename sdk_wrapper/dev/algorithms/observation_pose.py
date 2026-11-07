@@ -211,11 +211,12 @@ def plan_end_effector_grasp_pose(
 ) -> dict[str, typing.Any]:
     """Plan a top-down pre-grasp pose from a validated charger-top surface.
 
-    The ``EndEffector`` convention used by this project is:
+    The G1 ``EndEffector`` convention verified against the wrist camera and
+    attached gripper TCP is:
 
-    * local +x: gripper long axis;
-    * local -y: jaw closing axis (the physical axis is sign-symmetric);
-    * local +z: approach direction, pointing from the gripper toward the top.
+    * local +x: approach direction, pointing from the flange toward the TCP;
+    * local y: jaw closing axis;
+    * local z: gripper long axis.
 
     The target remains above the surface by ``standoff_m``.  The gripper long
     axis has a 180-degree symmetry for this grasp, so when the current
@@ -247,11 +248,13 @@ def plan_end_effector_grasp_pose(
         reasons.append("standoff_above_maximum")
 
     approach_axis = -normal
-    # [long, -closing, -normal] is a right-handed frame whose local +z looks
-    # toward the surface and local y crosses the charger's short dimension.
+    # The attached gripper TCP lies on local +x. The wrist optical +z also
+    # aligns with local +x, so approach is local +x toward -surface_normal.
+    # Flip both jaw-closing and long axes together for the equivalent 180-deg
+    # rotation around the approach axis.
     candidates = [
-        np.column_stack([long_axis, -closing_axis, approach_axis]),
-        np.column_stack([-long_axis, closing_axis, approach_axis]),
+        np.column_stack([approach_axis, closing_axis, long_axis]),
+        np.column_stack([approach_axis, -closing_axis, -long_axis]),
     ]
     selected_index = 0
     current_rotation_error_deg: float | None = None
@@ -272,8 +275,8 @@ def plan_end_effector_grasp_pose(
     position = center + normal * (standoff if math.isfinite(standoff) else 0.0)
     qx, qy, qz, qw = geo.matrix_to_quaternion(rotation)
     pose = [*position.tolist(), qx, qy, qz, qw]
-    selected_long = rotation[:, 0]
-    selected_closing = -rotation[:, 1]
+    selected_long = rotation[:, 2]
+    selected_closing = rotation[:, 1]
     return {
         "safe_to_plan": not reasons,
         "reasons": reasons,
@@ -290,8 +293,8 @@ def plan_end_effector_grasp_pose(
         "selected_long_axis_sign": 1.0 if selected_index == 0 else -1.0,
         "rotation_from_current_deg": current_rotation_error_deg,
         "end_effector_axis_convention": {
-            "x": "gripper_long_axis",
-            "y": "negative_jaw_closing_axis",
-            "z": "approach_axis_toward_surface",
+            "x": "approach_axis_toward_surface",
+            "y": "jaw_closing_axis",
+            "z": "gripper_long_axis",
         },
     }

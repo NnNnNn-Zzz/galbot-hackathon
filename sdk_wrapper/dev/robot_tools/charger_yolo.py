@@ -127,6 +127,15 @@ class ChargerYoloTool:
             edge_margin_px=int(quality.get("edge_margin_px", 3)),
             min_depth_valid_ratio=float(quality.get("min_depth_valid_ratio", 0.80)),
             max_depth_m=float(quality.get("max_depth_m", 1.5)),
+            min_long_dimension_m=float(
+                quality.get("min_long_dimension_m", 0.0)
+            ),
+            min_short_dimension_m=float(
+                quality.get("min_short_dimension_m", 0.0)
+            ),
+            max_surface_tilt_deg=float(
+                quality.get("max_surface_tilt_deg", 180.0)
+            ),
             safe_standoff_m=float(quality.get("safe_standoff_m", 0.12)),
             depth_sample_stride=int(quality.get("depth_sample_stride", 2)),
         )

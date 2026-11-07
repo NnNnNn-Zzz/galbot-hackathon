@@ -96,6 +96,23 @@ class MotionTool:
             return rejection
         return self.adapter.get_robot_state()
 
+    def check_ee_pose_reachable(
+        self,
+        pose: typing.Sequence[float],
+        *,
+        chain: str = "right_arm",
+        enable_collision_check: bool = True,
+    ) -> ToolResult:
+        """Read-only IK/collision preflight before an absolute arm command."""
+        rejection = self.safety.authorize()
+        if rejection is not None:
+            return rejection
+        return self.adapter.check_end_effector_reachable(
+            chain,
+            pose,
+            enable_collision_check=enable_collision_check,
+        )
+
     def stop_base(self) -> ToolResult:
         rejection = self.safety.authorize()
         if rejection is not None:

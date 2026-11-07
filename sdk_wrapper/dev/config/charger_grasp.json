@@ -8,6 +8,7 @@
   "end_effector": "right_gripper",
   "straight_line": false,
   "require_robot_idle": true,
+  "require_ik_reachability": true,
   "position_tolerance_m": 0.01,
   "rotation_tolerance_deg": 3.0,
   "min_plan_standoff_m": 0.02,

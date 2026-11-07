@@ -1,4 +1,5 @@
 import json
+import math
 import tempfile
 import unittest
 from pathlib import Path
@@ -141,6 +142,36 @@ class ChargerYoloGeometryTest(unittest.TestCase):
         self.assertFalse(result["eligible_for_precision"])
         self.assertIn("depth_valid_ratio_below_minimum", result["rejection_reasons"])
         self.assertIn("surface_3d_unavailable", result["rejection_reasons"])
+
+    def test_side_surface_with_small_dimensions_and_large_tilt_is_rejected(self):
+        instance = rectangle_instance(180, 180, 420, 270)
+        depth = np.full((512, 640), 0.45, dtype=np.float32)
+        angle = math.radians(60.0)
+        tilted_extrinsic = [
+            0.35,
+            0.12,
+            0.55,
+            0.0,
+            math.sin(angle / 2.0),
+            0.0,
+            math.cos(angle / 2.0),
+        ]
+
+        result, _ = analyze_charger_top(
+            instance,
+            (512, 640),
+            depth_m=depth,
+            intrinsics={"fx": 520.0, "fy": 520.0, "cx": 320.0, "cy": 256.0},
+            extrinsic=tilted_extrinsic,
+            min_short_dimension_m=0.04,
+            max_surface_tilt_deg=30.0,
+        )
+
+        self.assertFalse(result["eligible_for_precision"])
+        self.assertIn(
+            "surface_normal_tilt_above_maximum",
+            result["rejection_reasons"],
+        )
 
 
 class ChargerYoloToolTest(unittest.TestCase):

@@ -133,6 +133,16 @@ class RobotAdapter(ABC):
         """Read a semantic chain frame: ``EndEffector``, ``Camera`` or ``TCP``."""
 
     @abstractmethod
+    def check_end_effector_reachable(
+        self,
+        chain: str,
+        pose: typing.Sequence[float],
+        *,
+        enable_collision_check: bool = True,
+    ) -> ToolResult:
+        """Read-only IK preflight for an absolute ``EndEffector`` target."""
+
+    @abstractmethod
     def move_ee_delta(
         self,
         chain: str,
