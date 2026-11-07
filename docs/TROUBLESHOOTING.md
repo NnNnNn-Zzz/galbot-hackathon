@@ -359,3 +359,7 @@ LD_LIBRARY_PATH=/data/galbot/lib /data/galbot/bin/localization_server &
 | `scripts/test_base_motion.py` | 底盘直连冒烟测试（前进Ncm再退回） |
 | `sdk_wrapper/wrapper.py` | 封装层（`set_base_pose` 直接控制 + 安全限幅 + 自动启动导航服务） |
 | `safety_config.json` | 安全参数（单次最远2m / 限速0.3m/s / 最大转向180°） |
+
+### 抽屉实验 Mock 场景触发真机归位（2026-11-08）
+
+NNN 的 Agent 在任一场景返回后都会执行基线检查，并可能触发自动归位。抽屉实验的原生注册入口只运行离线装置，也需要隔离这段场景退出逻辑。该入口现在直接返回 Mock 结果，真机入口仍需由共享 Agent 注入现场封装。执行 `python -m unittest scenes.scene_drawer_experiment.test_scene` 可验证三个实验经原生调度运行时未调用基线读取或归位。

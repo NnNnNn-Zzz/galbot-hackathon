@@ -1,0 +1,66 @@
+{
+  "schema": "drawer_routes/1",
+  "setup_id": null,
+  "frame": "base_link",
+  "source_kind": "site",
+  "commissioned": false,
+  "evidence_ref": null,
+  "verified": {},
+  "waypoints": {
+    "P0": null,
+    "P1": null,
+    "P2": null,
+    "INITIAL_CARRY": null
+  },
+  "waypoint_joints_rad": {
+    "P0": {
+      "right_arm_joint1": 1.2101477026939391,
+      "right_arm_joint2": 0.7310304141044617,
+      "right_arm_joint3": -1.5415034174919129,
+      "right_arm_joint4": 1.631141517162323,
+      "right_arm_joint5": 0.5171743392944336,
+      "right_arm_joint6": -0.5624797344207764,
+      "right_arm_joint7": -1.4594875240325929
+    },
+    "P1": {
+      "right_arm_joint1": 0.5692458719015121,
+      "right_arm_joint2": 0.2688601896166801,
+      "right_arm_joint3": -1.6604868650436402,
+      "right_arm_joint4": 0.8402372419834137,
+      "right_arm_joint5": 0.7454434931278229,
+      "right_arm_joint6": -0.47032336592674256,
+      "right_arm_joint7": 0.17274159640073777
+    },
+    "P2": {
+      "right_arm_joint1": -1.5934019207954406,
+      "right_arm_joint2": 0.7328809648752213,
+      "right_arm_joint3": 1.3060817837715148,
+      "right_arm_joint4": 1.5170730233192444,
+      "right_arm_joint5": -1.155238962173462,
+      "right_arm_joint6": 0.389880895614624,
+      "right_arm_joint7": 0.08773725964128971
+    }
+  },
+  "waypoint_sources": {
+    "P0": {
+      "source": "grasp_capture_20261107_194545/states.ndjson",
+      "samples": 50,
+      "tcp_status": "not_recorded"
+    },
+    "P1": {
+      "source": "pregrasp_to_initial_20261107_200135_P1/states.ndjson",
+      "samples": 20,
+      "tcp_status": "not_recorded"
+    },
+    "P2": {
+      "source": "pregrasp_to_initial_20261107_200135_P2/states.ndjson",
+      "samples": 20,
+      "tcp_status": "not_recorded"
+    },
+    "INITIAL_CARRY": {
+      "samples": 0,
+      "tcp_status": "not_recorded"
+    }
+  },
+  "routes": {}
+}

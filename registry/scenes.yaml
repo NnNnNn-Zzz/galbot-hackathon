@@ -54,3 +54,16 @@
     failure: "VLM没找到杯子 / 反投影失败 / 手臂移动失败"
   recovery_on_failure: "调整观测角度重拍；连续失败则归位并报告相机/VLM状态"
   expected_exit_state: "右臂抬起持物，夹爪闭合，底盘静止"
+
+- name: scene_drawer_experiment
+  path: scenes/scene_drawer_experiment/scene.py
+  when_to_call: "用户明确要求 Mock 抽屉实验时调用"
+  params:
+    backend: "mock"
+    experiment: "1、2 或 3"
+    stage: "实验 1 vision/retreat，实验 2 hover/dry/carry/drop，实验 3 hover/full"
+  expected_feedback:
+    success: "返回 Mock 实验阶段和动作证据"
+    failure: "返回失败步骤及证据"
+  recovery_on_failure: "按返回的 Mock 失败步骤排查"
+  expected_exit_state: "离线模拟状态"

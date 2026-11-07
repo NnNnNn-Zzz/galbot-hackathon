@@ -135,6 +135,9 @@ def execute_decision(decision: dict) -> dict:
 
     if action == "call_scene":
         result = scene_loader.run_scene(target, params)
+        if target == "scene_drawer_experiment":
+            # This registered entry never accesses hardware. Skip the live baseline recovery.
+            return result
         # 场景后基线检查：记录不阻塞
         check = baseline.check_baseline()
         if not check.get("at_baseline"):
