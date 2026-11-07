@@ -71,13 +71,23 @@ class ChargerGraspTool:
         *,
         charger_tool: ChargerYoloTool | None = None,
         motion_tool: MotionTool | None = None,
+        arm: str | None = None,
         config_path: str | os.PathLike[str] = _CONFIG_PATH,
     ) -> None:
         self.perception = perception
         self.adapter = perception.adapter
         with open(config_path, encoding="utf-8") as fh:
             self.config = json.load(fh)
-        self.charger_tool = charger_tool or ChargerYoloTool(perception)
+        if arm is not None:
+            arm_name = str(arm)
+            if arm_name not in ("left", "right"):
+                raise ValueError(f"arm must be 'left' or 'right', got {arm_name!r}")
+            self.config["chain"] = f"{arm_name}_arm"
+            self.config["end_effector"] = f"{arm_name}_gripper"
+        self.charger_tool = charger_tool or ChargerYoloTool(
+            perception,
+            arm=arm,
+        )
         self.motion_tool = motion_tool or MotionTool(
             self.adapter,
             real_authorized=self.mode is RunMode.REAL,

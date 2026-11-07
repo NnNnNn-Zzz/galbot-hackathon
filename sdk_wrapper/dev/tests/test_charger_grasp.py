@@ -72,6 +72,19 @@ class ChargerGraspToolTest(unittest.TestCase):
         )
         self.assertEqual(adapter.ee_moves, [])
 
+    def test_left_arm_override_switches_chain_and_gripper(self):
+        adapter = MockAdapter()
+        perception = PerceptionTool(adapter)
+        tool = ChargerGraspTool(
+            perception,
+            charger_tool=FakeChargerTool(observation_data()),
+            motion_tool=MotionTool(adapter),
+            arm="left",
+        )
+
+        self.assertEqual(tool.config["chain"], "left_arm")
+        self.assertEqual(tool.config["end_effector"], "left_gripper")
+
     def test_ineligible_wrist_observation_never_plans_motion(self):
         tool, adapter, charger_tool = self.make_tool(eligible=False)
 

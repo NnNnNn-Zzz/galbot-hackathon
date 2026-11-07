@@ -117,9 +117,9 @@ def _print_result(label: str, result: dict[str, typing.Any]) -> None:
         )
 
 
-def _confirm_motion() -> bool:
+def _confirm_motion(arm: str) -> bool:
     print(
-        "\n即将下发右臂绝对 EndEffector 位姿。"
+        f"\n即将下发{'左' if arm == 'left' else '右'}臂绝对 EndEffector 位姿。"
         "请确认急停可用、手臂活动区无人无物，且目标位姿已在计划输出中核对。"
     )
     try:
@@ -149,35 +149,54 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="跳过 move 阶段的 MOVE 交互确认；仅建议在 mock 使用",
     )
+    parser.add_argument(
+        "--arm",
+        choices=("left", "right"),
+        default="left",
+        help="执行和腕部观察使用的手臂（默认 left）",
+    )
     args = parser.parse_args(argv)
 
     if args.yes and not args.mock and args.stage == "move":
         parser.error("真机 move 阶段不允许 --yes；必须交互输入 MOVE")
 
     from sdk_wrapper.dev import toolhub
+    from sdk_wrapper.dev.robot_tools.charger_grasp import ChargerGraspTool
+    from sdk_wrapper.dev.robot_tools.charger_yolo import ChargerYoloTool
 
     toolhub.configure(mock=bool(args.mock), force=True)
     mode = toolhub.describe()
     print(
-        f"mode={mode.get('mode')} adapter={mode.get('adapter')} stage={args.stage}"
+        f"mode={mode.get('mode')} adapter={mode.get('adapter')} "
+        f"stage={args.stage} arm={args.arm}"
+    )
+    charger_tool = ChargerYoloTool(toolhub.perception(), arm=args.arm)
+    grasp_tool = ChargerGraspTool(
+        toolhub.perception(),
+        charger_tool=charger_tool,
+        motion_tool=toolhub.motion(),
+        arm=args.arm,
     )
     if not args.mock:
-        print("真机测试会读取右腕 RGB/D405 并调用 YOLO-seg；plan 阶段不会下发动作。")
+        wrist = "左腕" if args.arm == "left" else "右腕"
+        print(f"真机测试会读取{wrist} RGB/D405 并调用 YOLO-seg；plan 阶段不会下发动作。")
 
     if args.stage == "detect":
-        result = toolhub.segment_charger_top_wrist()
+        result = charger_tool.segment_charger_top_wrist().to_dict()
         _print_result("detect", result)
         return 0 if result.get("success") else 1
 
     if args.stage == "plan":
-        result = toolhub.plan_wrist_charger_pregrasp()
+        result = grasp_tool.plan_wrist_charger_pregrasp().to_dict()
         _print_result("plan", result)
         return 0 if result.get("success") else 1
 
-    if not args.yes and not _confirm_motion():
+    if not args.yes and not _confirm_motion(args.arm):
         print("已取消，未下发运动。")
         return 2
-    result = toolhub.move_to_wrist_charger_pregrasp(operator_confirmed=True)
+    result = grasp_tool.move_to_wrist_charger_pregrasp(
+        operator_confirmed=True
+    ).to_dict()
     _print_result("move", result)
     return 0 if result.get("success") else 1
 

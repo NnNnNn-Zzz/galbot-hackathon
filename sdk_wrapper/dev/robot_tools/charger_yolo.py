@@ -71,12 +71,19 @@ class ChargerYoloTool:
         *,
         backend: typing.Any = None,
         stereo_tool: typing.Any = None,
+        arm: str | None = None,
         config_path: str | os.PathLike[str] = _CONFIG_PATH,
         output_dir: str | os.PathLike[str] = _DEFAULT_OUTPUT,
     ) -> None:
         self.perception = perception
         with open(config_path, encoding="utf-8") as fh:
             self.config = json.load(fh)
+        if arm is not None:
+            arm_name = str(arm)
+            if arm_name not in ("left", "right"):
+                raise ValueError(f"arm must be 'left' or 'right', got {arm_name!r}")
+            self.config["wrist_camera"] = f"{arm_name}_arm"
+            self.config["wrist_depth_camera"] = f"{arm_name}_arm_depth"
         cascade = dict(self.config.get("cascade") or {})
         if backend is not None:
             self.backend = backend

@@ -206,6 +206,15 @@ class ChargerYoloToolTest(unittest.TestCase):
             "~/yoloseg/runs/yolo11n_seg_charger_v2/weights/best.pt",
         )
 
+    def test_left_arm_override_switches_wrist_rgb_and_depth(self):
+        tool = ChargerYoloTool(
+            PerceptionTool(MockAdapter()),
+            arm="left",
+        )
+
+        self.assertEqual(tool.config["wrist_camera"], "left_arm")
+        self.assertEqual(tool.config["wrist_depth_camera"], "left_arm_depth")
+
     def test_wrist_tool_returns_structured_observation_and_artifacts(self):
         adapter = MockAdapter()
         perception = PerceptionTool(adapter)
