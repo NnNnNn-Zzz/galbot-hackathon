@@ -51,9 +51,23 @@ cd ~/galbot_hackathon && source scripts/env_hpu.sh
 
 **安全检查（每轮都做）**：
 - 机器人周围 **2 米空旷**，无桌角/线缆/台阶
-- 急停按钮在手边，另一人陪护
+- 急停按钮在手边，另一人陪护；**背部红色急停按钮确认已旋开弹出**（自锁，按下会锁定全部运动）
 - 机器人电量足够（低电跑一半断电很危险）
 - G1 站立姿态稳定（如果是坐姿先扶起来）
+
+**整机工作模式检查（2026-11-07 踩坑后新增，必做）**：
+
+机器人"能连上但完全不动"时，先查整机模式，别怀疑代码：
+```bash
+ssh galbot@<HPU_IP>            # 密码 gb@2023
+ssh root@192.168.1.66         # 从 HPU 跳 XCU，密码 12345678
+cd /data/bin && ./sys_tool    # XCU 系统工具
+# 交互界面里输入 q → 应显示 mode_type: WORKING_MODE
+```
+- 若显示 `ABNORMAL`：查 `/userdata/log/mission_manager/mission_manager.INFO` 搜 `abnormal_service` 定位异常服务，恢复后再跑（重启机器人可清掉大部分异常模式）。
+- **直控底盘（set_base_pose）不需要建图/定位**，但 ABNORMAL 模式会一刀切拒动——这是整机保护，与走哪条控制路径无关。
+- 只有**导航**（GalbotNavigation / navigate_to_place）才需要定位 + 地图 + service_navigation_plan。
+- 排查分工记忆：**能连不动 → 查 XCU（singorix/底盘/模式）；能动但地图/避障异常 → 查 HPU（localization/navigation）**。
 
 ## 二、Part base 实测（第一遍，只测底盘 API）
 
@@ -99,6 +113,7 @@ python3 scripts/test_wrapper_real.py --part dev
 
 | 症状 | 原因 | 处理 |
 |---|---|---|
+| set_base_pose TIMEOUT 且机器人**零位移**（2026-11-07 实测） | 整机进入 ABNORMAL 模式（如同伴调试定位服务触发 localization 异常），整机拒动保护 | XCU `sys_tool`→`q` 查模式；查 mission_manager.INFO 的 abnormal_service；重启机器人恢复 WORKING_MODE 后重试。**不是代码问题** |
 | B6-B8 `status=TIMEOUT` 但 `success=True`（旧版脚本输出） | 旧版 wrapper 用 `bool(res)` 判断，pybind 枚举恒真，把 TIMEOUT 当成了成功（2026-11-07 真机实测踩坑，已修复：如实上报 + 30s 超时 + 重试 1 次） | `git pull` 后重新部署再跑；修复后 TIMEOUT 会如实显示 FAIL，同时观察机器人是否实际移动了 |
 | `ModuleNotFoundError: galbot_sdk` | 没source环境 | `source scripts/env_hpu.sh`（HPU）/ `source scripts/env.sh`（WSL） |
 | 导航一直 `WAIT_INITIALIZED` | service_navigation_plan 没起 | 脚本会自动补启 + 等 2s；仍不行手动 `pgrep -f service_navigation_plan` 检查 |
