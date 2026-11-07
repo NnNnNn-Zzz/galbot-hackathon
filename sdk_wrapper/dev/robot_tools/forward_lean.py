@@ -26,13 +26,10 @@ LEG_JOINT_NAMES = (
     "leg_joint4",
     "leg_joint5",
 )
-MAX_STEP_RAD = 0.01
-MAX_SPEED_RAD_S = 0.03
-MOTION_TIMEOUT_S = 8.0
-MAX_UNCOMMANDED_DRIFT_RAD = 0.01
-MIN_FORWARD_X_M = 0.0005
-MIN_FORWARD_PITCH_RAD = 0.0005
-RESTORE_TOLERANCE_RAD = 0.002
+MAX_SPEED_DEG_S = 5.0
+DEFAULT_SPEED_DEG_S = 3.0
+TARGET_TOLERANCE_RAD = 0.02
+RESTORE_TOLERANCE_RAD = 0.02
 _ROBOT_LOCK = threading.RLock()
 
 
@@ -62,15 +59,15 @@ class ForwardLeanTool:
     """Command only ``leg_joint3``; positive delta means forward lean.
 
     ``leg_joint3`` is part of the height-coordinated leg mechanism. Moving it
-    therefore also changes support geometry and body height. Each command is
-    capped at 0.01 rad and verified through joint feedback, head X motion, and
-    head pitch before being reported as succeeded.
+    therefore also changes support geometry and body height. This is a
+    skill-facing API: the caller chooses the desired lean amount in degrees in
+    a single command. There is no artificial per-call angle or cumulative
+    session limit; motion speed is capped at 5 degrees/second.
     """
 
     TOOL_NAMES = (
         "get_forward_lean_state",
-        "lean_forward_step",
-        "lean_backward_step",
+        "set_forward_lean",
         "restore_lean_joint",
     )
 
@@ -154,73 +151,84 @@ class ForwardLeanTool:
                 self.mode,
             )
 
-    def lean_forward_step(
-        self, step_rad: float = MAX_STEP_RAD, *, operator_confirmed: bool = False
+    def set_forward_lean(
+        self,
+        angle_deg: float,
+        *,
+        speed_deg_s: float = DEFAULT_SPEED_DEG_S,
     ) -> ToolResult:
-        """Increase leg_joint3 by a bounded step to lean forward."""
-        return self._step(step_rad, direction=1, operator_confirmed=operator_confirmed)
+        """Move leg_joint3 by a caller-selected relative lean in one command.
 
-    def lean_backward_step(
-        self, step_rad: float = MAX_STEP_RAD, *, operator_confirmed: bool = False
-    ) -> ToolResult:
-        """Decrease leg_joint3 by a bounded step to return/lean backward."""
-        return self._step(step_rad, direction=-1, operator_confirmed=operator_confirmed)
-
-    def _step(self, step_rad: float, *, direction: int, operator_confirmed: bool) -> ToolResult:
+        Positive ``angle_deg`` means forward lean; negative means return or
+        lean backward. The complete angle change is sent as one target rather
+        than split into hidden micro-steps.
+        """
         if self.mode is RunMode.REAL and not self.real_authorized:
             return rejected(ErrorCode.PERMISSION_DENIED, "真机前倾动作未授权", self.mode)
-        if operator_confirmed is not True:
+        if (
+            isinstance(angle_deg, bool)
+            or not isinstance(angle_deg, (int, float))
+            or not math.isfinite(angle_deg)
+            or angle_deg == 0
+        ):
             return rejected(
-                ErrorCode.PERMISSION_DENIED,
-                "每一步都必须由现场监督者确认后才能下发",
+                ErrorCode.INVALID_ARGUMENT,
+                "angle_deg 必须是非零有限角度",
                 self.mode,
             )
         if (
-            isinstance(step_rad, bool)
-            or not isinstance(step_rad, (int, float))
-            or not math.isfinite(step_rad)
-            or not 0 < step_rad <= MAX_STEP_RAD
+            isinstance(speed_deg_s, bool)
+            or not isinstance(speed_deg_s, (int, float))
+            or not math.isfinite(speed_deg_s)
+            or not 0 < speed_deg_s <= MAX_SPEED_DEG_S
         ):
             return rejected(
                 ErrorCode.SAFETY_LIMIT,
-                f"step_rad 必须大于 0 且不超过 {MAX_STEP_RAD:.3f} rad",
+                f"speed_deg_s 必须大于 0 且不超过 {MAX_SPEED_DEG_S:.1f} °/s",
                 self.mode,
-                {"max_step_rad": MAX_STEP_RAD},
+                {"max_speed_deg_s": MAX_SPEED_DEG_S},
             )
 
         try:
             with _ROBOT_LOCK:
                 robot, _ = self._robot()
                 before = self._read_snapshot(robot)
-                target = round(before["joint_rad"] + direction * float(step_rad), 6)
+                requested_delta_rad = math.radians(float(angle_deg))
+                target = round(before["joint_rad"] + requested_delta_rad, 6)
+                timeout_s = max(8.0, abs(float(angle_deg)) / float(speed_deg_s) + 8.0)
                 status = robot.set_joint_positions(
                     joint_positions=[target],
                     joint_groups=[],
                     joint_names=[LEAN_JOINT_NAME],
                     is_blocking=True,
-                    speed_rad_s=MAX_SPEED_RAD_S,
-                    timeout_s=MOTION_TIMEOUT_S,
+                    speed_rad_s=math.radians(float(speed_deg_s)),
+                    timeout_s=timeout_s,
                 )
                 status_name = _enum_name(status)
                 after = self._read_snapshot(robot)
                 actual_delta = after["joint_rad"] - before["joint_rad"]
-                head_x_delta = after["head_x_m"] - before["head_x_m"]
-                pitch_delta = after["head_rpy_rad"][1] - before["head_rpy_rad"][1]
-                other_drift = max(
-                    abs(after["joint_positions_rad"][name] - before["joint_positions_rad"][name])
-                    for name in LEG_JOINT_NAMES
-                    if name != LEAN_JOINT_NAME
-                )
                 data = {
                     "joint_name": LEAN_JOINT_NAME,
+                    "requested_lean_deg": float(angle_deg),
+                    "speed_deg_s": float(speed_deg_s),
                     "from_joint_rad": before["joint_rad"],
                     "target_joint_rad": target,
                     "actual_joint_rad": after["joint_rad"],
                     "actual_delta_rad": actual_delta,
+                    "actual_lean_deg": math.degrees(actual_delta),
                     "target_error_rad": after["joint_rad"] - target,
-                    "head_x_delta_m": head_x_delta,
-                    "head_pitch_delta_rad": pitch_delta,
-                    "other_leg_joint_max_drift_rad": other_drift,
+                    "head_x_delta_m": after["head_x_m"] - before["head_x_m"],
+                    "head_pitch_delta_rad": (
+                        after["head_rpy_rad"][1] - before["head_rpy_rad"][1]
+                    ),
+                    "other_leg_joint_max_drift_rad": max(
+                        abs(
+                            after["joint_positions_rad"][name]
+                            - before["joint_positions_rad"][name]
+                        )
+                        for name in LEG_JOINT_NAMES
+                        if name != LEAN_JOINT_NAME
+                    ),
                     "sdk_status": status_name,
                     "timestamp_ns": after["timestamp_ns"],
                 }
@@ -232,37 +240,23 @@ class ForwardLeanTool:
                         self.mode,
                         data,
                     )
-                minimum_joint_progress = min(0.001, abs(float(step_rad)) * 0.4)
-                if direction * actual_delta < minimum_joint_progress:
+                if math.copysign(1.0, actual_delta) != math.copysign(
+                    1.0, requested_delta_rad
+                ):
                     return unknown(
                         ErrorCode.STATE_UNCERTAIN,
-                        "目标关节未产生预期方向的变化；停止后续步进",
+                        "目标关节变化方向与请求不一致；请现场确认",
                         self.mode,
                         data,
                     )
-                if direction * head_x_delta < MIN_FORWARD_X_M:
+                if abs(data["target_error_rad"]) > TARGET_TOLERANCE_RAD:
                     return unknown(
                         ErrorCode.STATE_UNCERTAIN,
-                        "关节已移动，但头部未按预期前后移动；停止后续步进",
+                        "SDK 报告成功，但目标关节误差超过验收阈值；请现场确认",
                         self.mode,
                         data,
                     )
-                if direction * pitch_delta < MIN_FORWARD_PITCH_RAD:
-                    return unknown(
-                        ErrorCode.STATE_UNCERTAIN,
-                        "关节已移动，但头部俯仰方向与预期不符；停止后续步进",
-                        self.mode,
-                        data,
-                    )
-                if other_drift > MAX_UNCOMMANDED_DRIFT_RAD:
-                    return unknown(
-                        ErrorCode.STATE_UNCERTAIN,
-                        "检测到未命令腿关节明显漂移；停止后续步进",
-                        self.mode,
-                        data,
-                    )
-            action = "前倾" if direction > 0 else "回正"
-            return ok(f"已完成{action}步进", self.mode, data)
+            return ok("已前倾到请求角度" if angle_deg > 0 else "已回正到请求角度", self.mode, data)
         except PermissionError as exc:
             return rejected(ErrorCode.PERMISSION_DENIED, str(exc), self.mode)
         except Exception as exc:
@@ -273,29 +267,47 @@ class ForwardLeanTool:
             )
 
     def restore_lean_joint(
-        self, target_rad: float, *, operator_confirmed: bool = False
+        self,
+        target_rad: float,
+        *,
+        speed_deg_s: float = DEFAULT_SPEED_DEG_S,
     ) -> ToolResult:
         """Restore only leg_joint3 to a session baseline."""
         if self.mode is RunMode.REAL and not self.real_authorized:
             return rejected(ErrorCode.PERMISSION_DENIED, "真机前倾恢复未授权", self.mode)
-        if operator_confirmed is not True:
-            return rejected(ErrorCode.PERMISSION_DENIED, "恢复前需要现场确认", self.mode)
         if (
             isinstance(target_rad, bool)
             or not isinstance(target_rad, (int, float))
             or not math.isfinite(target_rad)
         ):
             return rejected(ErrorCode.INVALID_ARGUMENT, "恢复目标必须是有限数值", self.mode)
+        if (
+            isinstance(speed_deg_s, bool)
+            or not isinstance(speed_deg_s, (int, float))
+            or not math.isfinite(speed_deg_s)
+            or not 0 < speed_deg_s <= MAX_SPEED_DEG_S
+        ):
+            return rejected(
+                ErrorCode.SAFETY_LIMIT,
+                f"speed_deg_s 必须大于 0 且不超过 {MAX_SPEED_DEG_S:.1f} °/s",
+                self.mode,
+            )
         try:
             with _ROBOT_LOCK:
                 robot, _ = self._robot()
+                before = self._read_snapshot(robot)
                 status = robot.set_joint_positions(
                     joint_positions=[float(target_rad)],
                     joint_groups=[],
                     joint_names=[LEAN_JOINT_NAME],
                     is_blocking=True,
-                    speed_rad_s=MAX_SPEED_RAD_S,
-                    timeout_s=12.0,
+                    speed_rad_s=math.radians(float(speed_deg_s)),
+                    timeout_s=max(
+                        8.0,
+                        math.degrees(abs(before["joint_rad"] - float(target_rad)))
+                        / float(speed_deg_s)
+                        + 8.0,
+                    )
                 )
                 status_name = _enum_name(status)
                 after = self._read_snapshot(robot)

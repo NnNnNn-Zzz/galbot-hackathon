@@ -110,16 +110,19 @@ python3 scripts/keyboard_head_control.py
 
 G1 专用前倾工具（只动 `leg_joint3`，增加量=前倾）：
 
-```bash
-source scripts/env_hpu.sh
-python3 scripts/keyboard_forward_lean.py
+```python
+from sdk_wrapper.dev import ForwardLeanTool
+
+tool = ForwardLeanTool(real_authorized=True)
+result = tool.set_forward_lean(12.0, speed_deg_s=3.0)
+print(result.to_dict())
 ```
 
-`ForwardLeanTool.lean_forward_step()` 只给 `leg_joint3` 正值目标，
-`lean_backward_step()` 只给负值目标；单步最多 0.01 rad、速度 0.03 rad/s。
-每步同时验证目标关节变化方向、头部 X 前移、头部 pitch 方向和其它腿关节漂移。
-脚本以启动时的 `leg_joint3` 为基准，本次偏移限 ±0.05 rad；`f/F` 前倾
-0.005/0.01 rad，`b/B` 回正，`r` 恢复起始，`q` 退出。
+`set_forward_lean(angle_deg)` 由调用方直接决定本次相对变化角度，正数前倾、
+负数回正；整个角度只下发一个 `leg_joint3` 目标，不拆成隐藏小步，也不设置
+单次角度或累计角度上限。速度默认 3°/s，硬上限 5°/s，防止一步过快。返回值
+同时记录实际关节角度、实际前倾角度、头部 X/姿态变化和未命令腿关节漂移；
+SDK 失败、目标误差超过 0.02 rad 或关节实际反向时返回 `unknown`。
 
 推杯子闭环（判不安全 → 语音 → 小步推 → 回位复测）：
 
