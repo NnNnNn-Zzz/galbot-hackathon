@@ -8,7 +8,7 @@
     "/home/mr/yoloseg/runs",
     "~/yoloseg/runs"
   ],
-  "weights": "~/yoloseg/runs/charger_seg_clean/weights/best.pt",
+  "weights": "~/yoloseg/runs/charger_seg_clean_v2/weights/best.pt",
   "target_class": "charger",
   "required_task": "segment",
   "imgsz": 640,
