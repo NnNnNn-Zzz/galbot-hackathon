@@ -83,6 +83,14 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 - **修复**：使用 `StereoDepthTool.capture_stereo_depth()` 直接调该 SDK 模块，保存原始 `.npy` 与伪彩色预览。SDK 未明确原始深度数值的物理单位，暂不换算成米。
 - **验证**：2026-11-07 在 HPU 真机完成封装调用，返回 `succeeded/real`，图像为 1280×960、`uint16`，有效像素比例 1.0，原始值范围 384–7798；预览能区分桌面、物体和背景。此结果验证深度图获取，不证明米制距离精度。
 
+### G1 躯干链：`leg_joint4` 是滚转轴，不是前倾俯仰轴（2026-11-07）
+
+- **现象**：监督脚本向 `leg_joint4` 下发小角度正步进，期望上半身向前探头，但真机实际表现为左右滚转，而不是前后俯仰。
+- **确认原因**：G1 的 `torso` 运动链由 `leg_joint4`、`leg_joint5` 组成；本次真机监督动作确认 `leg_joint4` 产生滚转。`leg_joint5` 是俯仰候选关节，但它在真机上的前倾方向和可用安全范围仍待验证。
+- **诊断**：在 HPU 的 `source scripts/env_hpu.sh` 环境读取 `get_joint_states([], ["leg_joint4", "leg_joint5"])`，再用 `get_transform("base_link", "head_base_link")` 的四元数计算头部 roll/pitch/yaw。只检查头部 X 位移会把滚转也可能造成的位移误判为前倾；应同时检查俯仰角是否显著、是否占主导，并确认未命令的另一个躯干关节没有漂移。
+- **修复**：监督工具只向 `leg_joint5` 下发目标，并把 `leg_joint4` 作为严禁命令的滚转关节持续监测；每步要求头部 X 前移与俯仰变化同时成立，若主要表现为滚转则返回 `state_uncertain` 并停止。单步仍限 0.02 rad、速度 0.05 rad/s，软件范围暂限 ±0.20 rad。
+- **验证结果与边界**：修正后的 6 个单关节单元测试在 PC 和 HPU 均通过，随后只读确认机器人已回到近中立姿态（`leg_joint4≈0`、`leg_joint5≈0`，头部 roll≈0.21°、pitch≈−0.49°）。截至 2026-11-07，`leg_joint5` 的前倾实际动作尚未真机验证，因此上条修复是待现场首步验证的实现，不是已验证的前倾方向或极限。
+
 ### 部署架构：全机器人端（HPU），不在 PC 上跑
 
 - Agent + SDK 都跑在机器人 HPU 上（hostname `galbot-echo`，aarch64，Ubuntu 20.04，Python 3.8）
