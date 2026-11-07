@@ -370,6 +370,31 @@ class MockAdapter(SyntheticCameraMixin, RobotAdapter):
                   "straight_line": bool(straight_line), "motion_status": "SUCCESS"},
         )
 
+    def rotate_ee(
+        self,
+        chain: str,
+        droll_deg: float,
+        dpitch_deg: float,
+        dyaw_deg: float,
+        *,
+        timeout_s: float = 10.0,
+    ) -> ToolResult:
+        """虚拟旋转：只记录，不改位姿（mock 不管姿态）。"""
+        if chain not in self._ee_pose:
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                f"Mock 未记录该链的位姿：{chain!r}",
+                mode=self.mode,
+                data={"supported_ids": sorted(self._ee_pose)},
+            )
+        delta = [float(droll_deg), float(dpitch_deg), float(dyaw_deg)]
+        self._ee_moves.append({"chain": chain, "rotate_deg": delta})
+        return ok(
+            f"Mock {chain} 末端旋转完成",
+            mode=self.mode,
+            data={"chain": chain, "delta_deg": delta, "motion_status": "SUCCESS"},
+        )
+
     def move_ee_to(
         self,
         chain: str,

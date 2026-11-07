@@ -49,7 +49,7 @@ __all__ = [
     "capture_frame", "capture_right_wrist", "read_sensor",
     "list_cameras", "find_object", "inspect_table", "capture_scene",
     # 手臂 / 夹爪
-    "get_ee_pose", "move_arm_to", "move_arm_delta",
+    "get_ee_pose", "move_arm_to", "move_arm_delta", "rotate_wrist",
     "set_gripper", "open_gripper", "close_gripper",
     # 场景
     "push_cup",
@@ -489,6 +489,13 @@ def move_arm_delta(dx: float, dy: float, dz: float, chain: str = "right_arm",
     """末端平移 (dx,dy,dz) 米，姿态不变。"""
     return result_to_dict(get_adapter().move_ee_delta(
         chain, float(dx), float(dy), float(dz), straight_line=straight_line))
+
+
+def rotate_wrist(droll_deg: float = 0.0, dpitch_deg: float = 0.0,
+                 dyaw_deg: float = 0.0, chain: str = "right_arm") -> dict:
+    """末端姿态旋转（度，base_link 系），位置不变。夹爪朝向对准时用。"""
+    return result_to_dict(get_adapter().rotate_ee(
+        chain, float(droll_deg), float(dpitch_deg), float(dyaw_deg)))
 
 
 def set_gripper(end_effector: str = "left_gripper", width_cm: float = 0.0,

@@ -246,6 +246,22 @@ def move_arm_delta(dx: float, dy: float, dz: float, chain: str = "right_arm",
     return _hub().move_arm_delta(dx, dy, dz, chain=chain, straight_line=False)
 
 
+#: 单步手腕旋转限幅（度）。给 VLM 直控用，小步慢转防止甩到位姿奇异。
+WRIST_MAX_STEP_DEG = 30.0
+
+
+def rotate_wrist(droll_deg: float = 0.0, dpitch_deg: float = 0.0,
+                 dyaw_deg: float = 0.0, chain: str = "right_arm") -> dict:
+    """末端姿态旋转（度，base_link 系），位置不变。单轴限幅 WRIST_MAX_STEP_DEG。
+
+    roll=绕x(前后翻腕) pitch=绕y(左右摆腕) yaw=绕z(水平转腕)。
+    """
+    droll_deg = _clamp(droll_deg, WRIST_MAX_STEP_DEG, "wrist_roll")
+    dpitch_deg = _clamp(dpitch_deg, WRIST_MAX_STEP_DEG, "wrist_pitch")
+    dyaw_deg = _clamp(dyaw_deg, WRIST_MAX_STEP_DEG, "wrist_yaw")
+    return _hub().rotate_wrist(droll_deg, dpitch_deg, dyaw_deg, chain=chain)
+
+
 # ---------------------------------------------------------------------------
 # 感知接口
 # ---------------------------------------------------------------------------

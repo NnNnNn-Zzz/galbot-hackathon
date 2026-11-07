@@ -71,14 +71,18 @@ def build_system_prompt(task: str, arm: str) -> str:
 1. {{"action": "move_arm", "params": {{"dx": 0.0, "dy": 0.0, "dz": 0.0}}, "reason": "..."}}
    手臂末端平移，单位米，base_link 坐标系（x 向前，y 向左，z 向上）。
    单轴每步最大 0.10m，建议单步 0.02~0.05m，小步慢调。当前控制的是 {arm}。
-2. {{"action": "open_gripper", "params": {{}}, "reason": "..."}}  张开 {gripper}
-3. {{"action": "close_gripper", "params": {{}}, "reason": "..."}} 闭合 {gripper}
-4. {{"action": "move_base", "params": {{"distance_cm": 0}}, "reason": "..."}}
+2. {{"action": "rotate_wrist", "params": {{"droll_deg": 0, "dpitch_deg": 0, "dyaw_deg": 0}}, "reason": "..."}}
+   只转手腕姿态（位置不动），单位度，base_link 坐标系：
+   dyaw 绕竖直轴水平转腕（换夹取方向最常用），dpitch 上下摆腕，droll 翻腕。
+   单轴每步最大 30°，建议单步 10~20°。夹爪朝向不对时先用它调整，再平移。
+3. {{"action": "open_gripper", "params": {{}}, "reason": "..."}}  张开 {gripper}
+4. {{"action": "close_gripper", "params": {{}}, "reason": "..."}} 闭合 {gripper}
+5. {{"action": "move_base", "params": {{"distance_cm": 0}}, "reason": "..."}}
    底盘前进（正）/后退（负），厘米，小步。
-5. {{"action": "turn", "params": {{"angle_deg": 0}}, "reason": "..."}}
+6. {{"action": "turn", "params": {{"angle_deg": 0}}, "reason": "..."}}
    原地转向，正左转负右转，度。
-6. {{"action": "wait", "params": {{}}, "reason": "..."}}  等一拍（等画面稳定）
-7. {{"action": "finish", "params": {{}}, "reason": "..."}} 任务完成，结束
+7. {{"action": "wait", "params": {{}}, "reason": "..."}}  等一拍（等画面稳定）
+8. {{"action": "finish", "params": {{}}, "reason": "..."}} 任务完成，结束
 
 【规则】
 - 每步只输出一个 JSON，不要输出任何其他文字。
@@ -159,6 +163,8 @@ class ScriptedClient:
 
     SCRIPT = [
         {"action": "open_gripper", "params": {}, "reason": "[剧本] 先张爪"},
+        {"action": "rotate_wrist", "params": {"droll_deg": 0, "dpitch_deg": 15, "dyaw_deg": 0},
+         "reason": "[剧本] 转腕对准"},
         {"action": "move_arm", "params": {"dx": 0.05, "dy": 0.0, "dz": -0.03},
          "reason": "[剧本] 向前下方伸"},
         {"action": "close_gripper", "params": {}, "reason": "[剧本] 闭爪"},
@@ -186,6 +192,11 @@ def execute(decision: dict, arm: str) -> dict:
             return wrapper.move_arm_delta(
                 float(params.get("dx", 0)), float(params.get("dy", 0)),
                 float(params.get("dz", 0)), chain=arm)
+        if action == "rotate_wrist":
+            return wrapper.rotate_wrist(
+                float(params.get("droll_deg", 0)),
+                float(params.get("dpitch_deg", 0)),
+                float(params.get("dyaw_deg", 0)), chain=arm)
         if action == "open_gripper":
             return wrapper.open_gripper(gripper)
         if action == "close_gripper":
