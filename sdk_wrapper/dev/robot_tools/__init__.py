@@ -14,4 +14,4 @@
 
 from __future__ import annotations
 
-__all__ = ["motion", "navigation", "perception", "safety"]
+__all__ = ["motion", "navigation", "perception", "safety", "stereo_depth"]

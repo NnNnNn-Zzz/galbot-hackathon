@@ -50,7 +50,7 @@
       "kind": "stereo_rgb_left",
       "depth_alignment": "none",
       "scale_hint": "广角，适合作全局场景描述",
-      "risk": "无深度；头立体相机需自己跑视差才有深度"
+      "risk": "普通 RGB 接口不返回深度；双目深度请调用 StereoDepthTool.capture_stereo_depth（原始数值单位未确认）"
     },
     "head_right": {
       "sensor": "HEAD_RIGHT_CAMERA",
@@ -58,7 +58,7 @@
       "kind": "stereo_rgb_right",
       "depth_alignment": "none",
       "scale_hint": "广角（与 head_left 构成双目）",
-      "risk": "无深度；双目基线/外参需真机标定后才可三角测量"
+      "risk": "普通 RGB 接口不返回深度；SDK FOUNDATION_STEREO 已提供双目深度图，原始数值单位未确认"
     },
     "front_left": {
       "sensor": "LEFT_FRONT_SURROUND_CAMERA",

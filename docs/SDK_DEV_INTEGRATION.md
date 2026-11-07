@@ -54,6 +54,23 @@ print(p.analyze_scene().to_dict())   # 结构化场景：目标 + 像素 + 3D
 print(p.find_object("red").to_dict())
 ```
 
+头部双目深度（真机 G1 SDK `FOUNDATION_STEREO`，只读）：
+
+```python
+from sdk_wrapper.dev import StereoDepthTool
+
+result = StereoDepthTool().capture_stereo_depth(timeout_s=8.0)
+print(result.to_dict())
+# 成功时：np.load(result.data["depth_ref"], allow_pickle=False) 读取原始二维数组
+```
+
+工具名为 `capture_stereo_depth`，返回通用六字段 `ToolResult`。`depth_ref` 是保存在
+`sdk_wrapper/dev/runs/stereo_depth/` 下的原始 `.npy`，`preview_ref` 是伪彩色预览；
+结果还包含尺寸、传感器名、时间戳、有效像素比例和原始值范围。SDK 将图放在
+`DetectionResult.instance_mask`，但未说明该值的物理单位，因此 `unit` 固定为
+`sdk_raw_unverified`，不可直接当米使用，也不与臂部深度相机的米制数据混用。
+首次调用会初始化模型并等待约 10 秒，后续调用仅运行单次推理。
+
 推杯子闭环（判不安全 → 语音 → 小步推 → 回位复测）：
 
 ```python
