@@ -661,6 +661,18 @@ def move_arm_delta(dx: float, dy: float, dz: float, chain: str = "right_arm",
         chain, float(dx), float(dy), float(dz), straight_line=straight_line))
 
 
+def move_along_gripper(distance_m: float, chain: str = "right_arm",
+                       actuate: str = "with_torso", auto_lift: bool = True) -> dict:
+    """沿**夹爪指向**直线走 distance_m 米（正=伸出逼近，负=后退），姿态不变。
+
+    抓取前的"沿逼近轴推近"、抓完的"沿原路退出"都用这个，别用 move_arm_delta
+    手算方向 —— base_link 系的位移和夹爪朝向没关系，很容易走歪。
+    actuate: with_torso（默认，躯干协助，够得更远）/ with_chain_only（纯手臂）。
+    """
+    return result_to_dict(get_adapter().move_along_gripper(
+        chain, float(distance_m), actuate=actuate, auto_lift=bool(auto_lift)))
+
+
 def rotate_wrist(droll_deg: float = 0.0, dpitch_deg: float = 0.0,
                  dyaw_deg: float = 0.0, chain: str = "right_arm") -> dict:
     """末端姿态旋转（度，base_link 系），位置不变。夹爪朝向对准时用。"""

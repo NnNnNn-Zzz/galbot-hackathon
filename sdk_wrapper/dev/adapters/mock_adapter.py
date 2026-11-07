@@ -19,7 +19,14 @@ from sdk_wrapper.dev.contracts import (
     rejected,
     running,
 )
-from sdk_wrapper.dev.adapters.base import RobotAdapter, SUPPORTED_GESTURES, SUPPORTED_PLACES
+from sdk_wrapper.dev.adapters.base import (
+    ALONG_MAX_TRAVEL_M,
+    ALONG_SAFE_Z,
+    RobotAdapter,
+    SUPPORTED_GESTURES,
+    SUPPORTED_PLACES,
+    quat_to_rot,
+)
 from sdk_wrapper.dev.adapters.synthetic_scene import SyntheticCameraMixin
 
 
@@ -465,6 +472,93 @@ class MockAdapter(SyntheticCameraMixin, RobotAdapter):
             mode=self.mode,
             data={"chain": chain, "delta": [dx, dy, dz], "target_pose": list(pose),
                   "straight_line": bool(straight_line), "motion_status": "SUCCESS"},
+        )
+
+    def move_along_gripper(
+        self,
+        chain: str,
+        distance_m: float,
+        *,
+        actuate: str = "with_torso",
+        auto_lift: bool = True,
+        max_step_m: float = 0.05,
+        enable_collision_check: bool = True,
+        timeout_s: float = 10.0,
+    ) -> ToolResult:
+        """虚拟沿夹爪方向平移：按姿态算轴后改写虚拟位姿，不碰硬件。
+
+        校验与真机保持同一套（行程上限 / actuate 合法 / 单步限幅），
+        免得编排逻辑在 mock 上跑通、换真机才突然被拒。抬升在 mock 里不模拟
+        （没有碰撞概念），所以 ``lifted_m`` 恒为 0。
+        """
+        if chain not in self._ee_pose:
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                f"Mock 未记录该链的位姿：{chain!r}",
+                mode=self.mode,
+                data={"supported_ids": sorted(self._ee_pose)},
+            )
+        try:
+            distance_m = float(distance_m)
+            max_step_m = float(max_step_m)
+        except (TypeError, ValueError):
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT, "distance_m / max_step_m 必须是数值", mode=self.mode
+            )
+        if not math.isfinite(distance_m):
+            return rejected(ErrorCode.INVALID_ARGUMENT, "distance_m 必须是有限数值", mode=self.mode)
+        if abs(distance_m) < 0.005:
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                f"distance_m={distance_m:.4f} 太小；单次至少 5 mm（真机在更小的步长上会卡住）",
+                mode=self.mode,
+            )
+        if abs(distance_m) > ALONG_MAX_TRAVEL_M:
+            return rejected(
+                ErrorCode.SAFETY_LIMIT,
+                f"单次沿夹爪行程 {distance_m:.3f} m 超过上限 {ALONG_MAX_TRAVEL_M:.2f} m",
+                mode=self.mode,
+                data={"max_travel_m": ALONG_MAX_TRAVEL_M},
+            )
+        if actuate not in ALONG_SAFE_Z:
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                f"未知 actuate {actuate!r}",
+                mode=self.mode,
+                data={"legal_actuate": sorted(ALONG_SAFE_Z)},
+            )
+        if not (0.0 < max_step_m <= 0.05):
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                f"max_step_m 必须在 (0, 0.05] 内，收到 {max_step_m}",
+                mode=self.mode,
+            )
+
+        pose = self._ee_pose[chain]
+        rot = quat_to_rot(pose[3:])
+        axis = (rot[0][0], rot[1][0], rot[2][0])
+        start = list(pose)
+        for j in range(3):
+            pose[j] += distance_m * axis[j]
+        self._ee_moves.append(
+            {"chain": chain, "along_gripper": distance_m, "axis": list(axis), "actuate": actuate}
+        )
+        self.push_in_scene(distance_m * axis[0], distance_m * axis[1])
+        return ok(
+            f"Mock {chain} 沿夹爪{'伸出' if distance_m > 0 else '后退'} {abs(distance_m):.3f} m",
+            mode=self.mode,
+            data={
+                "chain": chain,
+                "requested_m": distance_m,
+                "executed_m": round(distance_m, 4),
+                "actuate": actuate,
+                "gripper_axis_base": [round(v, 5) for v in axis],
+                "start_pose": [round(v, 5) for v in start],
+                "end_pose": [round(v, 5) for v in pose],
+                "lifted_m": 0.0,
+                "steps": max(1, math.ceil(abs(distance_m) / max_step_m)),
+                "motion_status": "SUCCESS",
+            },
         )
 
     def rotate_ee(
