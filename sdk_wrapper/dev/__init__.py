@@ -36,6 +36,7 @@ from sdk_wrapper.dev.robot_tools.motion import MotionTool  # noqa: F401
 from sdk_wrapper.dev.robot_tools.navigation import NavigationTool  # noqa: F401
 from sdk_wrapper.dev.robot_tools.safety import RobotSafety  # noqa: F401
 from sdk_wrapper.dev.robot_tools.stereo_depth import StereoDepthTool  # noqa: F401
+from sdk_wrapper.dev.robot_tools.leg_joint_control import LegJointControlTool  # noqa: F401
 
 __all__ = [
     "ErrorCode",
@@ -51,4 +52,5 @@ __all__ = [
     "NavigationTool",
     "RobotSafety",
     "StereoDepthTool",
+    "LegJointControlTool",
 ]
