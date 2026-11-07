@@ -99,6 +99,7 @@ python3 scripts/test_wrapper_real.py --part dev
 
 | 症状 | 原因 | 处理 |
 |---|---|---|
+| B6-B8 `status=TIMEOUT` 但 `success=True`（旧版脚本输出） | 旧版 wrapper 用 `bool(res)` 判断，pybind 枚举恒真，把 TIMEOUT 当成了成功（2026-11-07 真机实测踩坑，已修复：如实上报 + 30s 超时 + 重试 1 次） | `git pull` 后重新部署再跑；修复后 TIMEOUT 会如实显示 FAIL，同时观察机器人是否实际移动了 |
 | `ModuleNotFoundError: galbot_sdk` | 没source环境 | `source scripts/env_hpu.sh`（HPU）/ `source scripts/env.sh`（WSL） |
 | 导航一直 `WAIT_INITIALIZED` | service_navigation_plan 没起 | 脚本会自动补启 + 等 2s；仍不行手动 `pgrep -f service_navigation_plan` 检查 |
 | `切换底盘控制器失败` | 机器人控制器被别的程序占用（如示教器） | 关掉占用方，重启测试进程 |

@@ -197,6 +197,29 @@ def _clamp(value: float, limit: float, name: str) -> float:
     return max(-limit, min(limit, value))
 
 
+#: set_base_pose 阻塞调用的超时（秒）。
+#: 真机实测 15s 偏紧（2026-11-07 场地机器人返回 ControlStatus.TIMEOUT），放宽到 30。
+BASE_POSE_TIMEOUT_S = 30.0
+
+#: 非成功状态（TIMEOUT/WAIT_INITIALIZED 等）后的重试次数与间隔。
+#: 控制器切换后底盘需要就绪窗口，首次下令偶发超时属正常。
+BASE_POSE_RETRIES = 1
+BASE_POSE_RETRY_WAIT_S = 2.0
+
+
+def _status_name(res) -> str:
+    """把 SDK 返回的 pybind 枚举转成成员名（'SUCCESS' / 'TIMEOUT' / ...）。
+
+    ⚠️ 千万别用 bool(res) 判断——pybind 枚举成员恒为真，
+    TIMEOUT/FAILED 也会被当成成功（真机实测踩过这个坑，2026-11-07）。
+    """
+    name = getattr(res, "name", None)
+    if isinstance(name, str):
+        return name
+    text = str(res)
+    return text.rsplit(".", 1)[-1] if "." in text else text
+
+
 def _yaw_to_quaternion(yaw_rad: float) -> tuple:
     """偏航角（弧度）→ 四元数 (qx, qy, qz, qw)。"""
     return (0.0, 0.0, math.sin(yaw_rad / 2.0), math.cos(yaw_rad / 2.0))
@@ -230,10 +253,23 @@ def _move_straight(x_m: float, yaw_rad: float) -> dict:
     """
     robot = _get_robot()
     # set_base_pose(x, y, yaw, frame_id='rel(0)'=相对当前位置, is_blocking=True)
-    res = robot.set_base_pose(x_m, 0.0, yaw_rad,
-                               frame_id='rel(0)', is_blocking=True, timeout_s=15.0)
-    ok = str(res) == "ControlStatus.SUCCESS" or res == "SUCCESS" or bool(res)
-    return {"success": ok, "status": str(res),
+    # 真实状态必须如实上报：只有 SUCCESS 才算 success，TIMEOUT 等一律如实透传。
+    name = ""
+    res = None
+    for attempt in range(BASE_POSE_RETRIES + 1):
+        res = robot.set_base_pose(x_m, 0.0, yaw_rad,
+                                  frame_id='rel(0)', is_blocking=True,
+                                  timeout_s=BASE_POSE_TIMEOUT_S)
+        name = _status_name(res)
+        if name == "SUCCESS":
+            break
+        if attempt < BASE_POSE_RETRIES:
+            logger.warning("set_base_pose 第 %d 次返回 %s（x=%.2f yaw=%.2f），"
+                           "%.1fs 后重试一次",
+                           attempt + 1, name, x_m, yaw_rad, BASE_POSE_RETRY_WAIT_S)
+            time.sleep(BASE_POSE_RETRY_WAIT_S)
+    ok = name == "SUCCESS"
+    return {"success": ok, "status": name,
             "message": "ok" if ok else f"set_base_pose: {res}"}
 
 
