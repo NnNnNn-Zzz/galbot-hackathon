@@ -55,7 +55,10 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
+import subprocess
+import sys
 import threading
 import time
 import typing
@@ -121,6 +124,58 @@ _MOTION_STATUS_MAP: dict[str, tuple[TaskStatus, ErrorCode | None]] = {
 }
 
 
+#: 底盘单次位移硬上限（米）。软限幅在 toolhub / wrapper 层（safety_config.json）。
+_BASE_MAX_DISTANCE_M = 2.0
+
+#: 底盘单次转向硬上限（度）。
+_BASE_MAX_TURN_DEG = 180.0
+
+
+def _sdk_bootstrap() -> str:
+    """把 GalbotSDK 的 Python 包目录注入 sys.path（PYTHONPATH 已提供则跳过）。"""
+    import glob
+    import importlib.util
+    import platform as _platform
+
+    if importlib.util.find_spec("galbot_sdk") is not None:
+        return ""
+    sdk_root = os.environ.get("GALBOT_SDK_ROOT", os.path.expanduser("~/GalbotSDK"))
+    arch = _platform.machine()
+    candidates = sorted(glob.glob(
+        os.path.join(sdk_root, "galbot_sdk", f"linux-{arch}-gcc*", "lib", "python")))
+    if not candidates:
+        return ""
+    pkg_dir = candidates[0]
+    if pkg_dir not in sys.path:
+        sys.path.insert(0, pkg_dir)
+    return pkg_dir
+
+
+def _ensure_nav_service() -> None:
+    """确保导航规划服务 service_navigation_plan 在跑。
+
+    launcher.service 有时没启动它（实测场地机器人就没起），导致所有导航命令返回
+    WAIT_INITIALIZED。检测缺失则自动拉起（仅 HPU 真机存在该二进制时生效）。
+    """
+    nav_svc = "/data/galbot/bin/service_navigation_plan"
+    if not os.path.exists(nav_svc):
+        return
+    try:
+        probe = subprocess.run(["pgrep", "-f", "service_navigation_plan"],
+                               capture_output=True, timeout=5)
+        if probe.returncode == 0:
+            return
+    except Exception:  # noqa: BLE001 - 探测失败就继续尝试拉起
+        pass
+    env = os.environ.copy()
+    env["LD_LIBRARY_PATH"] = "/data/galbot/lib:" + env.get("LD_LIBRARY_PATH", "")
+    subprocess.Popen([nav_svc], env=env,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                     start_new_session=True)
+    LOG.info("已启动 service_navigation_plan（launcher 未自动拉起，手动补启）")
+    time.sleep(3.0)
+
+
 def _enum_name(value: typing.Any) -> str:
     """把 pybind 枚举转成成员名。"""
     name = getattr(value, "name", None)
@@ -163,6 +218,7 @@ class GalbotAdapter(RobotAdapter):
         self._navigation: typing.Any = None
         self._sdk: typing.Any = None
         self._lock = threading.RLock()
+        self._chassis_ready = False
         self._nav_tasks: dict[str, dict[str, typing.Any]] = {}
 
     # ══════════════════════════════════════════════════════════════════ #
@@ -183,29 +239,44 @@ class GalbotAdapter(RobotAdapter):
         return None
 
     def _import_sdk(self) -> typing.Any:
-        """懒加载 galbot_sdk.g1。Windows 上会失败——给出能直接照做的提示。"""
+        """懒加载 galbot_sdk.g1。找不到包目录时先 bootstrap 一次再试。"""
         if self._sdk is not None:
             return self._sdk
         try:
             import galbot_sdk.g1 as gm  # noqa: PLC0415 - 故意延迟到真机才 import
-        except Exception as exc:  # noqa: BLE001
-            raise RuntimeError(
-                "无法导入 galbot_sdk（该模块是 Linux x86_64 ELF，Windows 上不可用）。\n"
-                f"  原始错误：{exc}\n"
-                "  检查：export PYTHONPATH=/opt/galbot/galbot_sdk/linux-x86_64-gcc940/lib/python\n"
-                "        export LD_LIBRARY_PATH=/opt/galbot/galbot_sdk/linux-x86_64-gcc940/lib"
-            ) from exc
+        except Exception as first_exc:  # noqa: BLE001
+            pkg_dir = ""
+            try:
+                pkg_dir = _sdk_bootstrap()
+                import galbot_sdk.g1 as gm  # noqa: PLC0415, F811
+            except Exception as exc:  # noqa: BLE001
+                raise RuntimeError(
+                    "无法导入 galbot_sdk（该模块是 Linux x86_64 ELF，Windows 上不可用）。\n"
+                    f"  原始错误：{first_exc}\n"
+                    f"  bootstrap 后仍失败：{exc}（注入路径：{pkg_dir or '未找到'}）\n"
+                    "  检查：export PYTHONPATH=/opt/galbot/galbot_sdk/linux-x86_64-gcc940/lib/python\n"
+                    "        export LD_LIBRARY_PATH=/opt/galbot/galbot_sdk/linux-x86_64-gcc940/lib"
+                ) from exc
         self._sdk = gm
         return gm
 
-    def _ensure_interfaces(self) -> tuple[typing.Any, typing.Any, typing.Any]:
-        """一次性建好三个单例：Motion → Navigation → Robot。
+    def _ensure_interfaces(
+        self, *, need_nav: bool = True
+    ) -> tuple[typing.Any, typing.Any, typing.Any]:
+        """一次性建好三个单例：Motion → (Navigation) → Robot。
 
         顺序照官方 move_line.py（先 motion.init() 再 robot.init()）；
         官方 example6 还会 nav.init()。
+
+        ``need_nav=False`` 时**跳过 Navigation** —— 底盘直控 / 机械臂 / 夹爪 / 相机
+        都不需要导航服务。这是"底盘能单独动"的关键：导航后端
+        ``service_navigation_plan`` 没起来时，不该把整机初始化一起拖死。
+        真需要导航时会自动补建（见 ``_ensure_navigation``）。
         """
         with self._lock:
             if self._robot is not None:
+                if need_nav:
+                    self._ensure_navigation()
                 return self._robot, self._motion, self._navigation
 
             gm = self._import_sdk()
@@ -217,17 +288,17 @@ class GalbotAdapter(RobotAdapter):
             motion = gm.GalbotMotion()
             if not motion.init():
                 raise RuntimeError("GalbotMotion.init() 返回 False")
+            self._motion = motion
 
-            navigation = gm.GalbotNavigation()
-            if not navigation.init():
-                raise RuntimeError("GalbotNavigation.init() 返回 False")
+            navigation = self._ensure_navigation() if need_nav else None
 
             robot = gm.GalbotRobot()
             if not robot.init({members[name] for name in self._sensors}):
                 raise RuntimeError("GalbotRobot.init() 返回 False（通信总线未建立）")
 
             self._robot, self._motion, self._navigation = robot, motion, navigation
-            LOG.info("GalbotSDK 初始化完成（motion/navigation/robot），传感器：%s", list(self._sensors))
+            LOG.info("GalbotSDK 初始化完成（motion / navigation=%s / robot），传感器：%s",
+                     navigation is not None, list(self._sensors))
             return robot, motion, navigation
 
     def close(self) -> None:
@@ -263,20 +334,20 @@ class GalbotAdapter(RobotAdapter):
         return members[sensor]
 
     def get_rgb_data(self, sensor: str) -> typing.Any:
-        robot, _m, _n = self._ensure_interfaces()
+        robot, _m, _n = self._ensure_interfaces(need_nav=False)
         fmt = self._import_sdk().RgbOutputFormat
         return robot.get_rgb_data(self._sensor(sensor), fmt.JPEG, True)
 
     def get_depth_data(self, sensor: str) -> typing.Any:
-        robot, _m, _n = self._ensure_interfaces()
+        robot, _m, _n = self._ensure_interfaces(need_nav=False)
         return robot.get_depth_data(self._sensor(sensor))
 
     def get_camera_intrinsic(self, sensor: str) -> typing.Any:
-        robot, _m, _n = self._ensure_interfaces()
+        robot, _m, _n = self._ensure_interfaces(need_nav=False)
         return robot.get_camera_intrinsic(self._sensor(sensor))
 
     def get_sensor_extrinsic(self, sensor: str, reference_frame: str = "base_link") -> typing.Any:
-        robot, _m, _n = self._ensure_interfaces()
+        robot, _m, _n = self._ensure_interfaces(need_nav=False)
         return robot.get_sensor_extrinsic(self._sensor(sensor), reference_frame)
 
     # ══════════════════════════════════════════════════════════════════ #
@@ -605,7 +676,7 @@ class GalbotAdapter(RobotAdapter):
                     mode=self.mode,
                     data={"supported_ids": sorted(groups.values())},
                 )
-            robot, _m, _n = self._ensure_interfaces()
+            robot, _m, _n = self._ensure_interfaces(need_nav=False)
             # set_gripper_command(end_effector: str, ...) 要字符串；
             # groups[end_effector] 就是 getattr 取到的真字符串（如 "left_gripper"）。
             status = robot.set_gripper_command(
@@ -629,14 +700,203 @@ class GalbotAdapter(RobotAdapter):
         return failed(ErrorCode.SDK_ERROR, f"设置夹爪失败（{name}）", mode=self.mode, data=data)
 
     # ══════════════════════════════════════════════════════════════════ #
+    # 底盘：直控 set_base_pose（并入原 wrapper 能力，不需要地图/定位）
+    # ══════════════════════════════════════════════════════════════════ #
+    def _ensure_navigation(self) -> typing.Any:
+        """懒建 GalbotNavigation（真需要导航时才拉起服务）。"""
+        if self._navigation is not None:
+            return self._navigation
+        gm = self._import_sdk()
+        _ensure_nav_service()
+        navigation = gm.GalbotNavigation()
+        if not navigation.init():
+            raise RuntimeError(
+                "GalbotNavigation.init() 返回 False（service_navigation_plan 未就绪？）"
+            )
+        self._navigation = navigation
+        LOG.info("GalbotNavigation 初始化完成")
+        return navigation
+
+    def _ensure_chassis_pose_ctrl(self) -> str:
+        """把底盘控制器切到 CHASSIS_POSE_CTRL —— set_base_pose 直控的前提。幂等。
+
+        官方 SDK 切完控制器底盘会进初始化态，立即下令返回 WAIT_INITIALIZED，
+        所以成功后等 2s（原 wrapper 真机实测的就绪窗口）。
+        """
+        with self._lock:
+            if self._chassis_ready:
+                return "SUCCESS"
+            gm = self._import_sdk()
+            robot, _m, _n = self._ensure_interfaces(need_nav=False)
+            name = "UNKNOWN"
+            for attempt in range(3):
+                try:
+                    name = _enum_name(
+                        robot.switch_controller(gm.G1ControllerName.CHASSIS_POSE_CTRL)
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    name = f"EXCEPTION:{exc}"
+                if name == "SUCCESS":
+                    self._chassis_ready = True
+                    LOG.info("底盘控制器已切换到 CHASSIS_POSE_CTRL")
+                    time.sleep(2.0)
+                    return name
+                LOG.warning("切换 CHASSIS_POSE_CTRL 第 %d 次返回 %s", attempt + 1, name)
+                time.sleep(1.0)
+            return name
+
+    def move_base(self, distance_m: float, yaw_rad: float = 0.0, *,
+                  timeout_s: float = 30.0, retries: int = 1) -> ToolResult:
+        """相对当前位姿前进/后退 + 原地转向（``set_base_pose`` frame_id='rel(0)'）。
+
+        **不经过 GalbotNavigation**：不需要 localization / map / 规划服务，
+        没建图的场地也能动。软限幅在 toolhub / wrapper 层做，这里只挡物理硬上限。
+        """
+        rejection = self._authorization_rejection()
+        if rejection is not None:
+            return rejection
+        try:
+            distance_m = float(distance_m)
+            yaw_rad = float(yaw_rad)
+        except (TypeError, ValueError):
+            return rejected(ErrorCode.INVALID_ARGUMENT,
+                            "distance_m / yaw_rad 必须是数值", mode=self.mode)
+        if abs(distance_m) > _BASE_MAX_DISTANCE_M:
+            return rejected(
+                ErrorCode.SAFETY_LIMIT,
+                f"单次底盘位移 {distance_m:.2f} m 超过硬上限 {_BASE_MAX_DISTANCE_M} m",
+                mode=self.mode, data={"distance_m": distance_m},
+            )
+        if abs(yaw_rad) > math.radians(_BASE_MAX_TURN_DEG):
+            return rejected(
+                ErrorCode.SAFETY_LIMIT,
+                f"单次转向 {math.degrees(yaw_rad):.1f}° 超过硬上限 {_BASE_MAX_TURN_DEG:.0f}°",
+                mode=self.mode, data={"yaw_rad": yaw_rad},
+            )
+
+        ctrl = self._ensure_chassis_pose_ctrl()
+        if ctrl != "SUCCESS":
+            return failed(
+                ErrorCode.NOT_READY,
+                f"底盘控制器切换失败（{ctrl}），未下发运动指令",
+                mode=self.mode, data={"control_status": ctrl},
+            )
+
+        try:
+            robot, _m, _n = self._ensure_interfaces(need_nav=False)
+        except Exception as exc:  # noqa: BLE001
+            return unknown(ErrorCode.STATE_UNCERTAIN, f"SDK 初始化失败：{exc}", mode=self.mode)
+
+        name = ""
+        for attempt in range(max(0, int(retries)) + 1):
+            try:
+                res = robot.set_base_pose(
+                    distance_m, 0.0, yaw_rad,
+                    frame_id="rel(0)", is_blocking=True, timeout_s=float(timeout_s),
+                )
+            except TypeError:
+                # 老版本 pybind 只吃位置参数
+                try:
+                    res = robot.set_base_pose(distance_m, 0.0, yaw_rad,
+                                              "rel(0)", True, float(timeout_s))
+                except Exception as exc:  # noqa: BLE001
+                    return unknown(
+                        ErrorCode.STATE_UNCERTAIN,
+                        f"下发底盘运动时抛错：{exc}；机器人是否已移动未知",
+                        mode=self.mode,
+                    )
+            except Exception as exc:  # noqa: BLE001
+                return unknown(
+                    ErrorCode.STATE_UNCERTAIN,
+                    f"下发底盘运动时抛错：{exc}；机器人是否已移动未知",
+                    mode=self.mode,
+                )
+            name = _enum_name(res)
+            if name == "SUCCESS":
+                break
+            if attempt < int(retries):
+                LOG.warning("set_base_pose 第 %d 次返回 %s，2s 后重试", attempt + 1, name)
+                time.sleep(2.0)
+
+        data = {"distance_m": distance_m, "yaw_rad": yaw_rad, "control_status": name}
+        if name == "SUCCESS":
+            return ok(
+                f"底盘已移动：{distance_m * 100:.1f} cm / {math.degrees(yaw_rad):.1f}°",
+                self.mode, data=data,
+            )
+        if name == "TIMEOUT":
+            return failed(ErrorCode.TIMEOUT, f"底盘运动超时（{name}）", self.mode, data=data)
+        return failed(ErrorCode.SDK_ERROR, f"底盘运动失败（{name}）", self.mode, data=data)
+
+    def stop_base(self) -> ToolResult:
+        """停底盘：先撤导航任务，再补一条零位移指令（真正压住底盘）。
+
+        ⚠️ 只调 ``stop_navigation`` 在"导航没起过"的进程里等于空操作，
+        所以底盘控制器就绪时再发一次 ``set_base_pose(0,0,0)`` 兜底。
+        """
+        nav_err = None
+        nav_used = False
+        if self._navigation is not None:
+            nav_used = True
+            try:
+                self._navigation.stop_navigation()
+            except Exception as exc:  # noqa: BLE001
+                nav_err = str(exc)
+
+        zero_status = "skipped(底盘未启用)"
+        if self._chassis_ready:
+            try:
+                robot, _m, _n = self._ensure_interfaces(need_nav=False)
+                try:
+                    res = robot.set_base_pose(0.0, 0.0, 0.0, frame_id="rel(0)",
+                                              is_blocking=True, timeout_s=5.0)
+                except TypeError:
+                    res = robot.set_base_pose(0.0, 0.0, 0.0, "rel(0)", True, 5.0)
+                zero_status = _enum_name(res)
+            except Exception as exc:  # noqa: BLE001
+                zero_status = f"EXCEPTION:{exc}"
+
+        data = {"stopped": True, "nav": "stopped" if nav_used else "not_used",
+                "zero_cmd": zero_status}
+        if nav_err:
+            return unknown(ErrorCode.STATE_UNCERTAIN,
+                           f"停止导航时抛错：{nav_err}", mode=self.mode, data=data)
+        return ok("底盘已停止", self.mode, data=data)
+
+    def read_sensor(self, sensor_name: str) -> ToolResult:
+        """读任意传感器（相机请走 get_rgb_data / get_depth_data）。"""
+        rejection = self._authorization_rejection()
+        if rejection is not None:
+            return rejection
+        try:
+            robot, _m, _n = self._ensure_interfaces(need_nav=False)
+        except Exception as exc:  # noqa: BLE001
+            return unknown(ErrorCode.STATE_UNCERTAIN, f"SDK 初始化失败：{exc}", mode=self.mode)
+        getter = getattr(robot, "get_sensor_data", None)
+        if not callable(getter):
+            return rejected(
+                ErrorCode.NOT_SUPPORTED,
+                f"SDK 没有 get_sensor_data，无法读 {sensor_name!r}；"
+                f"相机请用 get_rgb_data / get_depth_data",
+                mode=self.mode, data={"sensor": sensor_name},
+            )
+        try:
+            value = getter(sensor_name)
+        except Exception as exc:  # noqa: BLE001
+            return failed(ErrorCode.SDK_ERROR, f"读传感器失败：{exc}", mode=self.mode,
+                          data={"sensor": sensor_name})
+        return ok(f"已读取传感器 {sensor_name}", self.mode,
+                  data={"sensor": sensor_name, "value": value})
+
+    # ══════════════════════════════════════════════════════════════════ #
     # 语音（播放预生成的 16 kHz / 16-bit / mono PCM）
     # ══════════════════════════════════════════════════════════════════ #
     def write_audio_stream_output(self, audio_chunk: bytes, stream_id: str = "") -> bool:
-        robot, _m, _n = self._ensure_interfaces()
+        robot, _m, _n = self._ensure_interfaces(need_nav=False)
         return bool(robot.write_audio_stream_output(audio_chunk, stream_id))
 
     def set_volume(self, volume: float) -> bool:
-        robot, _m, _n = self._ensure_interfaces()
+        robot, _m, _n = self._ensure_interfaces(need_nav=False)
         return bool(robot.set_volume(float(volume)))
 
     # ══════════════════════════════════════════════════════════════════ #

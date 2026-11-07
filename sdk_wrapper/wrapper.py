@@ -1,282 +1,163 @@
-"""SDK 封装层：提供带安全限幅的高层接口 + 共享单例入口。
+"""统一封装层（薄壳）：能力全部落在 ``sdk_wrapper.dev``，本模块只做三件事。
 
-安全策略：
-- 高层接口（move_forward / turn / ...）按 safety_config.json 限幅（clamp），超限不报错、静默截断并记日志。
-- galbot_sdk 全局单例由本模块管理；场景脚本**允许**自己组装 SDK 封装
-  （import galbot_sdk），但实例必须从本模块的 get_robot()/get_nav() 拿，
-  严禁自行 init()/destroy()（会打死主进程单例和急停监听）。
-- 支持 MOCK 模式（无真机/无 SDK 时开发调试）：
-    方式1: 命令行 `python agent/main.py --mock`
-    方式2: 环境变量 `GALBOT_MOCK=1`
+    ┌──────────────────────────────────────────────────────────────┐
+    │ 1. 名字兼容：保留全部历史函数名与参数（老脚本一行不用改）        │
+    │ 2. 安全限幅：按 safety_config.json 截断距离/角度/位移           │
+    │ 3. 单位换算：对外厘米/度 ↔ dev 层米/弧度                        │
+    └──────────────────────────────────────────────────────────────┘
 
-真机接口说明（Galbot SDK v1.10.0 / G1）：
-- 底盘移动走 GalbotNavigation.move_straight_to(goal_pose, is_blocking, timeout)，
-  goal_pose = [x, y, z, qx, qy, qz, qw]，相对当前 base_link（odom 系，单位米/四元数）。
-- 用导航前必须先把控制器切到 CHASSIS_POSE_CTRL（本模块在 _get_nav() 里自动完成）。
-- SDK 不在项目 venv 里，_sdk_bootstrap() 负责把 SDK 包目录注入 sys.path；
-  原生依赖（libfastcdr 等）需先执行 `sudo ~/GalbotSDK/install.sh`，
-  或 source scripts/env.sh 设置 LD_LIBRARY_PATH。
+════════════════════════════════════════════════════════════════════════════
+为什么要改成薄壳（这是本文件第 N 版）
+════════════════════════════════════════════════════════════════════════════
+老版本自己 ``GalbotRobot()`` / ``GalbotNavigation()`` / ``GalbotMotion()`` 各 init 一套，
+dev 层 ``GalbotAdapter`` 又 init 一套 —— 同进程**两套 SDK 单例互踩**（纪律④），
+于是能力被割裂成"底盘在 wrapper、手臂/相机/感知在 dev"两块，接新能力时要在两边重复实现。
+
+现在改成：
+
+    agent / 场景脚本 / 老脚本
+              │   本文件（薄壳：限幅 + 单位换算 + dict 返回）
+              ▼
+    sdk_wrapper.dev.toolhub（dev 层统一工具入口）
+              ▼
+    GalbotAdapter / MockAdapter   ← 全进程**唯一**的 SDK 单例持有者
+
+⚠️ 老代码若 import 了本模块的私有单例（``_get_robot`` / ``get_nav``），
+   仍可用，但它们现在返回的是 **adapter 内部的那一份**，不再是另外 new 的。
+   新代码请直接调本模块的函数，或 ``sdk_wrapper.dev.toolhub``。
 """
 
 from __future__ import annotations
-import glob
+
 import logging
 import math
 import os
-import platform
-import subprocess
-import sys
-import time
 
 from sdk_wrapper.config import load_safety
 
 logger = logging.getLogger("sdk_wrapper")
 
-_robot = None
-_nav = None
+#: 兜底开关：环境变量 GALBOT_MOCK=1 与 --mock 等效（保留旧行为）
 _mock_mode = os.environ.get("GALBOT_MOCK", "0") == "1"
+
+#: 夹爪默认运动速度（米/秒）与力档位。沿用 dev adapter 真机验证值（D5 通过）。
+GRIPPER_DEFAULT_VELOCITY_MPS = 0.05
+GRIPPER_DEFAULT_EFFORT = 10.0
+
+#: 手臂单次平移限幅（米）。
+ARM_MAX_STEP_M = 0.10
+
+#: 夹爪物理开度上限（米）。dev 层 D5 真机验证 0~0.12m 均 SUCCESS，保守取 0.085m。
+GRIPPER_MAX_WIDTH_M = 0.085
+
+
+# ---------------------------------------------------------------------------
+# 内部：拿到 dev 层统一入口
+# ---------------------------------------------------------------------------
+def _hub():
+    """懒加载 dev 层工具入口。
+
+    懒加载是必须的：``sdk_wrapper/__init__`` → wrapper → dev.toolhub → wrapper
+    如果在模块顶层 import 会形成循环。
+    """
+    from sdk_wrapper.dev import toolhub
+
+    return toolhub
 
 
 def set_mock_mode(enabled: bool):
     """由 agent/main.py 在启动时根据 --mock 参数调用。"""
     global _mock_mode
-    _mock_mode = enabled
+    _mock_mode = bool(enabled)
+    _hub().configure(mock=bool(enabled))
 
 
+# ---------------------------------------------------------------------------
+# 单例入口（兼容保留）
+# ---------------------------------------------------------------------------
 def get_robot():
-    """公开入口：给场景自定义封装用的共享机器人单例。
+    """公开入口：共享机器人单例。
 
-    真机返回 GalbotRobot（已 init），mock 返回 MockRobot。
-    场景禁止自己 GalbotRobot() init / destroy——必须从这里拿。
+    真机返回 ``GalbotRobot``（adapter 内部那一份，已 init）；
+    mock 返回 ``MockAdapter``（它自带 stop_base / set_gripper 等方法）。
+
+    ⚠️ 场景脚本**禁止**自己 init()/destroy()，必须从这里拿。
     """
-    return _get_robot()
-
-
-def get_nav():
-    """公开入口：给场景自定义封装用的共享导航单例（已切 CHASSIS_POSE_CTRL）。
-
-    注意：直接调 nav.move_straight_to 没有 wrapper 层的自动限幅，
-    请自觉遵守 safety_config.json 的量级。
-    """
-    return _get_nav()
-
-
-def _sdk_bootstrap() -> str:
-    """把 GalbotSDK 的 Python 包目录注入 sys.path，返回包目录路径。
-
-    环境变量 GALBOT_SDK_ROOT 可覆盖 SDK 位置（默认 ~/GalbotSDK）。
-    如果 galbot_sdk 已可通过 PYTHONPATH 导入（如 HPU 机器人端部署：
-    PYTHONPATH=~/g1_runtime），则直接跳过注入。
-    注意：本函数只解决 Python 包可见性；原生依赖请提前用 install.sh 安装
-    或 source scripts/env.sh / env_hpu.sh（LD_LIBRARY_PATH 须进程启动前生效）。
-    """
-    import importlib.util
-    if importlib.util.find_spec('galbot_sdk') is not None:
-        return ''  # 已可用（PYTHONPATH 提供）
-    sdk_root = os.environ.get("GALBOT_SDK_ROOT", os.path.expanduser("~/GalbotSDK"))
-    arch = platform.machine()  # x86_64 / aarch64
-    candidates = sorted(glob.glob(
-        os.path.join(sdk_root, "galbot_sdk", f"linux-{arch}-gcc*", "lib", "python")))
-    if not candidates:
-        raise ImportError(
-            f"未找到 galbot_sdk 包目录（arch={arch}），"
-            f"请检查 GALBOT_SDK_ROOT（当前={sdk_root}）")
-    pkg_dir = candidates[0]
-    if pkg_dir not in sys.path:
-        sys.path.insert(0, pkg_dir)
-    return pkg_dir
-
-
-def _ensure_nav_service():
-    """确保导航规划服务 service_navigation_plan 在跑。
-
-    launcher.service 有时没启动它（实测场地机器人就没起），导致所有导航命令
-    返回 WAIT_INITIALIZED。本函数检测缺失则自动拉起（仅 HPU 真机模式生效）。
-    """
-    nav_svc = "/data/galbot/bin/service_navigation_plan"
-    if not os.path.exists(nav_svc):
-        return  # 不在 HPU 上（PC 开发模式），跳过
+    hub = _hub()
+    adapter = hub.get_adapter()
+    if hub._is_mock():
+        return adapter
     try:
-        r = subprocess.run(["pgrep", "-f", "service_navigation_plan"],
-                           capture_output=True, timeout=5)
-        if r.returncode == 0:
-            return  # 已在跑
-    except Exception:
-        pass
-    env = os.environ.copy()
-    env["LD_LIBRARY_PATH"] = "/data/galbot/lib:" + env.get("LD_LIBRARY_PATH", "")
-    subprocess.Popen([nav_svc], env=env,
-                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                     start_new_session=True)
-    logger.info("已启动 service_navigation_plan（launcher 未自动拉起，手动补启）")
-    time.sleep(3)  # 等它初始化（日志显示 ~2s 进入主循环）
+        robot, _motion, _nav = adapter._ensure_interfaces(need_nav=False)
+        return robot
+    except Exception as exc:  # noqa: BLE001 - 兼容路径，拿不到就退回 adapter
+        logger.warning("取 GalbotRobot 单例失败，退回 adapter：%s", exc)
+        return adapter
 
 
 def _get_robot():
-    """获取全局机器人单例。mock 模式下返回 MockRobot。"""
-    global _robot
-    if _robot is None:
-        if _mock_mode:
-            from sdk_wrapper.mock_robot import MockRobot
-            _robot = MockRobot()
-        else:
-            _sdk_bootstrap()
-            from galbot_sdk.g1 import GalbotRobot
-            _robot = GalbotRobot()
-        _robot.init()
-        # 底盘运动需要先切到 CHASSIS_POSE_CTRL（仅真机）
-        if not _mock_mode:
-            from galbot_sdk.g1 import ControlStatus, G1ControllerName
-            res = _robot.switch_controller(G1ControllerName.CHASSIS_POSE_CTRL)
-            if res != ControlStatus.SUCCESS:
-                logger.warning("切换底盘控制器失败: %s（继续，set_base_pose 可能不生效）", res)
-            else:
-                logger.info("底盘控制器已切换到 CHASSIS_POSE_CTRL")
-        logger.info("机器人实例已初始化 (mock=%s)", _mock_mode)
-    return _robot
+    """历史私有名字，等价 ``get_robot()``（baseline.py / 老脚本仍在用）。"""
+    return get_robot()
+
+
+class _MockNavigation:
+    """mock 下的导航替身：老代码会调 ``nav.stop_navigation()``。"""
+
+    def __init__(self) -> None:
+        self.stopped = 0
+
+    def stop_navigation(self):
+        self.stopped += 1
+        return True, "SUCCESS"
+
+    def is_localized(self) -> bool:
+        return True
+
+
+_mock_nav = _MockNavigation()
+
+
+def get_nav():
+    """公开入口：共享导航单例（真机是 adapter 的 GalbotNavigation）。
+
+    ⚠️ 直接调 nav 没有 wrapper 层的自动限幅，请自觉遵守 safety_config.json。
+    """
+    hub = _hub()
+    adapter = hub.get_adapter()
+    if hub._is_mock():
+        return _mock_nav
+    _robot, _motion, nav = adapter._ensure_interfaces(need_nav=True)
+    return nav
 
 
 def _get_nav():
-    """获取全局导航单例，并确保底盘控制器已切到 CHASSIS_POSE_CTRL。"""
-    global _nav
-    if _nav is None:
-        if _mock_mode:
-            from sdk_wrapper.mock_robot import MockNavigation
-            _nav = MockNavigation()
-            _nav.init()
-        else:
-            _sdk_bootstrap()
-            from galbot_sdk.g1 import (ControlStatus, G1ControllerName,
-                                       GalbotNavigation)
-            _ensure_nav_service()  # 导航后端没跑的话先拉起，否则 WAIT_INITIALIZED
-            _nav = GalbotNavigation()
-            _nav.init()
-            robot = _get_robot()
-            res = robot.switch_controller(G1ControllerName.CHASSIS_POSE_CTRL)
-            if res != ControlStatus.SUCCESS:
-                raise RuntimeError(f"切换底盘控制器失败: {res}")
-            logger.info("底盘控制器已切换到 CHASSIS_POSE_CTRL")
-            # 控制器切换后底盘进入初始化，立即下令会返回 WAIT_INITIALIZED，
-            # 给 2 秒就绪窗口（实测足够；不够的话 _move_straight 还有重试兜底）
-            time.sleep(2.0)
-        logger.info("导航实例已初始化 (mock=%s)", _mock_mode)
-    return _nav
+    """历史私有名字，等价 ``get_nav()``。"""
+    return get_nav()
 
 
 def shutdown():
-    """真机 SDK 清理（程序退出时必须调用）。mock 模式下仅记录日志。
+    """真机 SDK 清理（程序退出时必须调用）。
 
     注意：SDK destroy() 后同进程无法再 init()，重启 agent 请重新起进程。
     """
-    global _robot, _nav
-    if _robot is None and _nav is None:
-        return
     try:
-        if _mock_mode:
-            if _nav is not None:
-                _nav.stop_navigation()
-            logger.info("[MOCK] shutdown()")
-        else:
-            if _nav is not None:
-                _nav.stop_navigation()
-            if _robot is not None:
-                _robot.request_shutdown()
-                _robot.wait_for_shutdown()
-                _robot.destroy()
-            logger.info("SDK 资源已释放")
-    except Exception as e:  # noqa: BLE001 - 清理失败也要让退出流程继续
-        logger.error("SDK 清理异常: %s", e)
-    finally:
-        _robot = None
-        _nav = None
+        _hub().shutdown()
+    except Exception as exc:  # noqa: BLE001 - 清理失败也要让退出流程继续
+        logger.error("SDK 清理异常: %s", exc)
 
 
+# ---------------------------------------------------------------------------
+# 内部：限幅
+# ---------------------------------------------------------------------------
 def _clamp(value: float, limit: float, name: str) -> float:
     if abs(value) > limit:
         logger.warning("[安全限幅] %s 请求值 %.3f 超过上限 %.3f，已截断", name, value, limit)
     return max(-limit, min(limit, value))
 
 
-#: set_base_pose 阻塞调用的超时（秒）。
-#: 真机实测 15s 偏紧（2026-11-07 场地机器人返回 ControlStatus.TIMEOUT），放宽到 30。
-BASE_POSE_TIMEOUT_S = 30.0
-
-#: 非成功状态（TIMEOUT/WAIT_INITIALIZED 等）后的重试次数与间隔。
-#: 控制器切换后底盘需要就绪窗口，首次下令偶发超时属正常。
-BASE_POSE_RETRIES = 1
-BASE_POSE_RETRY_WAIT_S = 2.0
-
-
-def _status_name(res) -> str:
-    """把 SDK 返回的 pybind 枚举转成成员名（'SUCCESS' / 'TIMEOUT' / ...）。
-
-    ⚠️ 千万别用 bool(res) 判断——pybind 枚举成员恒为真，
-    TIMEOUT/FAILED 也会被当成成功（真机实测踩过这个坑，2026-11-07）。
-    """
-    name = getattr(res, "name", None)
-    if isinstance(name, str):
-        return name
-    text = str(res)
-    return text.rsplit(".", 1)[-1] if "." in text else text
-
-
-def _yaw_to_quaternion(yaw_rad: float) -> tuple:
-    """偏航角（弧度）→ 四元数 (qx, qy, qz, qw)。"""
-    return (0.0, 0.0, math.sin(yaw_rad / 2.0), math.cos(yaw_rad / 2.0))
-
-
-def _wait_nav_done(nav, timeout_s: float):
-    """轮询导航状态直到终态或超时。"""
-    deadline = time.time() + timeout_s
-    while time.time() < deadline:
-        try:
-            ns = nav.get_navigation_status()
-            name = ns.name if hasattr(ns, "name") else str(ns)
-        except Exception:
-            name = "UNKNOWN"
-        if name in ("SUCCESS", "FAILED", "INTERRUPTED",
-                    "COLLISION", "CLOSE_TO_OBSTACLE", "OCCUPIED"):
-            return name
-        time.sleep(0.2)
-    return "TIMEOUT"
-
-
-def _move_straight(x_m: float, yaw_rad: float) -> dict:
-    """相对当前位姿走直线 + 转角（用 GalbotRobot.set_base_pose 直接底盘控制）。
-
-    不经过 GalbotNavigation / 导航规划服务，直接命令底盘控制器，
-    不需要 localization / map / service_navigation_plan。
-
-    Args:
-        x_m:     沿当前朝向的位移（米），正值向前
-        yaw_rad: 相对转角（弧度），正值左转
-    """
-    robot = _get_robot()
-    # set_base_pose(x, y, yaw, frame_id='rel(0)'=相对当前位置, is_blocking=True)
-    # 真实状态必须如实上报：只有 SUCCESS 才算 success，TIMEOUT 等一律如实透传。
-    name = ""
-    res = None
-    for attempt in range(BASE_POSE_RETRIES + 1):
-        res = robot.set_base_pose(x_m, 0.0, yaw_rad,
-                                  frame_id='rel(0)', is_blocking=True,
-                                  timeout_s=BASE_POSE_TIMEOUT_S)
-        name = _status_name(res)
-        if name == "SUCCESS":
-            break
-        if attempt < BASE_POSE_RETRIES:
-            logger.warning("set_base_pose 第 %d 次返回 %s（x=%.2f yaw=%.2f），"
-                           "%.1fs 后重试一次",
-                           attempt + 1, name, x_m, yaw_rad, BASE_POSE_RETRY_WAIT_S)
-            time.sleep(BASE_POSE_RETRY_WAIT_S)
-    ok = name == "SUCCESS"
-    return {"success": ok, "status": name,
-            "message": "ok" if ok else f"set_base_pose: {res}"}
-
-
 # ---------------------------------------------------------------------------
-# 底盘运动接口
+# 底盘运动接口（直控 set_base_pose，不需要地图/定位）
 # ---------------------------------------------------------------------------
-
 def move_forward(distance_cm: float) -> dict:
     """前进指定距离（厘米，负值即后退）。自动限幅，阻塞执行。
 
@@ -285,8 +166,8 @@ def move_forward(distance_cm: float) -> dict:
     """
     cfg = load_safety()
     distance_m = _clamp(distance_cm / 100.0, cfg["max_base_distance_m"], "distance")
-    r = _move_straight(distance_m, 0.0)
-    r["actual_distance_cm"] = distance_m * 100
+    r = _hub().move_base(distance_m, 0.0)
+    r["actual_distance_cm"] = round(distance_m * 100, 2)
     return r
 
 
@@ -299,37 +180,111 @@ def turn(angle_deg: float) -> dict:
     """原地转向（度），正值左转、负值右转。自动限幅。"""
     cfg = load_safety()
     angle_deg = _clamp(angle_deg, cfg["max_turn_deg"], "turn_angle")
-    r = _move_straight(0.0, math.radians(angle_deg))
-    r["actual_angle_deg"] = angle_deg
+    r = _hub().move_base(0.0, math.radians(angle_deg))
+    r["actual_angle_deg"] = round(angle_deg, 2)
     return r
 
 
 def stop_base() -> dict:
     """立即停止底盘运动（场景退出前建议调用）。"""
-    if _nav is not None and hasattr(_nav, "stop_navigation"):
-        _nav.stop_navigation()
-    else:
-        _get_nav().stop_navigation()
-    return {"success": True, "message": "base stopped"}
+    return _hub().stop_base()
+
+
+def read_sensor(sensor_name: str):
+    """读取传感器（相机名会直接转成"抓一帧"）。"""
+    return _hub().read_sensor(sensor_name)
+
+
+# ---------------------------------------------------------------------------
+# 夹爪接口
+# ---------------------------------------------------------------------------
+def set_gripper(end_effector: str = "left_gripper", width_cm: float = 0.0,
+                velocity_mps: float = GRIPPER_DEFAULT_VELOCITY_MPS,
+                effort: float = GRIPPER_DEFAULT_EFFORT) -> dict:
+    """设置夹爪开度。单位：厘米（0=完全闭合，约 8.5cm=最大张开）。
+
+    ``velocity_mps`` 仅为兼容旧签名保留（dev 层用固定速度 0.05 m/s）。
+    """
+    if abs(velocity_mps - GRIPPER_DEFAULT_VELOCITY_MPS) > 1e-9:
+        logger.debug("set_gripper 的 velocity_mps 参数已忽略（dev 层固定 0.05 m/s）")
+    return _hub().set_gripper(end_effector, float(width_cm), effort=float(effort))
+
+
+def open_gripper(end_effector: str = "left_gripper") -> dict:
+    """夹爪完全张开。"""
+    return _hub().open_gripper(end_effector)
+
+
+def close_gripper(end_effector: str = "left_gripper",
+                  effort: float = GRIPPER_DEFAULT_EFFORT) -> dict:
+    """夹爪合拢（抓取 / 用侧面推）。"""
+    return _hub().close_gripper(end_effector, effort=float(effort))
+
+
+# ---------------------------------------------------------------------------
+# 手臂运动接口
+# ---------------------------------------------------------------------------
+def get_ee_pose(chain: str = "right_arm") -> dict:
+    """读末端位姿 [x,y,z,qx,qy,qz,qw]（base_link，米/四元数）。"""
+    return _hub().get_ee_pose(chain)
+
+
+def move_arm_to(pose, chain: str = "right_arm", timeout_s: float = 15.0) -> dict:
+    """手臂到 base_link 绝对位姿。pose=[x,y,z,qx,qy,qz,qw]（米/四元数）。"""
+    pose = [float(v) for v in pose]
+    if len(pose) != 7:
+        return {"success": False, "message": f"pose 需 7 元，收到 {len(pose)}"}
+    return _hub().move_arm_to(pose, chain=chain, straight_line=False)
+
+
+def move_arm_delta(dx: float, dy: float, dz: float, chain: str = "right_arm",
+                   timeout_s: float = 15.0) -> dict:
+    """末端平移 (dx,dy,dz) 米（base_link 系），姿态不变。单轴限幅 ARM_MAX_STEP_M。"""
+    dx = _clamp(dx, ARM_MAX_STEP_M, "arm_dx")
+    dy = _clamp(dy, ARM_MAX_STEP_M, "arm_dy")
+    dz = _clamp(dz, ARM_MAX_STEP_M, "arm_dz")
+    return _hub().move_arm_delta(dx, dy, dz, chain=chain, straight_line=False)
 
 
 # ---------------------------------------------------------------------------
 # 感知接口
 # ---------------------------------------------------------------------------
+def capture_right_wrist(save_path: str = "/tmp/grasp_rgb.jpg") -> dict:
+    """抓右腕相机 RGB + 深度 + 内参 + 外参，供反投影。
 
-def read_sensor(sensor_name: str):
-    """读取传感器数据。
-
-    Args:
-        sensor_name: 传感器名称，如 'front_camera' / 'lidar' / 'imu'
+    ⚠️ 深度与彩色是否同一光心未验证（cameras.json: unverified）。
+       真机先比对 width/height，不一致则同一像素取深度会错位，需先做对齐。
 
     Returns:
-        传感器数据（具体格式取决于传感器类型）
-
-    TODO(负责人A): 按 Galbot SDK v1.10.0 实际接口补齐相机订阅、雷达读取等。
-    真机可用接口参考：robot.get_imu_data(sensor_id) / get_depth_data(camera_id)。
+        {"success": bool, "image_path": str, "depth_m": np.ndarray,
+         "intrinsic": dict, "extrinsic": [7], "width": int, "height": int, ...}
+        depth_m 是 numpy 数组（米），仅供场景脚本内部 deproject 用，不给 LLM。
     """
-    robot = _get_robot()
-    if hasattr(robot, "get_sensor_data"):
-        return robot.get_sensor_data(sensor_name)
-    raise NotImplementedError(f"传感器 '{sensor_name}' 接口尚未封装，请联系负责人 A")
+    return _hub().capture_right_wrist(save_path)
+
+
+def capture_frame(camera_id: str = "right_arm",
+                  save_path: str = "/tmp/frame.jpg") -> dict:
+    """抓任意相机一帧（right_arm / left_arm）。"""
+    return _hub().capture_frame(camera_id, save_path)
+
+
+def find_object(label: str, camera_id: str | None = None,
+                max_distance_m: float = 1.5) -> dict:
+    """按颜色/前景找目标（label 见 dev.algorithms.scene_analyzer）。"""
+    return _hub().find_object(label, camera_id, max_distance_m)
+
+
+def inspect_table(camera_id: str | None = None) -> dict:
+    """判桌面杯子到桌沿的距离（需 table_calib.json 标定）。"""
+    return _hub().inspect_table(camera_id)
+
+
+def list_cameras() -> dict:
+    """列出可用相机与能力（有无 RGB/深度）。"""
+    return _hub().list_cameras()
+
+
+def push_cup() -> dict:
+    """把不安全的杯子推离桌沿（dev 层 CupScenario 闭环）。"""
+    return _hub().push_cup()

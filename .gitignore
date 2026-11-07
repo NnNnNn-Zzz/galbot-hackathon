@@ -12,3 +12,7 @@ task_log.jsonl
 
 # sdk_wrapper/dev 感知层抓帧落盘（mock/真机运行产物）
 sdk_wrapper/dev/runs/
+
+# 合并前的本地备份目录（不提交）
+.bak_merge_dev_*/
+.bak_*/

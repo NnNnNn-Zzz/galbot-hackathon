@@ -75,9 +75,19 @@ def build_system_prompt() -> str:
 【你可以调用的封装硬件接口（sdk_wrapper）】
 - move_forward(distance_cm): 前进指定厘米数（自动限幅）
 - move_backward(distance_cm): 后退
-- turn(angle_deg): 转向，正值左转
+- turn(angle_deg): 转向，正值左转、负值右转
 - stop_base(): 停止底盘
-- read_sensor(sensor_name): 读传感器
+- open_gripper(end_effector="left_gripper"): 张开夹爪到约 8cm
+- close_gripper(end_effector="left_gripper"): 闭合夹爪
+- set_gripper(end_effector, width_cm, ...): 精确设置夹爪开度（厘米，0=闭合）
+- read_sensor(sensor_name): 读传感器（相机名会直接抓一帧）
+- list_cameras(): 列出可用相机（哪几个有深度）
+- capture_right_wrist(): 右腕相机抓一帧（RGB+深度+内参+外参）
+- find_object(label, camera_id): 按颜色/前景找目标，返回像素坐标与三维位置
+- inspect_table(camera_id): 判断桌面上杯子到桌沿的距离（需赛前标定）
+- push_cup(): 把不安全的杯子推离桌沿（自动闭环：推→复测→直到达标）
+- get_ee_pose(chain): 读手臂末端位姿
+- move_arm_delta(dx, dy, dz, chain): 末端平移，单位米，单轴上限 10cm
 - reset_to_baseline(): 回到基线状态
 
 【你可以调用的场景脚本】

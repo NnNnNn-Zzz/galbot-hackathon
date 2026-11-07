@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import uuid
 from dataclasses import dataclass
 
@@ -82,6 +83,9 @@ class MockAdapter(SyntheticCameraMixin, RobotAdapter):
         }
         self._audio_calls: list[dict[str, object]] = []
         self._volume: float = 80.0
+        self._base_moves: list[dict[str, object]] = []
+        self._base_stops: int = 0
+        self._base_pose: list[float] = [0.0, 0.0, 0.0]
 
     @property
     def mode(self) -> RunMode:
@@ -391,6 +395,52 @@ class MockAdapter(SyntheticCameraMixin, RobotAdapter):
         )
 
     #: 供测试/彩排断言"推了几次、夹爪闭到多少"
+    # ══════════════════════════════════════════════════════════════════ #
+    # 底盘直控（并入原 wrapper 能力）
+    # ══════════════════════════════════════════════════════════════════ #
+    def move_base(self, distance_m: float, yaw_rad: float = 0.0, *,
+                  timeout_s: float = 20.0, retries: int = 1) -> ToolResult:
+        """模拟底盘直控：累计位姿，便于断言"确实走了这么远"。"""
+        try:
+            distance_m = float(distance_m)
+            yaw_rad = float(yaw_rad)
+        except (TypeError, ValueError):
+            return rejected(ErrorCode.INVALID_ARGUMENT,
+                            "distance_m / yaw_rad 必须是数值", mode=self.mode)
+        self._base_moves.append({"distance_m": distance_m, "yaw_rad": yaw_rad})
+        yaw0 = self._base_pose[2]
+        self._base_pose = [
+            self._base_pose[0] + distance_m * math.cos(yaw0),
+            self._base_pose[1] + distance_m * math.sin(yaw0),
+            yaw0 + yaw_rad,
+        ]
+        return ok(
+            f"底盘已移动：{distance_m * 100:.1f} cm / {math.degrees(yaw_rad):.1f}°",
+            self.mode,
+            data={"distance_m": distance_m, "yaw_rad": yaw_rad,
+                  "control_status": "SUCCESS", "base_pose": list(self._base_pose)},
+        )
+
+    def stop_base(self) -> ToolResult:
+        self._base_stops += 1
+        return ok("底盘已停止", self.mode, data={"stopped": True})
+
+    def read_sensor(self, sensor_name: str) -> ToolResult:
+        return rejected(
+            ErrorCode.NOT_SUPPORTED,
+            f"Mock 不支持任意传感器 {sensor_name!r}；相机请用 right_arm / left_arm",
+            mode=self.mode, data={"sensor": sensor_name},
+        )
+
+    @property
+    def base_moves(self) -> list[dict[str, object]]:
+        """已下发的底盘动作列表（断言用）。"""
+        return list(self._base_moves)
+
+    @property
+    def base_stops(self) -> int:
+        return self._base_stops
+
     @property
     def ee_moves(self) -> list[dict[str, object]]:
         return list(self._ee_moves)

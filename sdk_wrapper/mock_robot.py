@@ -64,6 +64,17 @@ class MockRobot:
         logger.info("[MOCK] get_sensor_data(%s)", sensor_name)
         return None
 
+    def set_gripper_command(self, end_effector, width_m, velocity_mps,
+                            effort, is_blocking=True):
+        """夹爪开度控制（对齐 GalbotRobot.set_gripper_command）。mock 恒成功。"""
+        self.call_history.append(("set_gripper_command",
+                                  {"ee": end_effector, "width_m": width_m,
+                                   "vel": velocity_mps, "effort": effort,
+                                   "blocking": is_blocking}))
+        logger.info("[MOCK] set_gripper_command ee=%s width=%.3fm vel=%.3f effort=%.1f",
+                    end_effector, width_m, velocity_mps, effort)
+        return MOCK_SUCCESS
+
 
 class MockNavigation:
     def __init__(self):
@@ -118,3 +129,27 @@ class MockNavigation:
         self.call_history.append(("stop_navigation", {}))
         logger.info("[MOCK] stop_navigation()")
         return (True, "SUCCESS")
+
+
+class MockMotion:
+    """Mock 运动规划（对齐 GalbotMotion 的手臂运动接口）。
+
+    记录末端位姿，供场景编排逻辑的 mock 验证。
+    """
+
+    def __init__(self):
+        # 右臂观测位姿（base_link 系，米）：右前方桌面上方
+        self.pose = [0.45, -0.20, 0.60, 0.0, 0.0, 0.0, 1.0]
+        self.call_history = []
+
+    def get_ee_pose(self, chain="right_arm"):
+        self.call_history.append(("get_ee_pose", chain))
+        return {"success": True, "pose": list(self.pose),
+                "frame": "base_link", "message": "ok"}
+
+    def move_to(self, pose, chain="right_arm"):
+        self.call_history.append(("move_to", {"chain": chain,
+                                              "pose": [round(v, 3) for v in pose]}))
+        self.pose = [float(v) for v in pose]
+        return {"success": True, "status": "SUCCESS",
+                "pose": list(self.pose), "message": "ok"}
