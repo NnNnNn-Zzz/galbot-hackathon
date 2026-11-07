@@ -41,3 +41,16 @@
     failure: "抽屉未能拉开，或本次未成功检查任何药品（取图/抓取失败）"
   recovery_on_failure: "先切 table 模式把药品摆到桌面重试一次；仍失败则归位并报告感知服务与夹爪状态，不要反复硬拉抽屉"
   expected_exit_state: "抽屉推回原位，手臂折叠，夹爪释放，底盘停止"
+
+- name: scene_grasp_cup
+  path: scenes/scene_grasp_cup/scene.py
+  when_to_call: "收到「把桌上的杯子夹起来 / 抓杯子 / 拿起杯子」指令时调用；右腕相机+VLM识别杯子位置，右臂抓取"
+  params:
+    query: "要抓的目标名，默认「杯子」"
+    chain: "机械臂链，默认 right_arm"
+    end_effector: "夹爪，默认 right_gripper"
+  expected_feedback:
+    success: "已夹起杯子（base_link 位置 [...]）"
+    failure: "VLM没找到杯子 / 反投影失败 / 手臂移动失败"
+  recovery_on_failure: "调整观测角度重拍；连续失败则归位并报告相机/VLM状态"
+  expected_exit_state: "右臂抬起持物，夹爪闭合，底盘静止"
