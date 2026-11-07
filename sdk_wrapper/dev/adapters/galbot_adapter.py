@@ -88,6 +88,7 @@ DEFAULT_SENSORS: tuple[str, ...] = (
     "RIGHT_ARM_CAMERA",
     "LEFT_ARM_DEPTH_CAMERA",
     "RIGHT_ARM_DEPTH_CAMERA",
+    "HEAD_LEFT_CAMERA",
 )
 
 #: 判定"机器人在动"的速度阈值（m/s 或 rad/s）
@@ -697,6 +698,99 @@ class GalbotAdapter(RobotAdapter):
                 "straight_line": bool(straight_line),
             },
             on_success=f"{chain} 末端平移完成",
+        )
+
+    def rotate_ee(
+        self,
+        chain: str,
+        droll_deg: float,
+        dpitch_deg: float,
+        dyaw_deg: float,
+        *,
+        timeout_s: float = 10.0,
+    ) -> ToolResult:
+        """末端姿态旋转（度），位置不变。旋转轴为 base_link 系（世界系）。
+
+        与 move_ee_delta 同套路：读当前位姿 → 左乘增量旋转 → 下发绝对目标。
+        给 VLM 直控用：夹爪朝向不对时不用移位置，纯转手腕对准。
+        """
+        rejection = self._authorization_rejection()
+        if rejection is not None:
+            return rejection
+        try:
+            droll_deg, dpitch_deg, dyaw_deg = (
+                float(droll_deg), float(dpitch_deg), float(dyaw_deg))
+        except (TypeError, ValueError):
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT, "角度必须是数值", mode=self.mode)
+
+        import numpy as np
+
+        try:
+            _robot, motion, _nav = self._ensure_interfaces()
+            status, pose = motion.get_end_effector_pose_on_chain(
+                chain, "EndEffector", "base_link")
+        except Exception as exc:  # noqa: BLE001
+            return unknown(
+                ErrorCode.STATE_UNCERTAIN, f"旋转前读位姿失败：{exc}；未下发运动",
+                mode=self.mode, data={"chain": chain})
+        name = _enum_name(status)
+        pose = list(pose)
+        if name != "SUCCESS" or len(pose) != 7:
+            return failed(
+                ErrorCode.SDK_ERROR, f"旋转前读位姿失败（{name}）；未下发运动",
+                mode=self.mode, data={"chain": chain, "motion_status": name})
+
+        # 增量旋转（base_link 系，内旋 ZYX 顺序：先 yaw 再 pitch 再 roll）
+        def _axis_angle_quat(axis, deg):
+            half = math.radians(deg) / 2.0
+            s = math.sin(half)
+            return np.array([axis[0] * s, axis[1] * s, axis[2] * s, math.cos(half)])
+
+        def _quat_mul(a, b):
+            ax, ay, az, aw = a
+            bx, by, bz, bw = b
+            return np.array([
+                aw * bx + ax * bw + ay * bz - az * by,
+                aw * by - ax * bz + ay * bw + az * bx,
+                aw * bz + ax * by - ay * bx + az * bw,
+                aw * bw - ax * bx - ay * by - az * bz,
+            ])
+
+        q_delta = _quat_mul(
+            _quat_mul(_axis_angle_quat([0, 0, 1], dyaw_deg),
+                      _axis_angle_quat([0, 1, 0], dpitch_deg)),
+            _axis_angle_quat([1, 0, 0], droll_deg))
+        q_cur = np.array([pose[3], pose[4], pose[5], pose[6]])
+        # 世界系旋转 = 增量左乘当前姿态
+        q_new = _quat_mul(q_delta, q_cur)
+        q_new = q_new / np.linalg.norm(q_new)
+
+        target = [pose[0], pose[1], pose[2],
+                  float(q_new[0]), float(q_new[1]), float(q_new[2]), float(q_new[3])]
+        try:
+            status = self._execute_cartesian(
+                chain, target,
+                straight_line=False,  # 纯旋转不强制直线
+                enable_collision_check=True,
+                timeout_s=timeout_s,
+            )
+        except Exception as exc:  # noqa: BLE001
+            return unknown(
+                ErrorCode.STATE_UNCERTAIN,
+                f"下发末端旋转时抛错：{exc}；机器人是否已动未知",
+                mode=self.mode,
+                data={"chain": chain,
+                      "delta_deg": [droll_deg, dpitch_deg, dyaw_deg]},
+            )
+        return self._motion_result(
+            status, chain=chain,
+            data={
+                "chain": chain,
+                "delta_deg": [droll_deg, dpitch_deg, dyaw_deg],
+                "target_pose": target,
+            },
+            on_success=f"{chain} 末端旋转完成",
         )
 
     def set_gripper_width(

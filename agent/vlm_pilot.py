@@ -71,19 +71,53 @@ def build_system_prompt(task: str, arm: str) -> str:
 1. {{"action": "move_arm", "params": {{"dx": 0.0, "dy": 0.0, "dz": 0.0}}, "reason": "..."}}
    手臂末端平移，单位米，base_link 坐标系（x 向前，y 向左，z 向上）。
    单轴每步最大 0.10m，建议单步 0.02~0.05m，小步慢调。当前控制的是 {arm}。
-2. {{"action": "open_gripper", "params": {{}}, "reason": "..."}}  张开 {gripper}
-3. {{"action": "close_gripper", "params": {{}}, "reason": "..."}} 闭合 {gripper}
-4. {{"action": "move_base", "params": {{"distance_cm": 0}}, "reason": "..."}}
+2. {{"action": "rotate_wrist", "params": {{"droll_deg": 0, "dpitch_deg": 0, "dyaw_deg": 0}}, "reason": "..."}}
+   只转手腕姿态（位置不动），单位度，base_link 坐标系：
+   dyaw 绕竖直轴水平转腕（换夹取方向最常用），dpitch 上下摆腕，droll 翻腕。
+   单轴每步最大 30°，建议单步 10~20°。夹爪朝向不对时先用它调整，再平移。
+3. {{"action": "open_gripper", "params": {{}}, "reason": "..."}}  张开 {gripper}
+4. {{"action": "close_gripper", "params": {{}}, "reason": "..."}} 闭合 {gripper}
+5. {{"action": "move_base", "params": {{"distance_cm": 0}}, "reason": "..."}}
    底盘前进（正）/后退（负），厘米，小步。
-5. {{"action": "turn", "params": {{"angle_deg": 0}}, "reason": "..."}}
+6. {{"action": "turn", "params": {{"angle_deg": 0}}, "reason": "..."}}
    原地转向，正左转负右转，度。
-6. {{"action": "wait", "params": {{}}, "reason": "..."}}  等一拍（等画面稳定）
-7. {{"action": "finish", "params": {{}}, "reason": "..."}} 任务完成，结束
+7. {{"action": "wait", "params": {{}}, "reason": "..."}}  等一拍（等画面稳定）
+8. {{"action": "finish", "params": {{}}, "reason": "..."}} 任务完成，结束
+
+【标准流程】严格按这个顺序推进，每步先判断自己处于哪个阶段：
+1. 定位：在头部相机里找到目标。看不清就先动底盘/转头，不要乱伸手。
+2. 调姿（最容易被跳过、也最关键）：动手臂平移之前，先检查夹爪朝向——
+   从 {arm} 的腕部相机看，夹爪两指应当像在「抱住」目标：目标在画面中央，
+   两指分居目标两侧且开口朝向目标。如果夹爪是从目标的正上方/正下方/斜着
+   对着它，或者两指连线与目标的长边平行（这样会夹空），先用 rotate_wrist
+   把腕部转到位，再平移。宁可多花两三步转腕，也不要带着错误的姿态逼近。
+3. 逼近：姿态对了再 move_arm 小步靠近，每步 0.02~0.05m，边靠近边修正。
+   最终定位必须综合三台相机共同判断，不能只看一路：
+   - 头部相机：确认目标的全局位置（在你前方多远、偏左还是偏右）；
+   - {arm} 腕部相机：确认目标在逼近方向上的偏差（画面偏哪边就往反方向修）；
+   - 另一侧腕部相机：从侧面确认深度——目标是真的进入了夹爪开口范围，
+     还是只在某一个视角里「看起来对准了」。单一路相机对准不算对准，
+     两路腕部相机里目标都贴近两指中心，才算真正对准。
+4. 夹取：两路腕部相机都确认目标进入两指之间后，才 close_gripper。
+5. 抬起：闭爪后 move_arm dz>0 抬起 0.05~0.10m，确认目标被夹离桌面。
+6. finish。
+
+【画面 → 坐标直觉】（base_link：x 前、y 左、z 上）
+- 头部相机里目标偏画面左侧 → 目标在你左边 → 需要 dy>0；偏右侧 → dy<0。
+- 腕部相机里目标偏上 → dz>0；偏下 → dz<0；偏小/远 → dx>0（向前伸）。
+- 目标在你的 {arm} 一侧（{'右' if arm == 'right_arm' else '左'}半区）才正常；
+  若目标明显跑到另一侧半区，说明该先 turn 底盘把它转回来，不要硬伸手。
 
 【规则】
 - 每步只输出一个 JSON，不要输出任何其他文字。
-- 看画面自己判断下一步；夹取前先张爪，对准后再闭爪。
+- reason 必须引用你这步在画面里实际看到的东西（目标位置、夹爪朝向、
+  两指与目标的相对关系），不许写空泛的套话。
+- 禁止原地踏步：如果最近 2~3 步你发了相同或几乎相同的动作，而新画面和
+  之前几乎一样，说明那个动作没起作用——必须换策略（转腕、转动底盘、
+  换个平移方向，或先后退再重新逼近），不允许再发同一个动作。
 - 看不清目标时可以先移动手臂/底盘换个视角。
+- 硬件限制：手臂不能跨过身体中线（y≈0），目标在中线另一侧时先用 turn
+  转底盘让目标对正你这条手臂。
 - 确认杯子已被夹起离开桌面后输出 finish。"""
 
 
@@ -120,7 +154,8 @@ def vlm_decide(system_prompt: str, frames: list[tuple[str, str]],
         for i, h in enumerate(action_history[-15:]))  # 只带最近15步，防爆token
     text = (f"以下是机器人当前的 {len(frames)} 路相机画面。\n"
             f"你过去发出的动作（仅供参考，结果请自己从画面判断）：\n{hist_text}\n"
-            f"请输出下一个动作 JSON。")
+            f"先对照标准流程判断你现在处于哪个阶段（定位/调姿/逼近/夹取/抬起），"
+            f"再输出下一个动作 JSON。若最近几步动作雷同且画面没变化，必须换策略。")
 
     content = [{"type": "text", "text": text}]
     for path, label in frames:
@@ -158,6 +193,8 @@ class ScriptedClient:
 
     SCRIPT = [
         {"action": "open_gripper", "params": {}, "reason": "[剧本] 先张爪"},
+        {"action": "rotate_wrist", "params": {"droll_deg": 0, "dpitch_deg": 15, "dyaw_deg": 0},
+         "reason": "[剧本] 转腕对准"},
         {"action": "move_arm", "params": {"dx": 0.05, "dy": 0.0, "dz": -0.03},
          "reason": "[剧本] 向前下方伸"},
         {"action": "close_gripper", "params": {}, "reason": "[剧本] 闭爪"},
@@ -185,6 +222,11 @@ def execute(decision: dict, arm: str) -> dict:
             return wrapper.move_arm_delta(
                 float(params.get("dx", 0)), float(params.get("dy", 0)),
                 float(params.get("dz", 0)), chain=arm)
+        if action == "rotate_wrist":
+            return wrapper.rotate_wrist(
+                float(params.get("droll_deg", 0)),
+                float(params.get("dpitch_deg", 0)),
+                float(params.get("dyaw_deg", 0)), chain=arm)
         if action == "open_gripper":
             return wrapper.open_gripper(gripper)
         if action == "close_gripper":
@@ -227,6 +269,7 @@ def main():
         logger.warning("无 LLM_API_KEY，用内置剧本假模型验证管线")
     system_prompt = build_system_prompt(args.task, args.arm)
     action_history: list[dict] = []
+    consecutive_faults = 0
 
     logger.info("任务: %s | 手臂: %s | 相机: %s", args.task, args.arm,
                 ", ".join(CAMERAS))
@@ -264,6 +307,18 @@ def main():
                 print(f"          （取图失败已跳过: {'; '.join(failed)}）")
             result = execute(decision, args.arm)
             print(f"          执行: {result.get('success')} - {result.get('message', '')}")
+
+            # 安全熔断：运动连续 FAULT 说明在够不可达区域/碰撞边缘，
+            # 模型收不到失败反馈会一直重复同一动作（00:12 真机实测连撞 17 次）。
+            # 安全红线「出 FAULT 立刻停，不要连续重试」由这里兜底。
+            if result.get("status") == "failed" or result.get("error_code"):
+                consecutive_faults += 1
+                if consecutive_faults >= 3:
+                    logger.error("连续 %d 次 FAULT，熔断停机（模型在无反馈空转）",
+                                 consecutive_faults)
+                    break
+            else:
+                consecutive_faults = 0
             with open(log_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps({
                     "step": step, "decision": decision, "result": {

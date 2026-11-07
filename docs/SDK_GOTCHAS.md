@@ -187,6 +187,20 @@
 
 ---
 
+
+### G-19 `capture_frame("head_left")` 静默失败，头部相机取不到图
+- **报错原文**：无报错；`capture_frame` 返回 `{"success": False, "message": "HEAD_LEFT_CAMERA 取图失败（无数据）"}`，
+  调用方若做了跳过兜底则完全无感（vlm_pilot 跑了 28 步头部相机一张图都没有）
+- **触发条件**：用 toolhub/adapter 默认配置取头部相机
+- **真因**：`GalbotAdapter.DEFAULT_SENSORS` 只列了四个臂部相机（左右 RGB + 左右深度），
+  `robot.init(enable_sensor_set)` 只开启集合内的传感器，头部相机根本没被启用
+- **正确做法**：`DEFAULT_SENSORS` 加入 `HEAD_LEFT_CAMERA`（已修，commit f4f85ae）；
+  自定义 sensors 时记得把头/腕相机都列全
+- **涉及接口**：`GalbotRobot.init(enable_sensor_set)` / `toolhub.capture_frame()`
+- **发现日期**：2026-11-08，真机
+
+---
+
 ## 更新记录
 
 | 日期 | 条目 | 一句话 |
@@ -194,3 +208,4 @@
 | 2026-11-07 | G-01 ~ G-16 | 首版：把当天真机踩过的 16 个坑全部落盘 |
 | 2026-11-07 | G-17 | 机器人莫名进数采模式：真因是 `mode_change_select.sh` 把 `auto_enter_mode_type` 改成 DATA_COLLECTION，重启才生效 |
 | 2026-11-07 | G-18 | 切回 WORKING 后 wbcs 因 Embosa exit callback 崩掉且不自动重拉，`systemctl restart launcher` 修 |
+| 2026-11-08 | G-19 | 头部相机静默失败：DEFAULT_SENSORS 没列 HEAD_LEFT_CAMERA，init 只开声明过的传感器 |
