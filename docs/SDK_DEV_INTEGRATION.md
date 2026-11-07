@@ -108,6 +108,19 @@ python3 scripts/keyboard_head_control.py
 来判断低头方向。脚本中 `j/k` 以 0.01 rad 低头/抬头，`J/K` 以 0.02 rad
 低头/抬头，`r` 逐步回起始，`q` 退出。正负方向会由实际头部末端姿态验证。
 
+G1 专用前倾工具（只动 `leg_joint3`，增加量=前倾）：
+
+```bash
+source scripts/env_hpu.sh
+python3 scripts/keyboard_forward_lean.py
+```
+
+`ForwardLeanTool.lean_forward_step()` 只给 `leg_joint3` 正值目标，
+`lean_backward_step()` 只给负值目标；单步最多 0.01 rad、速度 0.03 rad/s。
+每步同时验证目标关节变化方向、头部 X 前移、头部 pitch 方向和其它腿关节漂移。
+脚本以启动时的 `leg_joint3` 为基准，本次偏移限 ±0.05 rad；`f/F` 前倾
+0.005/0.01 rad，`b/B` 回正，`r` 恢复起始，`q` 退出。
+
 推杯子闭环（判不安全 → 语音 → 小步推 → 回位复测）：
 
 ```python

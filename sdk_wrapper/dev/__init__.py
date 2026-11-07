@@ -43,6 +43,7 @@ from sdk_wrapper.dev.robot_tools.calibration import CameraCalibrationTool  # noq
 from sdk_wrapper.dev.robot_tools.charger_search import ChargerSearchTool  # noqa: F401
 from sdk_wrapper.dev.robot_tools.charger_yolo import ChargerYoloTool  # noqa: F401
 from sdk_wrapper.dev.robot_tools.power_strip_yolo import PowerStripYoloTool  # noqa: F401
+from sdk_wrapper.dev.robot_tools.forward_lean import ForwardLeanTool  # noqa: F401
 
 __all__ = [
     "ErrorCode",
@@ -65,4 +66,5 @@ __all__ = [
     "ChargerSearchTool",
     "ChargerYoloTool",
     "PowerStripYoloTool",
+    "ForwardLeanTool",
 ]

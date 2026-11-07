@@ -27,4 +27,5 @@ __all__ = [
     "charger_search",
     "charger_yolo",
     "power_strip_yolo",
+    "forward_lean",
 ]
