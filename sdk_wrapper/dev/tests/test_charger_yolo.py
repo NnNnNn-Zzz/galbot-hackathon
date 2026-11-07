@@ -1,4 +1,3 @@
-import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -130,18 +129,9 @@ class ChargerYoloToolTest(unittest.TestCase):
         backend = ConstantBackend([rectangle_instance(120, 360, 520, 430)])
 
         with tempfile.TemporaryDirectory() as directory:
-            config_path = Path(directory) / "charger_yolo.json"
-            config = json.loads(
-                (Path(__file__).resolve().parents[1] / "config" / "charger_yolo.json").read_text(
-                    encoding="utf-8"
-                )
-            )
-            config["depth_alignment_verified"] = True
-            config_path.write_text(json.dumps(config), encoding="utf-8")
             tool = ChargerYoloTool(
                 perception,
                 backend=backend,
-                config_path=config_path,
                 output_dir=Path(directory),
             )
             result = tool.segment_charger_top_wrist()
@@ -155,7 +145,7 @@ class ChargerYoloToolTest(unittest.TestCase):
             self.assertTrue(Path(result.data["mask_ref"]).is_file())
             self.assertTrue(Path(result.data["overlay_ref"]).is_file())
             self.assertTrue(Path(result.data["observation_ref"]).is_file())
-            self.assertEqual(result.data["depth_rgb_alignment"], "unverified")
+            self.assertEqual(result.data["depth_rgb_alignment"], "calibration_match")
             self.assertTrue(result.data["depth_alignment_verified"])
             self.assertEqual(backend.calls, 1)
 
@@ -176,7 +166,7 @@ class ChargerYoloToolTest(unittest.TestCase):
         self.assertFalse(result.data["eligible_for_precision"])
         self.assertIn("depth_unavailable", result.data["rejection_reasons"])
 
-    def test_default_unverified_depth_alignment_blocks_precision(self):
+    def test_default_calibration_match_allows_precision(self):
         adapter = MockAdapter()
         perception = PerceptionTool(adapter)
         backend = ConstantBackend([rectangle_instance(120, 360, 520, 430)])
@@ -190,9 +180,37 @@ class ChargerYoloToolTest(unittest.TestCase):
             result = tool.segment_charger_top_wrist()
 
         self.assertEqual(result.status, TaskStatus.SUCCEEDED)
+        self.assertTrue(result.data["depth_alignment_verified"])
+        self.assertTrue(result.data["eligible_for_precision"])
+
+    def test_rgbd_calibration_mismatch_blocks_precision(self):
+        adapter = MockAdapter()
+        original = adapter.get_sensor_extrinsic
+
+        def mismatched(sensor, reference_frame="base_link"):
+            transform, timestamp = original(sensor, reference_frame)
+            if sensor == "RIGHT_ARM_DEPTH_CAMERA":
+                transform = list(transform)
+                transform[0] += 0.01
+            return transform, timestamp
+
+        adapter.get_sensor_extrinsic = mismatched
+        perception = PerceptionTool(adapter)
+        backend = ConstantBackend([rectangle_instance(120, 360, 520, 430)])
+
+        with tempfile.TemporaryDirectory() as directory:
+            tool = ChargerYoloTool(
+                perception,
+                backend=backend,
+                output_dir=Path(directory),
+            )
+            result = tool.segment_charger_top_wrist()
+
+        self.assertEqual(result.status, TaskStatus.SUCCEEDED)
+        self.assertFalse(result.data["depth_alignment_verified"])
         self.assertFalse(result.data["eligible_for_precision"])
         self.assertIn(
-            "depth_rgb_alignment_unverified",
+            "depth_rgb_calibration_mismatch",
             result.data["rejection_reasons"],
         )
 
@@ -224,7 +242,7 @@ class ChargerYoloToolTest(unittest.TestCase):
                 backend=UnavailableBackend(),
                 output_dir=Path(directory),
             )
-            result = tool.detect_charger_head()
+            result = tool.segment_charger_top_wrist()
 
         self.assertEqual(result.status, TaskStatus.FAILED)
         self.assertEqual(result.error_code, ErrorCode.NOT_READY)

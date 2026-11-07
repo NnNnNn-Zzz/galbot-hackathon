@@ -14,7 +14,6 @@
   "confidence": 0.3,
   "iou": 0.7,
   "device": "cpu",
-  "head_camera": "head_left",
   "wrist_camera": "right_arm",
   "wrist_depth_camera": "right_arm_depth",
   "quality": {
@@ -28,6 +27,9 @@
     "safe_standoff_m": 0.12,
     "depth_sample_stride": 2
   },
-  "depth_alignment_verified": false,
-  "max_rgb_depth_skew_ms": 150.0
+  "max_rgb_depth_skew_ms": 150.0,
+  "max_rgb_depth_translation_delta_m": 0.002,
+  "max_rgb_depth_rotation_delta_deg": 0.5,
+  "max_rgb_depth_focal_delta_px": 1.0,
+  "max_rgb_depth_principal_delta_px": 1.0
 }

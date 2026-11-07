@@ -19,11 +19,12 @@ import cv2
 import numpy as np
 
 from sdk_wrapper.dev.algorithms.charger_yolo import (
-    UltralyticsSegmentationBackend,
+    UltralyticsYoloBackend,
     YoloInstance,
     analyze_charger_top,
     annotation_overlay,
 )
+from sdk_wrapper.dev.algorithms.calibration import compare_rgbd_calibration
 from sdk_wrapper.dev.contracts import ErrorCode, RunMode, ToolError, ToolResult, failed, ok
 from sdk_wrapper.dev.robot_tools.perception import PerceptionTool
 
@@ -54,7 +55,7 @@ def _tool(method: typing.Callable[..., ToolResult]) -> typing.Callable[..., Tool
 class ChargerYoloTool:
     """Recognize a charger top surface and validate whether it is actionable."""
 
-    TOOL_NAMES = ("detect_charger_head", "segment_charger_top_wrist")
+    TOOL_NAMES = ("segment_charger_top_wrist",)
 
     def __init__(
         self,
@@ -67,7 +68,7 @@ class ChargerYoloTool:
         self.perception = perception
         with open(config_path, encoding="utf-8") as fh:
             self.config = json.load(fh)
-        self.backend = backend or UltralyticsSegmentationBackend(
+        self.backend = backend or UltralyticsYoloBackend(
             roots=self.config["model_search_roots"],
             weights=self.config.get("weights"),
             target_class=self.config.get("target_class", "charger"),
@@ -153,6 +154,7 @@ class ChargerYoloTool:
 
         depth_intrinsics = snap.intr
         depth_extrinsic: dict[str, typing.Any] | None = None
+        depth_calibration: dict[str, typing.Any] | None = None
         if snap.depth is not None:
             depth_camera_id = (
                 str(self.config.get("wrist_depth_camera", "right_arm_depth"))
@@ -162,6 +164,7 @@ class ChargerYoloTool:
             try:
                 depth_intrinsics = self.perception.intrinsics(depth_camera_id)
                 depth_extrinsic = self.perception.extrinsic(depth_camera_id)
+                rgb_extrinsic = self.perception.extrinsic(camera_id)
             except ToolError as exc:
                 raise ToolError(
                     ErrorCode.NOT_READY,
@@ -172,6 +175,29 @@ class ChargerYoloTool:
                     ErrorCode.NOT_READY,
                     f"{depth_camera_id} extrinsic unavailable; refusing 2-D-to-base coordinate promotion",
                 )
+            if rgb_extrinsic is None:
+                raise ToolError(
+                    ErrorCode.NOT_READY,
+                    f"{camera_id} extrinsic unavailable; cannot verify RGB-D calibration",
+                )
+            depth_calibration = compare_rgbd_calibration(
+                snap.intr,
+                depth_intrinsics,
+                rgb_extrinsic["transform"],
+                depth_extrinsic["transform"],
+                max_translation_delta_m=float(
+                    self.config.get("max_rgb_depth_translation_delta_m", 0.002)
+                ),
+                max_rotation_delta_deg=float(
+                    self.config.get("max_rgb_depth_rotation_delta_deg", 0.5)
+                ),
+                max_focal_delta_px=float(
+                    self.config.get("max_rgb_depth_focal_delta_px", 1.0)
+                ),
+                max_principal_delta_px=float(
+                    self.config.get("max_rgb_depth_principal_delta_px", 1.0)
+                ),
+            )
         analyzed: list[tuple[dict[str, typing.Any], YoloInstance, np.ndarray]] = []
         for instance in instances:
             if instance.mask is None:
@@ -229,9 +255,12 @@ class ChargerYoloTool:
         skew_ms: float | None = None
         if rgb_timestamp_ns and depth_timestamp_ns:
             skew_ms = abs(depth_timestamp_ns - rgb_timestamp_ns) / 1_000_000.0
-        alignment_verified = bool(self.config.get("depth_alignment_verified", False))
+        alignment_verified = bool(
+            depth_calibration is not None
+            and depth_calibration.get("calibration_match")
+        )
         if snap.depth is not None and not alignment_verified:
-            selected["rejection_reasons"].append("depth_rgb_alignment_unverified")
+            selected["rejection_reasons"].append("depth_rgb_calibration_mismatch")
         if (
             skew_ms is not None
             and skew_ms > float(self.config.get("max_rgb_depth_skew_ms", 150.0))
@@ -252,7 +281,12 @@ class ChargerYoloTool:
                 "rgb_depth_skew_ms": None if skew_ms is None else round(skew_ms, 3),
                 "depth_alignment_verified": alignment_verified,
                 "warnings": list(snap.warnings),
-                "depth_rgb_alignment": snap.data.get("depth_alignment", "unverified"),
+                "depth_rgb_alignment": (
+                    "calibration_match"
+                    if alignment_verified
+                    else snap.data.get("depth_alignment", "unverified")
+                ),
+                "depth_calibration_check": depth_calibration,
                 "model": model_info,
             }
         )
@@ -274,16 +308,6 @@ class ChargerYoloTool:
                 + ", ".join(selected["rejection_reasons"])
             )
         return ok(message, self.mode, data=selected)
-
-    @_tool
-    def detect_charger_head(self) -> ToolResult:
-        """Head-camera charger box/segmentation for coarse approach only."""
-        return self._recognize(
-            str(self.config.get("head_camera", "head_left")),
-            include_depth=False,
-            require_mask=False,
-            note="charger YOLO head coarse detection",
-        )
 
     @_tool
     def segment_charger_top_wrist(self) -> ToolResult:

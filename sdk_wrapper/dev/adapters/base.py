@@ -101,6 +101,15 @@ class RobotAdapter(ABC):
         """读末端位姿。``data["pose"]`` 为 base_link 下 ``[x,y,z,qx,qy,qz,qw]``（米）。"""
 
     @abstractmethod
+    def get_chain_frame_pose(
+        self,
+        chain: str = "right_arm",
+        frame_id: str = "Camera",
+        reference_frame: str = "base_link",
+    ) -> ToolResult:
+        """Read a semantic chain frame: ``EndEffector``, ``Camera`` or ``TCP``."""
+
+    @abstractmethod
     def move_ee_delta(
         self,
         chain: str,

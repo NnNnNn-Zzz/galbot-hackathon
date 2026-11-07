@@ -28,6 +28,7 @@ from sdk_wrapper.dev.algorithms import geometry as geo
 
 __all__ = [
     "YoloInstance",
+    "UltralyticsYoloBackend",
     "UltralyticsSegmentationBackend",
     "discover_latest_charger_seg_weights",
     "analyze_charger_top",
@@ -446,12 +447,14 @@ def discover_latest_charger_seg_weights(
     return sorted(found.values(), key=lambda p: p.stat().st_mtime, reverse=True)
 
 
-class UltralyticsSegmentationBackend:
-    """Lazy Ultralytics YOLO-seg backend with task/class validation.
+class UltralyticsYoloBackend:
+    """Lazy Ultralytics YOLO backend with task/class validation.
 
     ``weights=None`` selects the newest candidate whose model metadata reports
-    the requested segmentation task and target class. Loading every stale
-    experiment is undesirable, but is necessary for fail-closed discovery.
+    the requested task and target class. Detection and segmentation tasks share
+    the same normalized output; masks are populated only for segment models.
+    Loading every stale experiment is undesirable, but is necessary for
+    fail-closed discovery.
     """
 
     def __init__(
@@ -586,3 +589,7 @@ class UltralyticsSegmentationBackend:
                 )
             )
         return instances
+
+
+# Backward-compatible name for callers that only use segmentation weights.
+UltralyticsSegmentationBackend = UltralyticsYoloBackend

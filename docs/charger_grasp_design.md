@@ -1,13 +1,13 @@
 # 充电器视觉抓取：Tool 层设计
 
-> 状态：第一阶段（YOLO-seg 上表面识别）已实现；底盘靠近、双深度交叉验证和抓取动作尚未授权执行。
+> 状态：头部 strip 检测、腕部 charger 上表面识别和只读相机/手眼标定检查已实现；底盘靠近、双深度交叉验证和抓取动作尚未授权执行。
 
 ## 1. 目标与安全边界
 
 目标是夹住充电器上表面的两条长边。术语固定为：
 
 - **长边轴**：上表面最长方向。
-- **夹爪长轴**：夹爪本体 / 两指接触面的纵向，应与长边轴平行。
+- **夹爪长轴**：夹爪本体 / 两指接触面的纵向，应与长边轴平行，使两指接触充电器的两条长边。
 - **闭合轴**：两指相向运动方向，应与长边轴正交，跨过充电器短边尺寸。
 - **接近轴**：上表面法向；抓取时沿 `-normal` 下降。
 
@@ -17,19 +17,20 @@
 
 ```text
 大模型
-  -> ChargerYoloTool.detect_charger_head()
+  -> PowerStripYoloTool.detect_power_strip_head()
   -> ChargerYoloTool.segment_charger_top_wrist()
   -> 后续 ChargerGraspTool.plan_observation() / align_and_grasp()
        -> PerceptionTool / StereoDepthTool    （视觉与深度）
        -> MotionTool / 底盘安全封装            （停稳、分段移动、夹爪）
-       -> 纯算法 charger_yolo / geometry       （无 SDK、无运动）
+       -> 纯算法 power_strip_yolo / charger_yolo / geometry / calibration
+                                             （无 SDK、无运动）
 ```
 
 大模型只接收框、质量标志、拒绝原因、表面轴和结构化位置；模型权重路径、原始张量和任意动作位姿不暴露给大模型。真机动作仍必须经过 `RobotSafety` 和显式授权闸门。
 
 ## 3. 阶段 A：头部粗定位与分段靠近
 
-1. 读取头左 RGB，运行轻量 YOLO 检测 `charger / power_strip` 整体框。
+1. 读取头左 RGB，运行轻量 YOLO 检测 `power_strip` 整体框。它与腕部近距 `charger` 模型是两个独立模型。
 2. 同时取得头部双目深度。检测框缩放到深度分辨率，不能假设两者分辨率相同。
 3. 对框内深度检查：
    - 有效像素比例；
@@ -50,7 +51,7 @@
 1. YOLO-seg 检测到上表面掩码，置信度稳定。
 2. 掩码和检测框不接触图像边缘，上表面没有明显裁切。
 3. 掩码内 D405 深度有效率达标，且表面不是由多个深度的离群点拼成。
-4. 右腕 RGB 与 D405 深度已完成像素对齐验收，且时间戳偏差在允许范围内。当前仓库配置仍为“未验证”，因此只会识别，不会放行精抓取。
+4. 右腕 RGB 与 D405 深度运行时内外参通过一致性检查，时间戳偏差在允许范围内，并完成一次实时图像边缘对齐验收。
 5. 掩码短边像素数达标；同时三维短边宽度要大于定位误差预算。只看像素面积不足，细长、倾斜或部分裁切的区域可能面积很大却无法定义闭合轴。
 6. 表面中心、法向和长边轴稳定；变换到 `base_link` 后位于已标定的右臂可达区。
 7. 相机到目标距离满足 D405 近距量程，并保留预抓取空间。
@@ -83,6 +84,7 @@
 
 ## 7. 当前已实现（第一阶段）
 
+- 头部 `power_strip` 检测工具 `PowerStripYoloTool.detect_power_strip_head()`：当前选择 `/home/mr/yoloseg/runs/yolo11n_detect/weights/best.pt`，单类 `power_strip`；训练集 35 张 / 验证集 9 张，验证 `mAP50(B)=0.995`、`mAP50-95(B)=0.581`。输出只到方向/靠近候选，`grasp_coordinate` 明确为 null。
 - 自动发现 `/home/mr/yoloseg/runs` 下时间最新的 `best.pt`，验证 `task=segment` 和类别 `charger` 后才加载。
 - 当前选中 `/home/mr/yoloseg/runs/yolo11n_seg_charger/weights/best.pt`：YOLO11n-seg、单类 `charger`、输入 640、98 个训练 epoch。数据仅 21 张训练 / 5 张验证，验证集指标 `mAP50(B)=0.795`、`mAP50(M)=0.795`，只能作为初版权重，不能据此宣称现场泛化可靠。
 - YOLO-seg 输出归一化为完整分辨率布尔掩码。
@@ -91,13 +93,36 @@
 - 输出夹爪长轴、夹爪闭合轴和预抓取点，但**不下发动作**。
 - 大而裁切、大而细、深度无效三类样本均被单测拒绝。
 - 已用真实权重在 5 张验证图上完成端到端推理；检测成功帧的掩码与标注上表面轮廓一致。
+- `CameraCalibrationTool` 可只读比较右腕 RGB/D405 内参与外参；`check_right_wrist_rgbd_calibration()` 参数不一致时直接拒绝精抓取。
+- `GalbotAdapter.get_chain_frame_pose()` 可读取 `EndEffector`、`Camera`、`TCP` 语义帧；`check_right_arm_eye_in_hand()` 会交叉验证运动学 `Camera` 帧和官方相机外参。
 
-## 8. 待现场标定
+## 8. 官方手眼标定与工具坐标
+
+官方运行时链路已确认：
+
+1. HPU 启动 `/data/galbot/bin/eyehand_calib_publish`，它发布相机到末端/机器人 TF 的手眼标定。
+2. XCU 配置文件为 `/userdata/config/robot_config/eyehand_calib.toml`；当前 `right_arm` 的 D405 条目 `calib_status=calib`，`from_link=right_arm_end_effector_mount_link`，`to_link=right_arm_camera_color_optical_frame`。
+3. `GalbotRobot.get_sensor_extrinsic(SensorType.RIGHT_ARM_CAMERA)` 或 `get_transform("base_link", "right_arm_camera_color_optical_frame")` 返回 `base_link <- camera` 实时变换。
+4. `GalbotMotion.get_end_effector_pose_on_chain(chain, frame_id)` 支持语义帧 `EndEffector`、`Camera`、`TCP`；TCP 需要先 `attach_tool(chain, "galbot_gripper")`。
+5. `set_end_effector_pose()` 默认控制法兰；抓取时应 attach 工具并通过 `Parameter.set_tool_pose(True)` 控制夹爪 TCP。
+
+本机当前运动规划服务 `service_motion_plan` 未运行，`GalbotMotion.init()` 返回 False，因此暂时不能在线查询 `Camera`/`TCP` 位姿；相机外参和手眼配置文件仍可读取。
+
+当前右臂 D405 彩色与深度运行时结果：
+
+- 内参 `K` 和畸变参数完全一致；
+- 640×360 分辨率一致；
+- `get_sensor_extrinsic` 的时间戳和 `base_link <- camera` 外参完全一致；
+- 深度 header 使用 `right_arm_camera_depth_optical_frame`，但该深度 frame 不在 TF 中；计算时使用颜色光心 frame `right_arm_camera_color_optical_frame`。
+
+这只证明官方标定值一致，仍建议做一次实际 RGB-D 边缘对齐验收，防止配置正确但安装机械偏移。
+
+## 9. 待现场标定
 
 - 充电器真实长 / 短边尺寸，用于单目比例与双目尺度交叉检查。
 - 头部双目原始值到米的映射。
-- 右腕 RGB 与 D405 深度是否严格像素对齐。
-- `RIGHT_ARM_CAMERA` / `RIGHT_ARM_DEPTH_CAMERA` 到末端工具坐标系的刚体变换。
+- 右腕 RGB 与 D405 深度的实时图像边缘对齐验收（配置值已一致）。
+- 启动 `service_motion_plan` 后验收运动学 `Camera`/`TCP` 帧与 `eyehand_calib_publish` 一致。
 - 夹爪两指闭合轴、指面长度、最大开度、接触余量。
 - 右臂可达区、底盘观察点到充电器的安全间距。
 - 真实位姿误差、D405 距离误差、YOLO 中心误差，用于确定“目标尺寸足够”的数值门槛。
