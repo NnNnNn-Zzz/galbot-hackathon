@@ -486,16 +486,16 @@ def default_table() -> List[Dict[str, Any]]:
       expiry_date —— 仅 mock 固定数据；真机无此字段，读不到就是 None
     """
     return [
-        {"id": "box_left", "label": "white", "ee_pose": [0.40, -0.10, 0.65],
-         "position_m": [0.40, -0.10, 0.65], "frame": "base_link", "unit": "m",
+        {"id": "box_left", "label": "white", "ee_pose": [0.40, -0.10, 0.75],
+         "position_m": [0.40, -0.10, 0.75], "frame": "base_link", "unit": "m",
          "image_ref": "mock_frame_0",
          "bbox": [0, 0, 60, 40], "score": 0.9, "expiry_date": "2026-08-01"},
-        {"id": "box_mid", "label": "white", "ee_pose": [0.40, -0.20, 0.65],
-         "position_m": [0.40, -0.20, 0.65], "frame": "base_link", "unit": "m",
+        {"id": "box_mid", "label": "white", "ee_pose": [0.40, -0.20, 0.75],
+         "position_m": [0.40, -0.20, 0.75], "frame": "base_link", "unit": "m",
          "image_ref": "mock_frame_0",
          "bbox": [80, 0, 60, 40], "score": 0.9, "expiry_date": "2027-12-01"},
-        {"id": "box_right", "label": "white", "ee_pose": [0.40, -0.30, 0.65],
-         "position_m": [0.40, -0.30, 0.65], "frame": "base_link", "unit": "m",
+        {"id": "box_right", "label": "white", "ee_pose": [0.40, -0.30, 0.75],
+         "position_m": [0.40, -0.30, 0.75], "frame": "base_link", "unit": "m",
          "image_ref": "mock_frame_0",
          "bbox": [160, 0, 60, 40], "score": 0.9, "expiry_date": "2028-05-01"},
     ]
