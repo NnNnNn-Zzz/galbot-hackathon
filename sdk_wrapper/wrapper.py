@@ -36,6 +36,20 @@ _robot = None
 _nav = None
 _mock_mode = os.environ.get("GALBOT_MOCK", "0") == "1"
 
+#: 真机 init 时要启用的传感器（SensorType 成员名字符串，init 时再解析成枚举）。
+#: SDK 规则（g1/__init__.pyi:2785 + 官方 example4 注释）：只有 init(enable_sensor_set)
+#: 传入的传感器才能取到数据，没传的 get_rgb_data 一律返回空 dict。
+#: 这里在默认集合基础上补齐头部双目（HEAD_LEFT / HEAD_RIGHT），
+#: 供「双目识别药盒」等功能包步骤使用（2026-11-07）。
+ENABLE_SENSOR_NAMES: tuple = (
+    "HEAD_LEFT_CAMERA",
+    "HEAD_RIGHT_CAMERA",
+    "LEFT_ARM_CAMERA",
+    "RIGHT_ARM_CAMERA",
+    "LEFT_ARM_DEPTH_CAMERA",
+    "RIGHT_ARM_DEPTH_CAMERA",
+)
+
 
 def set_mock_mode(enabled: bool):
     """由 agent/main.py 在启动时根据 --mock 参数调用。"""
@@ -123,7 +137,21 @@ def _get_robot():
             _sdk_bootstrap()
             from galbot_sdk.g1 import GalbotRobot
             _robot = GalbotRobot()
-        _robot.init()
+        if _mock_mode:
+            _robot.init()
+        else:
+            # 只启用声明过的传感器（官方口径：不传 = 默认集合，头部双目不在其中，
+            # 这正是 capture_image 真机返回空的根因，见 vlm_grasp.md「真机上还缺什么」）
+            from galbot_sdk.g1 import SensorType
+            sensor_set = set()
+            for name in ENABLE_SENSOR_NAMES:
+                member = getattr(SensorType, name, None)
+                if member is None:
+                    logger.warning("SensorType.%s 不存在（SDK 版本差异？），跳过", name)
+                else:
+                    sensor_set.add(member)
+            _robot.init(sensor_set)
+            logger.info("已启用传感器: %s", sorted(ENABLE_SENSOR_NAMES))
         # 底盘运动需要先切到 CHASSIS_POSE_CTRL（仅真机）
         if not _mock_mode:
             from galbot_sdk.g1 import ControlStatus, G1ControllerName
@@ -581,18 +609,36 @@ def get_ee_pose(chain: str = "") -> dict:
             "pose": pose, "frame": "base_link", "unit": "m"}
 
 
-def capture_image(tag: str = "") -> dict:
-    """拍一帧头部左目 RGB（JPEG），存到 logs/frames/，返回 frame_id=文件路径。
+#: capture_image 支持的相机名 → SensorType 成员名（头部双目 + 手臂，按需扩充）
+CAMERA_MAP = {
+    "head_left": "HEAD_LEFT_CAMERA",
+    "head_right": "HEAD_RIGHT_CAMERA",
+    "left_arm": "LEFT_ARM_CAMERA",
+    "right_arm": "RIGHT_ARM_CAMERA",
+}
 
-    供识别类策略（OCR/检测）取图用；基线固定位姿抓取不依赖它。
+
+def capture_image(tag: str = "", camera: str = "head_left") -> dict:
+    """拍一帧 RGB（JPEG），存到 logs/frames/，返回 frame_id=文件路径。
+
+    camera 支持 "head_left" / "head_right"（头部双目，识别药盒用）、
+    "left_arm" / "right_arm"（腕部）。默认头部左目（兼容旧调用）。
+    相机必须在 ENABLE_SENSOR_NAMES 里（init 时已启用），否则返回空。
     """
+    member_name = CAMERA_MAP.get(camera)
+    if member_name is None:
+        return {"success": False, "completion": "failed",
+                "message": f"未知相机 '{camera}'，可选: {sorted(CAMERA_MAP)}"}
     if _mock_mode:
-        return _mock_ok("capture_image", frame_id=f"mock_frame_{tag or '0'}")
+        return _mock_ok("capture_image", frame_id=f"mock_frame_{camera}_{tag or '0'}")
     _sdk_bootstrap()
     import galbot_sdk.g1 as gm
     robot = _get_robot()
-    frame = robot.get_rgb_data(gm.SensorType.HEAD_LEFT_CAMERA,
-                               gm.RgbOutputFormat.JPEG, True)
+    sensor = getattr(gm.SensorType, member_name, None)
+    if sensor is None:
+        return {"success": False, "completion": "failed",
+                "message": f"SensorType.{member_name} 不存在"}
+    frame = robot.get_rgb_data(sensor, gm.RgbOutputFormat.JPEG, True)
     if not frame or "data" not in frame:
         return {"success": False, "completion": "failed",
                 "message": "get_rgb_data 返回空（相机不可用或未订阅）"}

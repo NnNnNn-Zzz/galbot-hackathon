@@ -115,7 +115,8 @@ class RobotIO:
     def speak(self, text: str) -> Dict[str, Any]:
         raise NotImplementedError
 
-    def capture_image(self, tag: str = "") -> Dict[str, Any]:
+    def capture_image(self, tag: str = "", camera: str = "head_left") -> Dict[str, Any]:
+        """拍一帧 RGB。camera: "head_left"/"head_right"（头部双目）/"left_arm"/"right_arm"。"""
         raise NotImplementedError
 
     def is_holding(self) -> Optional[bool]:
@@ -204,8 +205,8 @@ class WrapperIO(RobotIO):
     def speak(self, text: str) -> Dict[str, Any]:
         return self._call("speak", text)
 
-    def capture_image(self, tag: str = "") -> Dict[str, Any]:
-        return self._call("capture_image", tag)
+    def capture_image(self, tag: str = "", camera: str = "head_left") -> Dict[str, Any]:
+        return self._call("capture_image", tag, camera=camera)
 
 
 # ===========================================================================
@@ -444,14 +445,15 @@ class MockIO(RobotIO):
         return {"success": True, "message": "ok", "played": True,
                 "bytes": len(str(text).encode("utf-8")), "completion": "completed"}
 
-    def capture_image(self, tag: str = "") -> Dict[str, Any]:
+    def capture_image(self, tag: str = "", camera: str = "head_left") -> Dict[str, Any]:
         self.calls.append("capture_image")
         bad = self._guard("capture_image")
         if bad:
             return bad
         return {"success": True, "message": "ok",
-                "path": f"/tmp/mock_{tag or 'frame'}.jpg", "mock": True,
-                "frame_id": "mock_frame_0", "completion": "completed"}
+                "path": f"/tmp/mock_{camera}_{tag or 'frame'}.jpg", "mock": True,
+                "camera": camera,
+                "frame_id": f"mock_frame_{camera}_{tag or '0'}", "completion": "completed"}
 
     def is_holding(self) -> Optional[bool]:
         return self.holding is not None
