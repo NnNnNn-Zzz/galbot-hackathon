@@ -1,0 +1,10 @@
+{
+  "python.defaultInterpreterPath": "/usr/bin/python3",
+  "python.terminal.activateEnvironment": false,
+  "terminal.integrated.env.linux": {
+    "MED_IO": "mock"
+  },
+  "files.exclude": {
+    "**/__pycache__": true
+  }
+}
