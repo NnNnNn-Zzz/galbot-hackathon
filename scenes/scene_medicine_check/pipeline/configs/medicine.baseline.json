@@ -12,7 +12,7 @@
       "id": "grasp",
       "stage": "grasp_first_box",
       "params": {
-        "chain": "left_arm",
+        "chain": "right_arm",
         "tool": "galbot_gripper"
       }
     },

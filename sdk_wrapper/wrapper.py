@@ -333,3 +333,272 @@ def read_sensor(sensor_name: str):
     if hasattr(robot, "get_sensor_data"):
         return robot.get_sensor_data(sensor_name)
     raise NotImplementedError(f"传感器 '{sensor_name}' 接口尚未封装，请联系负责人 A")
+
+
+# ---------------------------------------------------------------------------
+# 场景层 P0 接口（2026-11-07 补全，药品场景专用，纯追加不改动上文）
+#
+# 全部是对官方 SDK 的薄封装，写法对照 sdk_wrapper/dev GalbotAdapter
+# （该层已在场地真机 22/22 验证）。关键坑位提醒：
+#   - 状态判定一律走 _status_name()，pybind 枚举 bool() 恒真，TIMEOUT 也会变 True；
+#   - set_gripper_command 的夹爪名要传字符串（getattr 取 G1JointGroup 静态值），
+#     不能传 pybind 枚举/描述符；
+#   - move_line 需要包 MotionPlanChainTarget（照 dev._execute_cartesian）。
+# mock 模式下全部返回成功假数据（真机路径才碰 SDK），与场景 MockIO 互不干扰
+# （场景 mock 走 io.MockIO，不经过本模块）。
+# ---------------------------------------------------------------------------
+
+_motion = None
+#: attach_tool 挂载过的链名，供 set_arm_pose / move_line_to 缺省使用
+_attached_chain: str = "right_arm"
+
+
+def _get_motion():
+    """获取 GalbotMotion 单例（真机）。mock 模式返回字符串占位。"""
+    global _motion
+    if _motion is None:
+        if _mock_mode:
+            _motion = "mock"
+        else:
+            _sdk_bootstrap()
+            from galbot_sdk.g1 import GalbotMotion
+            m = GalbotMotion()
+            if not m.init():
+                raise RuntimeError("GalbotMotion.init() 返回 False")
+            _motion = m
+            logger.info("Motion 实例已初始化")
+    return _motion
+
+
+def _mock_ok(message: str, **extra):
+    """mock 模式统一成功返回（completion 恒 completed，与契约一致）。"""
+    return {"success": True, "message": f"[MOCK] {message}",
+            "completion": "completed", **extra}
+
+
+def attach_tool(chain: str, tool: str) -> dict:
+    """把末端工具（如 galbot_gripper）挂载到手臂链，后续位姿控制的前提。"""
+    global _attached_chain
+    if _mock_mode:
+        _attached_chain = chain
+        return _mock_ok(f"已挂载 {tool} 到 {chain}")
+    status = _get_motion().attach_tool(chain, tool)
+    name = _status_name(status)
+    ok = name == "SUCCESS"
+    if ok:
+        _attached_chain = chain
+    return {"success": ok, "status": name, "completion": "completed" if ok else "failed",
+            "message": "ok" if ok else f"attach_tool({chain},{tool}): {status}"}
+
+
+def set_arm_pose(pose, timeout_s: float = 20.0, chain: str = "") -> dict:
+    """移动到 base_link 下的绝对末端位姿 [x,y,z,qx,qy,qz,qw]（自由路径）。"""
+    pose = [float(v) for v in pose]
+    if len(pose) != 7:
+        return {"success": False, "completion": "failed",
+                "message": f"位姿应为 7 维，收到 {len(pose)} 维"}
+    if _mock_mode:
+        return _mock_ok("set_arm_pose", pose=pose)
+    chain = chain or _attached_chain
+    status = _get_motion().set_end_effector_pose(
+        pose, chain, "base_link",
+        enable_collision_check=True, is_blocking=True, timeout=float(timeout_s))
+    name = _status_name(status)
+    ok = name == "SUCCESS"
+    return {"success": ok, "status": name, "completion": "completed" if ok else "failed",
+            "message": "ok" if ok else f"set_end_effector_pose: {status}"}
+
+
+def move_line_to(pose, chain: str = "") -> dict:
+    """末端直线逼近 base_link 下的绝对位姿（抓取最后一段必须用直线）。"""
+    pose = [float(v) for v in pose]
+    if len(pose) != 7:
+        return {"success": False, "completion": "failed",
+                "message": f"位姿应为 7 维，收到 {len(pose)} 维"}
+    if _mock_mode:
+        return _mock_ok("move_line_to", pose=pose)
+    _sdk_bootstrap()
+    import galbot_sdk.g1 as gm
+    chain = chain or _attached_chain
+    target = gm.MotionPlanChainTarget()
+    target.chain_name = chain
+    target.mode = gm.MotionPlanTargetMode.kCartesian
+    target.cart.chain_name = chain
+    target.cart.frame_id = "EndEffector"
+    target.cart.reference_frame = "base_link"
+    target.cart.pose = gm.Pose(pose)
+    target.cart.assist_chains = {"torso"}
+    params = gm.Parameter()
+    params.set_direct_execute(True)
+    params.set_blocking(True)
+    params.set_timeout(10.0)
+    params.set_check_collision(True)
+    params.set_reference_frame("base_link")
+    params.set_actuate(True)
+    status, _traj = _get_motion().move_line([[target]], params)
+    name = _status_name(status)
+    ok = name == "SUCCESS"
+    return {"success": ok, "status": name, "completion": "completed" if ok else "failed",
+            "message": "ok" if ok else f"move_line: {status}"}
+
+
+def set_joints(positions, names, speed_rad_s: float = 0.2) -> dict:
+    """按关节名列表下关节角（弧度），用于收臂抱持等固定姿态。"""
+    positions = [float(v) for v in positions]
+    if names and len(names) != len(positions):
+        return {"success": False, "completion": "failed",
+                "message": f"关节名 {len(names)} 个、位置 {len(positions)} 个，数量不一致"}
+    if _mock_mode:
+        return _mock_ok("set_joints", joints=positions)
+    robot = _get_robot()
+    status = robot.set_joint_positions(
+        positions, joint_names=list(names), is_blocking=True,
+        speed_rad_s=float(speed_rad_s), timeout_s=15.0)
+    name = _status_name(status)
+    ok = name == "SUCCESS"
+    return {"success": ok, "status": name, "completion": "completed" if ok else "failed",
+            "message": "ok" if ok else f"set_joint_positions: {status}"}
+
+
+def set_gripper(width_m: float, side: str = "left",
+                velocity_mps: float = 0.05, effort: float = 10.0) -> dict:
+    """设置夹爪开度（米）。side: 'left' / 'right'。"""
+    if _mock_mode:
+        return _mock_ok(f"set_gripper {side} -> {width_m:.3f}m")
+    _sdk_bootstrap()
+    import galbot_sdk.g1 as gm
+    # 夹爪名必须传字符串；getattr 取 G1JointGroup 静态属性值（描述符 __get__），
+    # 用 vars() 会拿到描述符对象导致白名单恒空（真机实测坑，见 dev 层注释）。
+    gripper_name = getattr(gm.G1JointGroup, f"{side}_gripper", None)
+    if not isinstance(gripper_name, str):
+        return {"success": False, "completion": "failed",
+                "message": f"未知夹爪侧 {side!r}，G1JointGroup 无 {side}_gripper"}
+    robot = _get_robot()
+    status = robot.set_gripper_command(
+        gripper_name, float(width_m), float(velocity_mps), float(effort), True)
+    name = _status_name(status)
+    ok = name == "SUCCESS"
+    return {"success": ok, "status": name, "completion": "completed" if ok else "failed",
+            "message": "ok" if ok else f"set_gripper_command: {status}"}
+
+
+def get_odom() -> dict:
+    """读底盘里程计：{"odom": {"position": [x,y,z], "orientation": [qx,qy,qz,qw]}}。"""
+    if _mock_mode:
+        return _mock_ok("get_odom",
+                        odom={"position": [0.0, 0.0, 0.0],
+                              "orientation": [0.0, 0.0, 0.0, 1.0]})
+    robot = _get_robot()
+    odom = robot.get_odom()  # 失败时 SDK 返回空 dict
+    if not odom or "position" not in odom:
+        return {"success": False, "completion": "failed",
+                "message": "get_odom 返回空（里程计不可用）"}
+    return {"success": True, "message": "ok", "odom": {
+        "position": [float(v) for v in odom["position"]],
+        "orientation": [float(v) for v in odom.get("orientation", [0, 0, 0, 1])]}}
+
+
+def move_left(distance_m: float) -> dict:
+    """沿机体左向平移（米，负值向右）。相对当前位姿，自动限幅。"""
+    cfg = load_safety()
+    distance_m = _clamp(float(distance_m), cfg["max_base_distance_m"], "distance")
+    if _mock_mode:
+        return _mock_ok(f"move_left {distance_m:.2f}m")
+    robot = _get_robot()
+    # set_base_pose(x, y, yaw, frame_id='rel(0)'=相对当前)：x 前、y 左
+    res = robot.set_base_pose(0.0, distance_m, 0.0,
+                              frame_id='rel(0)', is_blocking=True,
+                              timeout_s=BASE_POSE_TIMEOUT_S)
+    name = _status_name(res)
+    ok = name == "SUCCESS"
+    return {"success": ok, "status": name, "completion": "completed" if ok else "failed",
+            "message": "ok" if ok else f"set_base_pose: {res}",
+            "actual_distance_m": distance_m}
+
+
+def move_to_pose(x: float, y: float, yaw: float) -> dict:
+    """走到底盘绝对位姿（odom 系，x/y 米、yaw 弧度）。走导航通道。"""
+    if _mock_mode:
+        return _mock_ok(f"move_to_pose ({x:.2f},{y:.2f},{yaw:.2f})")
+    nav = _get_nav()
+    qx, qy, qz, qw = _yaw_to_quaternion(float(yaw))
+    goal = [float(x), float(y), 0.0, qx, qy, qz, qw]
+    nav.move_straight_to(goal, is_blocking=False, timeout=30.0)
+    name = _wait_nav_done(nav, timeout_s=60.0)
+    ok = name == "SUCCESS"
+    return {"success": ok, "status": name, "completion": "completed" if ok else "failed",
+            "message": "ok" if ok else f"move_straight_to 终态: {name}"}
+
+
+def speak(text: str) -> dict:
+    """播报文本。SDK 无 TTS，只能播预合成的 16kHz/16bit/mono PCM。
+
+    素材映射：sdk_wrapper/assets/tts/<sha1(text)前16位>.pcm，
+    用 scripts/make_pcm.py 预生成（Windows SAPI 或 Edge TTS 转 PCM）。
+    缺素材时返回 success=False + played=False（场景层降级为仅日志可见，
+    不阻塞流程）——绝不拿假成功冒充已播报。
+    """
+    import hashlib
+    pcm_dir = os.path.join(os.path.dirname(__file__), "assets", "tts")
+    pcm_path = os.path.join(pcm_dir, hashlib.sha1(text.encode("utf-8")).hexdigest()[:16] + ".pcm")
+    if _mock_mode:
+        return _mock_ok(f"speak「{text}」", played=True)
+    if not os.path.exists(pcm_path):
+        return {"success": False, "completion": "failed", "played": False,
+                "message": f"PCM 素材缺失：{pcm_path}（先用 scripts/make_pcm.py 生成）"}
+    robot = _get_robot()
+    with open(pcm_path, "rb") as f:
+        data = f.read()
+    chunk = 4096
+    ok = True
+    for i in range(0, len(data), chunk):
+        if not robot.write_audio_stream_output(data[i:i + chunk], ""):
+            ok = False
+            break
+    return {"success": ok, "completion": "completed" if ok else "failed",
+            "played": ok,
+            "message": "ok" if ok else "write_audio_stream_output 中途返回 False"}
+
+
+def get_ee_pose(chain: str = "") -> dict:
+    """读手臂末端在 base_link 下的当前位姿 [x,y,z,qx,qy,qz,qw]。
+
+    示教取数专用：手动/手柄把手臂摆到目标位后调用，把返回的 pose
+    填进场景 tuning.py（PRE_GRASP_POSE / GRASP_POSE / LIFT_POSE）。
+    """
+    if _mock_mode:
+        return _mock_ok("get_ee_pose",
+                        pose=[0.40, -0.10, 0.65, 0.0, 0.0, 0.0, 1.0],
+                        frame="base_link", unit="m")
+    chain = chain or _attached_chain
+    status, pose = _get_motion().get_end_effector_pose_on_chain(
+        chain, "EndEffector", "base_link")
+    name = _status_name(status)
+    pose = [float(v) for v in pose]
+    ok = name == "SUCCESS" and len(pose) == 7
+    return {"success": ok, "status": name,
+            "message": "ok" if ok else f"get_end_effector_pose_on_chain: {status}",
+            "pose": pose, "frame": "base_link", "unit": "m"}
+
+
+def capture_image(tag: str = "") -> dict:
+    """拍一帧头部左目 RGB（JPEG），存到 logs/frames/，返回 frame_id=文件路径。
+
+    供识别类策略（OCR/检测）取图用；基线固定位姿抓取不依赖它。
+    """
+    if _mock_mode:
+        return _mock_ok("capture_image", frame_id=f"mock_frame_{tag or '0'}")
+    _sdk_bootstrap()
+    import galbot_sdk.g1 as gm
+    robot = _get_robot()
+    frame = robot.get_rgb_data(gm.SensorType.HEAD_LEFT_CAMERA,
+                               gm.RgbOutputFormat.JPEG, True)
+    if not frame or "data" not in frame:
+        return {"success": False, "completion": "failed",
+                "message": "get_rgb_data 返回空（相机不可用或未订阅）"}
+    out_dir = os.path.join(os.path.dirname(__file__), "..", "logs", "frames")
+    os.makedirs(out_dir, exist_ok=True)
+    frame_id = os.path.join(out_dir, f"frame_{int(time.time())}_{tag or 'shot'}.jpg")
+    with open(frame_id, "wb") as f:
+        f.write(frame["data"])
+    return {"success": True, "message": "ok", "frame_id": frame_id}
