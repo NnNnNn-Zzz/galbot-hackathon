@@ -1,0 +1,228 @@
+{
+  "retained_front_view": "reference/front_view.jpg",
+  "front_view_source": "medicine_frontend/data/handle/raw/Front/0ceb05671278f12bbba77668474e3cdd.jpg",
+  "photographs_omitted": [
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_956924Z_head_left.jpg",
+      "sha256": "655ee528488c7068bf8543cd39d71f7d07442614d7df39ce38b98424b8ae4b52",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_956924Z_head_right.jpg",
+      "sha256": "e2d7304b75376dee5638c70d1fd8f0243b516d5bec850d5055e6ff79504e3052",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_grip_verify_20261107_121348/0001_none_drawer_handle_20261107T041348_968320Z_head_right.jpg",
+      "sha256": "d56937ca5148d11f56ca83b2b4e902d1adfbfebf1b70dc1e8921d50fe36b343a",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_084939Z_head_left.jpg",
+      "sha256": "32a05e3d44c6eb831dabc6ca8f951c5fe3fbb53ee1e1bd2b17c75eadc89ef652",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_084939Z_head_right.jpg",
+      "sha256": "1d540b209c9b1f8d96f2668c8d5153f22e0835f73094160f0738424ac80a6034",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0001_none_drawer_pull_pre_20261107T042209_120471Z_head_left.jpg",
+      "sha256": "81088abac7bf10b2d88a7cfeddf66875b7381f89eb794ef79fb5364443427d41",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0001_none_drawer_pull_pre_20261107T042209_120471Z_head_right.jpg",
+      "sha256": "1c5e9e6cbf1cbf9c31c09b9d022c1d157d7fc800a9890b8fd72278c6f5c4c1e7",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0002_none_drawer_pull_step_01_20261107T042811_185984Z_head_right.jpg",
+      "sha256": "a28842299859fb2d6b696333dadb5e5c2616dd945c41d8c147876c4c0683e0a3",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0003_none_drawer_pull_step_02_20261107T042844_829244Z_head_right.jpg",
+      "sha256": "130909eee3bc0e4e92200bb94fe5ac9eae24b5f8abb3e8d188178740e849976b",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0004_none_drawer_pull_step_04_20261107T042943_258934Z_head_right.jpg",
+      "sha256": "73590a8597530f729727fe9fef3cfaa5e1c69eec65c4984d9e2f61935426efb5",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0005_none_drawer_pull_step_05_20261107T043017_859147Z_head_right.jpg",
+      "sha256": "9c223e43a2b03efd6ccffaab52e3737a2b50bea819c248792b79eda9606176f9",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0006_none_drawer_pull_final_25cm_20261107T043116_022066Z_head_left.jpg",
+      "sha256": "975273340207035cec4ffe4fa7addc8cd9706799bd75c4fa500bde619c8b1899",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0006_none_drawer_pull_final_25cm_20261107T043116_022066Z_head_right.jpg",
+      "sha256": "525ca7040f15c1d75fafa57970b4cb51be5272b59b5f10bfdb1b1c1b93f9bbaa",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0007_none_drawer_pull_27_5cm_20261107T043305_947220Z_head_right.jpg",
+      "sha256": "349ad4e442c7f546a3782df3cf9b4c056817d9431010c7545d74b7d9b4b74114",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_527328Z_head_left.jpg",
+      "sha256": "8350de267e9e322ba1ee80ed93caa31dff429a029d73e323a64bb6d5d5dd831f",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_527328Z_head_right.jpg",
+      "sha256": "765c96e52116455cb487fd48e1ae338d7e734d220c439901b878274f28e64d08",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/grasp_capture_20261107_194545/0001_none_pre_grasp_preparation_20261107T115242_143384Z_head_left.jpg",
+      "sha256": "f5f97ce23babe4e8db42fcb22da4fc2fd1dc5db10e7b76fed0f12d21d3e23d82",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/grasp_capture_20261107_194545/0001_none_pre_grasp_preparation_20261107T115242_143384Z_head_right.jpg",
+      "sha256": "2bfc8bbe0503a58b5900b7cc3cafc2ddc03daafdad7461e6633593c5ccbdfe7b",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/pregrasp_to_initial_20261107_200135_P1/0001_none_return_waypoint_P1_20261107T120900_600375Z_head_left.jpg",
+      "sha256": "6522710e3f2d29345ba8e29820405c2b72e63d1edca063864cfcb343e04840f8",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/pregrasp_to_initial_20261107_200135_P1/0001_none_return_waypoint_P1_20261107T120900_600375Z_head_right.jpg",
+      "sha256": "5acaff040fe336678120cb522e1f0d5e73201056a381c980a3bc3089d6158884",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/pregrasp_to_initial_20261107_200135_P2/0001_none_return_waypoint_P2_20261107T121804_947567Z_head_left.jpg",
+      "sha256": "eebd7e1fe6c9ac0a3fd0e8c7c454579d57919ff60c37c401d5eaefc3b8c3d7d4",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/pregrasp_to_initial_20261107_200135_P2/0001_none_return_waypoint_P2_20261107T121804_947567Z_head_right.jpg",
+      "sha256": "464f340f6d9b0be0ae09a4cc973d60f72844f2a6fe260e9c57b91e996834f5c3",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_957925Z_wrist_left.jpg",
+      "sha256": "66b5917e0e2962740274767d0a2ebd8337bf49636003e03a6ed1c4e12d0c5956",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_957925Z_wrist_right.jpg",
+      "sha256": "54d1f4430ecb51a90ac4374aeb2a5d994675da82210ee4fd47a34e51049e21a9",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_grip_verify_20261107_121348/0001_none_drawer_handle_20261107T041348_966322Z_wrist_right.jpg",
+      "sha256": "e16c47cc8e5f213e7b0fabf55d30d421723bb9f0d05484b50ef9bb2952fa4fbf",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_083939Z_wrist_left.jpg",
+      "sha256": "ef2c9e289a2fe09034156a67004c659cceb33622f04b6a50b134dd385f11bccb",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_083939Z_wrist_right.jpg",
+      "sha256": "63171e9b86f9839098dcfa9ebdb2e40a5ec59f03f2ae64af88aa47299e849827",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0001_none_drawer_pull_pre_20261107T042209_120471Z_wrist_left.jpg",
+      "sha256": "254ed552ba58d4a9c6666219a22303b03d9b68d132af891c60b5fe85ad77932e",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0001_none_drawer_pull_pre_20261107T042209_120471Z_wrist_right.jpg",
+      "sha256": "d311ff4a6349796f78267aaf7aac545725cda76b5ff23f7e1150f81f72513807",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0002_none_drawer_pull_step_01_20261107T042811_186983Z_wrist_right.jpg",
+      "sha256": "f222609cd15563703ab984c9f40becb2245a1e22bdb028ad24cec73abe15db34",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0003_none_drawer_pull_step_02_20261107T042844_830260Z_wrist_right.jpg",
+      "sha256": "b4b0f84f3b84b85d49782e9d8965ea665293988fed0cae6f10d0f2acba29a947",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0004_none_drawer_pull_step_04_20261107T042943_199328Z_wrist_right.jpg",
+      "sha256": "d1c022aa89b85eb851190c5b45a71b92568dd7a65b6ab712d57d6718d9d51156",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0005_none_drawer_pull_step_05_20261107T043017_821183Z_wrist_right.jpg",
+      "sha256": "96782303cd5d6700db6495524edaae3de10d79b2afeb6ed10ab3b1b1624dc47b",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0006_none_drawer_pull_final_25cm_20261107T043116_023721Z_wrist_left.jpg",
+      "sha256": "bdd004fdf3b5eb70e462884c8833917909eb4eb69666e1b5513c641e65c6551d",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0006_none_drawer_pull_final_25cm_20261107T043116_023721Z_wrist_right.jpg",
+      "sha256": "ef25a0fb33fc28d8c4a3e4944cbad88ac3c8d2b9795e36ffa07941a1b68caca5",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0007_none_drawer_pull_27_5cm_20261107T043305_948220Z_wrist_right.jpg",
+      "sha256": "25130ebd089a6f74465af012ff0fe8d8cfa922fb6fbcaa1b66b4e0c67606bd73",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_528327Z_wrist_left.jpg",
+      "sha256": "0188da38178b0d5b1d4cbf056ed00aa8129f18a44bac02f269beb51d9e901846",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_528327Z_wrist_right.jpg",
+      "sha256": "04c59f4f19f0c22b7936c51567b8e7c870be548feb648ae4088ddc4391b1aba5",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/grasp_capture_20261107_194545/0001_none_pre_grasp_preparation_20261107T115154_998437Z_wrist_left.jpg",
+      "sha256": "5d78a8ab121213819f01b3f0c267da694188ad70c7ec6ea942cbbf66249ca693",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/grasp_capture_20261107_194545/0001_none_pre_grasp_preparation_20261107T115154_998437Z_wrist_right.jpg",
+      "sha256": "c0abc7230a78ccce8b309df620112d24528a71ac1fda66f5fbba25088110cc5c",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/pregrasp_to_initial_20261107_200135_P1/0001_none_return_waypoint_P1_20261107T120729_684496Z_wrist_left.jpg",
+      "sha256": "e44762f169a7cb8adb495ce156a5ac440ba7e1b0848659500871e3fa3802f02e",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/pregrasp_to_initial_20261107_200135_P1/0001_none_return_waypoint_P1_20261107T120729_684496Z_wrist_right.jpg",
+      "sha256": "a41de295060f78364e3e5eb77f6eaa15d30e3498b73c2610d16910fc9a6f4f0e",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/pregrasp_to_initial_20261107_200135_P2/0001_none_return_waypoint_P2_20261107T121554_452383Z_wrist_left.jpg",
+      "sha256": "a2d2f7c05508711c6056109a6c38c087ad41d87e09c449e5bf5e754c247a7404",
+      "reason": "user_requested_one_front_view_only"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/pregrasp_to_initial_20261107_200135_P2/0001_none_return_waypoint_P2_20261107T121554_452383Z_wrist_right.jpg",
+      "sha256": "cfd8fe31a9fe7961c466366b85b9b428786f7dc036bf31d541715d2e8e91da15",
+      "reason": "user_requested_one_front_view_only"
+    }
+  ],
+  "numeric_depth_retained": true,
+  "historical_metadata_policy": "Original metadata and hashes retained; references listed as omitted are intentional and are not missing by accident."
+}

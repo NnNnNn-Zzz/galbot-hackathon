@@ -1,0 +1,48 @@
+{
+  "schema": "drawer_close_stop/1",
+  "recorded_ns": 1794028247511787776,
+  "session": "drawer_close_20261107_130612_probe2",
+  "after_step": 2,
+  "drawer_closed_verified": false,
+  "right_arm_stop_confirmed": true,
+  "motion_commands_sent_by_capture": [],
+  "close_step_file": "teaching/drawer_close_20261107_130612_probe2/close_step_02.json",
+  "close_step_sha256": "b82feb0c4a7438ebd4a5bd1a058feadaaeff0d9a1be84813909ca51e0dcb9717",
+  "frames": [
+    {
+      "source": "head_left",
+      "image_path": "raw/head/drawer_close_20261107_130612_probe2/0002_none_drawer_close_stop_after_15mm_20261107T051044_917090Z_head_left.jpg",
+      "image_sha256": "283b9b5bdc6b9981b53b99189528fbd9b485b74f064d4f55b9b5d59209a36bef",
+      "depth_path": null,
+      "quality_flags": []
+    },
+    {
+      "source": "wrist_left",
+      "image_path": "raw/wrist/drawer_close_20261107_130612_probe2/0002_none_drawer_close_stop_after_15mm_20261107T051038_221357Z_wrist_left.jpg",
+      "image_sha256": "8e1f2f98c4dc87fc2ce288096fb53d919f24ae23bd04ee1e0739f9e286d74d0a",
+      "depth_path": "raw/wrist/drawer_close_20261107_130612_probe2/0002_none_drawer_close_stop_after_15mm_20261107T051038_221357Z_wrist_left_depth.bin",
+      "quality_flags": [
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ]
+    },
+    {
+      "source": "head_right",
+      "image_path": "raw/head/drawer_close_20261107_130612_probe2/0002_none_drawer_close_stop_after_15mm_20261107T051044_917090Z_head_right.jpg",
+      "image_sha256": "c0faefb73da4961e13d8b59e8197e92f1ecc03e9d7e287e58d838e9992578aba",
+      "depth_path": null,
+      "quality_flags": []
+    },
+    {
+      "source": "wrist_right",
+      "image_path": "raw/wrist/drawer_close_20261107_130612_probe2/0002_none_drawer_close_stop_after_15mm_20261107T051038_221357Z_wrist_right.jpg",
+      "image_sha256": "0c4a8aadf2bfc113f369efa74be9007b2d084c59c1dbadb855ae181eeef986d4",
+      "depth_path": "raw/wrist/drawer_close_20261107_130612_probe2/0002_none_drawer_close_stop_after_15mm_20261107T051038_221357Z_wrist_right_depth.bin",
+      "quality_flags": [
+        "depth_error_or_stale",
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ]
+    }
+  ]
+}

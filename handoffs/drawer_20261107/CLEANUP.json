@@ -1,0 +1,447 @@
+{
+  "status": "completed_after_verified_archive",
+  "failed_sessions": [
+    "drawer_close_20261107_125552",
+    "drawer_close_20261107_130612_probe2",
+    "drawer_replay_20261107_185938",
+    "drawer_replay_20261107_190843"
+  ],
+  "targets": [
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_close_20261107_125552",
+      "reason": "confirmed_failed_or_blocked_experiment; compact_JSON_evidence_retained",
+      "files": 12,
+      "bytes": 4664918
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_close_20261107_125552",
+      "reason": "confirmed_failed_or_blocked_experiment; compact_JSON_evidence_retained",
+      "files": 9,
+      "bytes": 707949
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_close_20261107_125552",
+      "reason": "confirmed_failed_or_blocked_experiment; compact_JSON_evidence_retained",
+      "files": 13,
+      "bytes": 2022944
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_close_20261107_130612_probe2",
+      "reason": "confirmed_failed_or_blocked_experiment; compact_JSON_evidence_retained",
+      "files": 23,
+      "bytes": 4572329
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_close_20261107_130612_probe2",
+      "reason": "confirmed_failed_or_blocked_experiment; compact_JSON_evidence_retained",
+      "files": 9,
+      "bytes": 719969
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_close_20261107_130612_probe2",
+      "reason": "confirmed_failed_or_blocked_experiment; compact_JSON_evidence_retained",
+      "files": 13,
+      "bytes": 2017326
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_replay_20261107_185938",
+      "reason": "confirmed_failed_or_blocked_experiment; compact_JSON_evidence_retained",
+      "files": 6,
+      "bytes": 172427
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_replay_20261107_190843",
+      "reason": "confirmed_failed_or_blocked_experiment; compact_JSON_evidence_retained",
+      "files": 2,
+      "bytes": 32438
+    },
+    {
+      "path": "medicine_frontend/__pycache__",
+      "reason": "regenerable_python_cache",
+      "files": 31,
+      "bytes": 352503
+    },
+    {
+      "path": "medicine_frontend/tools/__pycache__",
+      "reason": "regenerable_python_cache",
+      "files": 25,
+      "bytes": 412720
+    },
+    {
+      "path": "tmp/capture_waypoint_p1.py",
+      "reason": "replaced_by_verified_handoff_or_duplicate_preview",
+      "files": 1,
+      "bytes": 3562
+    },
+    {
+      "path": "tmp/capture_waypoint_p2.py",
+      "reason": "replaced_by_verified_handoff_or_duplicate_preview",
+      "files": 1,
+      "bytes": 3550
+    },
+    {
+      "path": "tmp/retry_waypoint_p1.py",
+      "reason": "replaced_by_verified_handoff_or_duplicate_preview",
+      "files": 1,
+      "bytes": 3572
+    },
+    {
+      "path": "tmp/drawer_visual",
+      "reason": "replaced_by_verified_handoff_or_duplicate_preview",
+      "files": 13,
+      "bytes": 2505246
+    },
+    {
+      "path": "medicine_frontend/data/exports/drawer_pull_20261107_complete.zip",
+      "reason": "replaced_by_verified_handoff_or_duplicate_preview",
+      "files": 1,
+      "bytes": 4608756
+    },
+    {
+      "path": "medicine_frontend/data/exports/drawer_pull_20261107_complete.sha256",
+      "reason": "replaced_by_verified_handoff_or_duplicate_preview",
+      "files": 1,
+      "bytes": 101
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_956924Z_head_left.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 143328
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_956924Z_head_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 144595
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_957925Z_wrist_left.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 51176
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_957925Z_wrist_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 28755
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_grip_verify_20261107_121348/0001_none_drawer_handle_20261107T041348_968320Z_head_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 143489
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_084939Z_head_left.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 145464
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_084939Z_head_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 147209
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_grip_verify_20261107_121348/0001_none_drawer_handle_20261107T041348_966322Z_wrist_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 29010
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_083939Z_wrist_left.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 48448
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_083939Z_wrist_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 28877
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0001_none_drawer_pull_pre_20261107T042209_120471Z_head_left.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 171732
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0001_none_drawer_pull_pre_20261107T042209_120471Z_head_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 172845
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0002_none_drawer_pull_step_01_20261107T042811_185984Z_head_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 170992
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0003_none_drawer_pull_step_02_20261107T042844_829244Z_head_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 173817
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0004_none_drawer_pull_step_04_20261107T042943_258934Z_head_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 174763
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0005_none_drawer_pull_step_05_20261107T043017_859147Z_head_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 175589
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0006_none_drawer_pull_final_25cm_20261107T043116_022066Z_head_left.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 172985
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0006_none_drawer_pull_final_25cm_20261107T043116_022066Z_head_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 175667
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0007_none_drawer_pull_27_5cm_20261107T043305_947220Z_head_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 173114
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_527328Z_head_left.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 168823
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_527328Z_head_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 170309
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0001_none_drawer_pull_pre_20261107T042209_120471Z_wrist_left.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 47885
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0001_none_drawer_pull_pre_20261107T042209_120471Z_wrist_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 31409
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0002_none_drawer_pull_step_01_20261107T042811_186983Z_wrist_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 29242
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0003_none_drawer_pull_step_02_20261107T042844_830260Z_wrist_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 30508
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0004_none_drawer_pull_step_04_20261107T042943_199328Z_wrist_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 30262
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0005_none_drawer_pull_step_05_20261107T043017_821183Z_wrist_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 29879
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0006_none_drawer_pull_final_25cm_20261107T043116_023721Z_wrist_left.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 50278
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0006_none_drawer_pull_final_25cm_20261107T043116_023721Z_wrist_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 28344
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0007_none_drawer_pull_27_5cm_20261107T043305_948220Z_wrist_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 29526
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_528327Z_wrist_left.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 50115
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_528327Z_wrist_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 31927
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/grasp_capture_20261107_194545/0001_none_pre_grasp_preparation_20261107T115242_143384Z_head_left.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 185423
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/grasp_capture_20261107_194545/0001_none_pre_grasp_preparation_20261107T115242_143384Z_head_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 183825
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/grasp_capture_20261107_194545/0001_none_pre_grasp_preparation_20261107T115154_998437Z_wrist_left.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 40798
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/grasp_capture_20261107_194545/0001_none_pre_grasp_preparation_20261107T115154_998437Z_wrist_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 38364
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/pregrasp_to_initial_20261107_200135_P1/0001_none_return_waypoint_P1_20261107T120900_600375Z_head_left.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 178321
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/pregrasp_to_initial_20261107_200135_P1/0001_none_return_waypoint_P1_20261107T120900_600375Z_head_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 185227
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/pregrasp_to_initial_20261107_200135_P1/0001_none_return_waypoint_P1_20261107T120729_684496Z_wrist_left.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 32288
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/pregrasp_to_initial_20261107_200135_P1/0001_none_return_waypoint_P1_20261107T120729_684496Z_wrist_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 51634
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/pregrasp_to_initial_20261107_200135_P2/0001_none_return_waypoint_P2_20261107T121804_947567Z_head_left.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 181172
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/pregrasp_to_initial_20261107_200135_P2/0001_none_return_waypoint_P2_20261107T121804_947567Z_head_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 180238
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/pregrasp_to_initial_20261107_200135_P2/0001_none_return_waypoint_P2_20261107T121554_452383Z_wrist_left.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 31839
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/pregrasp_to_initial_20261107_200135_P2/0001_none_return_waypoint_P2_20261107T121554_452383Z_wrist_right.jpg",
+      "reason": "user_requested_one_front_view_only; metadata_and_numeric_depth_retained",
+      "files": 1,
+      "bytes": 38232
+    },
+    {
+      "path": "medicine_frontend/data/handle/inspection/contact_sheet.jpg",
+      "reason": "user_requested_one_front_view_only",
+      "files": 1,
+      "bytes": 106059
+    },
+    {
+      "path": "medicine_frontend/data/handle/inspection/model_projections.png",
+      "reason": "user_requested_one_front_view_only",
+      "files": 1,
+      "bytes": 105700
+    },
+    {
+      "path": "medicine_frontend/data/handle/inspection/opened_contact_sheet.jpg",
+      "reason": "user_requested_one_front_view_only",
+      "files": 1,
+      "bytes": 93170
+    },
+    {
+      "path": "medicine_frontend/data/handle/raw/Front/d84dbfef95165818b33bc94eca362c88.jpg",
+      "reason": "user_requested_one_front_view_only",
+      "files": 1,
+      "bytes": 85609
+    },
+    {
+      "path": "medicine_frontend/data/handle/raw/LeftSide/c4e44b767b23ac57a80e6cf2519c74a6.jpg",
+      "reason": "user_requested_one_front_view_only",
+      "files": 1,
+      "bytes": 136529
+    },
+    {
+      "path": "medicine_frontend/data/handle/raw/RightSide/5ed474b1242f53d66333f1395679e267.jpg",
+      "reason": "user_requested_one_front_view_only",
+      "files": 1,
+      "bytes": 104728
+    },
+    {
+      "path": "medicine_frontend/data/handle/raw/RightSide/b0b6ec5059d4eafce7b5c99fdeb28aa2.jpg",
+      "reason": "user_requested_one_front_view_only",
+      "files": 1,
+      "bytes": 127096
+    },
+    {
+      "path": "medicine_frontend/data/handle/raw/Robot's view/158bd221cb5a462c8f3d6cd8636b4fa6.jpg",
+      "reason": "user_requested_one_front_view_only",
+      "files": 1,
+      "bytes": 93900
+    },
+    {
+      "path": "medicine_frontend/data/handle/raw/Robot's view/4eadf06d98da7a8a02db6c8d32461c1f.jpg",
+      "reason": "user_requested_one_front_view_only",
+      "files": 1,
+      "bytes": 100578
+    },
+    {
+      "path": "medicine_frontend/data/handle/raw/Robot's view/81dec11dd3e3a81861fd9ceb91a8efda.jpg",
+      "reason": "user_requested_one_front_view_only",
+      "files": 1,
+      "bytes": 100578
+    },
+    {
+      "path": "medicine_frontend/data/handle/raw/Robot's view/9515fdbf9d452cb45fb0420e92186e8e.jpg",
+      "reason": "user_requested_one_front_view_only",
+      "files": 1,
+      "bytes": 93900
+    }
+  ],
+  "preserved": [
+    "P0/P1/P2 numerical samples",
+    "all successful pull numerical records",
+    "CAD/measurements",
+    "one original front photo",
+    "other repositories and uncommitted frontend work",
+    "successful alignment and other unclassified records"
+  ],
+  "database_integrity": "ok",
+  "removed_targets": 71
+}

@@ -1,0 +1,48 @@
+{
+  "schema": "drawer_close_stop/1",
+  "recorded_ns": 1794027863223481856,
+  "session": "drawer_close_20261107_125552",
+  "after_step": 1,
+  "drawer_closed_verified": false,
+  "right_arm_stop_confirmed": true,
+  "motion_commands_sent_by_capture": [],
+  "close_step_file": "teaching/drawer_close_20261107_125552/close_step_01.json",
+  "close_step_sha256": "65ad441afd1046a7d8e2c28cbec885af8c38638e7beacf49ad12e09a4d0aad9c",
+  "frames": [
+    {
+      "source": "wrist_left",
+      "image_path": "raw/wrist/drawer_close_20261107_125552/0002_none_drawer_close_stop_after_5mm_20261107T050409_838245Z_wrist_left.jpg",
+      "image_sha256": "b1c10dce7bc5ecefb2cb69ec3f7c3b37c9c1440077c254271d5432de98bef912",
+      "depth_path": "raw/wrist/drawer_close_20261107_125552/0002_none_drawer_close_stop_after_5mm_20261107T050409_838245Z_wrist_left_depth.bin",
+      "quality_flags": [
+        "clock_offset_detected",
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ]
+    },
+    {
+      "source": "wrist_right",
+      "image_path": "raw/wrist/drawer_close_20261107_125552/0002_none_drawer_close_stop_after_5mm_20261107T050409_838245Z_wrist_right.jpg",
+      "image_sha256": "5eb8b41493ea725cb50f64d156bff651a79b4df49f55deccd2b79cd18974519d",
+      "depth_path": "raw/wrist/drawer_close_20261107_125552/0002_none_drawer_close_stop_after_5mm_20261107T050409_838245Z_wrist_right_depth.bin",
+      "quality_flags": [
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ]
+    },
+    {
+      "source": "head_left",
+      "image_path": "raw/head/drawer_close_20261107_125552/0002_none_drawer_close_stop_after_5mm_20261107T050415_826327Z_head_left.jpg",
+      "image_sha256": "75c12d1d2eff079aa50884611caef94d847e8b20dba41240803609c78c77fbcc",
+      "depth_path": null,
+      "quality_flags": []
+    },
+    {
+      "source": "head_right",
+      "image_path": "raw/head/drawer_close_20261107_125552/0002_none_drawer_close_stop_after_5mm_20261107T050415_826327Z_head_right.jpg",
+      "image_sha256": "8fe1b53ff86997114e411461bef6ba8af563db988317668dea64da129dce96e9",
+      "depth_path": null,
+      "quality_flags": []
+    }
+  ]
+}

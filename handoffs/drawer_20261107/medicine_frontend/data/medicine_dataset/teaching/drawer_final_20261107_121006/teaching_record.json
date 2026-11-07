@@ -1,0 +1,105 @@
+{
+  "schema": "drawer_teaching_record/2",
+  "session": "drawer_final_20261107_121006",
+  "status": "final_canonical_capture",
+  "operator_confirmed_alignment": true,
+  "operator_reported_gripper": "open",
+  "grasp_verified": false,
+  "replay_ready": false,
+  "motion_commands_sent": [],
+  "capture_ids": [
+    "0088c36f-d4af-51ed-90b1-987b0d2deb22",
+    "a78e9f7f-abb5-55b6-8617-f01e7c3e130b"
+  ],
+  "state_snapshot_id": "385bca1b-b3ca-5ab5-877b-93d9026b99e7",
+  "state_snapshot_path": "teaching/drawer_final_20261107_121006/sdk_snapshot.json",
+  "frames": [
+    {
+      "source": "head_right",
+      "id": "a78e9f7f-abb5-55b6-8617-f01e7c3e130b:head_right",
+      "image_path": "raw/head/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_956924Z_head_right.jpg",
+      "depth_path": null,
+      "quality_flags": []
+    },
+    {
+      "source": "head_left",
+      "id": "a78e9f7f-abb5-55b6-8617-f01e7c3e130b:head_left",
+      "image_path": "raw/head/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_956924Z_head_left.jpg",
+      "depth_path": null,
+      "quality_flags": []
+    },
+    {
+      "source": "wrist_right",
+      "id": "0088c36f-d4af-51ed-90b1-987b0d2deb22:wrist_right",
+      "image_path": "raw/wrist/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_957925Z_wrist_right.jpg",
+      "depth_path": "raw/wrist/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_957925Z_wrist_right_depth.bin",
+      "quality_flags": [
+        "clock_offset_detected",
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ]
+    },
+    {
+      "source": "wrist_left",
+      "id": "0088c36f-d4af-51ed-90b1-987b0d2deb22:wrist_left",
+      "image_path": "raw/wrist/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_957925Z_wrist_left.jpg",
+      "depth_path": "raw/wrist/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_957925Z_wrist_left_depth.bin",
+      "quality_flags": [
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ]
+    }
+  ],
+  "numeric_state": {
+    "base_pose_map": {
+      "x": -1.1482843160629272,
+      "y": 0.03716663643717766,
+      "z": 0.00846363790333271,
+      "qx": 0.001001617272507556,
+      "qy": -0.0008616633655276613,
+      "qz": -0.6990933195774813,
+      "qw": 0.7150292195576498,
+      "frame_id": "map"
+    },
+    "base_yaw_deg": -88.70869726712343,
+    "base_event_ns": 1794024609285586710,
+    "right_arm_joints_rad": {
+      "right_arm_joint1": -0.23596850037574768,
+      "right_arm_joint2": 1.4272499084472656,
+      "right_arm_joint3": 0.13781817257404327,
+      "right_arm_joint4": 0.43826088309288025,
+      "right_arm_joint5": -1.1547045707702637,
+      "right_arm_joint6": -0.0747821182012558,
+      "right_arm_joint7": 0.2716098725795746
+    },
+    "joint_event_ns": 1794024609286041762,
+    "right_end_effector_pose_base_link_xyz_xyzw": [
+      0.7517217473786474,
+      -0.23831644265708138,
+      0.8228363829304625,
+      -0.6999693863327615,
+      0.04283559458454876,
+      0.014368136352929684,
+      0.7127422582471656
+    ],
+    "tcp_requested_ns": 1794024607135968400,
+    "tcp_received_ns": 1794024607429650400,
+    "right_gripper_feedback": {
+      "width": 0.050003677368164065,
+      "velocity": -5.247104167938232e-05,
+      "effort": 2.914285659790039,
+      "is_moving": false,
+      "timestamp_ns": 1794024609079285760
+    },
+    "gripper_event_ns": 1794024609083762315
+  },
+  "caveats": [
+    "Operator confirmation of alignment predates this final capture; latest images show handle between right gripper fingers.",
+    "Right gripper is still open; no stable grasp is verified.",
+    "Camera and SDK requests overlap in time but are not hardware-synchronized.",
+    "Navigation reports status UNKNOWN although connected and localized are true.",
+    "map origin/version and tool-tip-to-EndEffector transform are not verified.",
+    "30 cm in camera metadata is a collector default, not a measured distance.",
+    "Right wrist clock offset warning remains; RGB-D calibration is unverified."
+  ]
+}

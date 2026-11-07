@@ -1,0 +1,1001 @@
+{
+  "schema": "sdk_console_snapshot/1",
+  "started_ns": 1794025838370178900,
+  "source": "http://192.168.166.7:8080",
+  "motion_commands_sent": [],
+  "reads": {
+    "navigation": {
+      "requested_ns": 1794025838370178900,
+      "data": {
+        "connected": true,
+        "localized": true,
+        "pose": {
+          "x": -1.1517502069473267,
+          "y": 0.030034150928258896,
+          "z": -0.006523897871375084,
+          "qx": 0.0005873136124151979,
+          "qy": -0.0009254000620997884,
+          "qz": -0.6919557010690821,
+          "qw": 0.7219391293283949,
+          "frame_id": "map"
+        },
+        "status": "UNKNOWN",
+        "task_id": null,
+        "detail": ""
+      },
+      "received_ns": 1794025838437174200
+    },
+    "robot": {
+      "requested_ns": 1794025838437174200,
+      "data": {
+        "joint_state": [
+          {
+            "name": "chassis_joint1",
+            "position": -0.0002562242746353149,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "chassis_joint2",
+            "position": -0.0008168200850486756,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "chassis_joint3",
+            "position": -0.0005032941699028015,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "chassis_joint4",
+            "position": -0.0003882456123828888,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "head_joint1",
+            "position": 0.01726926863193512,
+            "velocity": 0.0007070692954584956,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "head_joint2",
+            "position": -0.00015579492901451886,
+            "velocity": 0.00046738478704355657,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "left_arm_joint1",
+            "position": 1.2188663482666016,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "left_arm_joint2",
+            "position": -1.4435460567474365,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "left_arm_joint3",
+            "position": -0.7255246639251709,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "left_arm_joint4",
+            "position": -1.6905642747879028,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "left_arm_joint5",
+            "position": -0.051628582179546356,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "left_arm_joint6",
+            "position": 0.21979105472564697,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "left_arm_joint7",
+            "position": 0.045900411903858185,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "right_arm_joint1",
+            "position": -0.966575562953949,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "right_arm_joint2",
+            "position": 1.1808059215545654,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "right_arm_joint3",
+            "position": 0.18424567580223083,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "right_arm_joint4",
+            "position": 1.4896610975265503,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "right_arm_joint5",
+            "position": -1.1517810821533203,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "right_arm_joint6",
+            "position": -0.3141557574272156,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "right_arm_joint7",
+            "position": 0.03082251362502575,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "leg_joint1",
+            "position": 0.4981482923030853,
+            "velocity": 0.00025166873820126057,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "leg_joint2",
+            "position": 1.4937736988067627,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "leg_joint3",
+            "position": 1.00121009349823,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "leg_joint4",
+            "position": -0.0006111955153755844,
+            "velocity": 5.992112710373476e-05,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          },
+          {
+            "name": "leg_joint5",
+            "position": -0.0019174760673195124,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025838729001472
+          }
+        ],
+        "lidar": null,
+        "sensors": null,
+        "dry_run": false
+      },
+      "received_ns": 1794025838592026000
+    },
+    "right_end_effector": {
+      "requested_ns": 1794025838592026000,
+      "data": {
+        "available": true,
+        "dry_run": false,
+        "arm": "right_arm",
+        "pose": [
+          0.5315002088142327,
+          -0.23957984015459316,
+          0.8198174132337147,
+          -0.7009087423309005,
+          0.04743732126591944,
+          0.016188784815285278,
+          0.7114875675100962
+        ],
+        "frame_id": "base_link"
+      },
+      "received_ns": 1794025838677937600
+    }
+  },
+  "events": [
+    {
+      "received_ns": 1794025838876626400,
+      "event": {
+        "type": "navigation_state",
+        "timestamp_ns": 1794025838985875688,
+        "sequence": 167,
+        "data": {
+          "connected": true,
+          "localized": true,
+          "pose": {
+            "x": -1.1503900289535522,
+            "y": 0.026975613087415695,
+            "z": -0.003865797771140933,
+            "qx": 0.0005479113477212981,
+            "qy": -0.000840016782646575,
+            "qz": -0.6918850742661588,
+            "qw": 0.7220069516096587,
+            "frame_id": "map"
+          },
+          "status": "UNKNOWN",
+          "task_id": null,
+          "detail": ""
+        }
+      }
+    },
+    {
+      "received_ns": 1794025839318163900,
+      "event": {
+        "type": "navigation_state",
+        "timestamp_ns": 1794025839198329590,
+        "sequence": 169,
+        "data": {
+          "connected": true,
+          "localized": true,
+          "pose": {
+            "x": -1.1495424509048462,
+            "y": 0.028112979605793953,
+            "z": -0.005818286444991827,
+            "qx": 0.0005410682248020713,
+            "qy": -0.000865080597666542,
+            "qz": -0.6918334107629712,
+            "qw": 0.7220564317508775,
+            "frame_id": "map"
+          },
+          "status": "UNKNOWN",
+          "task_id": null,
+          "detail": ""
+        }
+      }
+    },
+    {
+      "received_ns": 1794025839318163900,
+      "event": {
+        "type": "joint_state",
+        "timestamp_ns": 1794025839199247086,
+        "sequence": 170,
+        "data": [
+          {
+            "name": "chassis_joint1",
+            "position": -0.0002562242746353149,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "chassis_joint2",
+            "position": -0.0008169190287590027,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "chassis_joint3",
+            "position": -0.0005032941699028015,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "chassis_joint4",
+            "position": -0.0003882456123828888,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "head_joint1",
+            "position": 0.01728125289082527,
+            "velocity": -0.0005033374764025211,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "head_joint2",
+            "position": -0.00017976337403524667,
+            "velocity": 0.000215716048842296,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "left_arm_joint1",
+            "position": 1.2188663482666016,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "left_arm_joint2",
+            "position": -1.4435704946517944,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "left_arm_joint3",
+            "position": -0.7255246639251709,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "left_arm_joint4",
+            "position": -1.6906358003616333,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "left_arm_joint5",
+            "position": -0.05165301635861397,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "left_arm_joint6",
+            "position": 0.21979105472564697,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "left_arm_joint7",
+            "position": 0.04594753310084343,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "right_arm_joint1",
+            "position": -0.9665999412536621,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "right_arm_joint2",
+            "position": 1.180781602859497,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "right_arm_joint3",
+            "position": 0.18422123789787292,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "right_arm_joint4",
+            "position": 1.4896610975265503,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "right_arm_joint5",
+            "position": -1.151756763458252,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "right_arm_joint6",
+            "position": -0.3141557574272156,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "right_arm_joint7",
+            "position": 0.03082251362502575,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "leg_joint1",
+            "position": 0.4981363117694855,
+            "velocity": -5.992112710373476e-05,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "leg_joint2",
+            "position": 1.4937857389450073,
+            "velocity": -0.00046738478704355657,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "leg_joint3",
+            "position": 1.0012221336364746,
+            "velocity": 0.0002636529679875821,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "leg_joint4",
+            "position": -0.0006231797160580754,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          },
+          {
+            "name": "leg_joint5",
+            "position": -0.0019654128700494766,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839150330112
+          }
+        ]
+      }
+    },
+    {
+      "received_ns": 1794025840125834200,
+      "event": {
+        "type": "robot_sensors",
+        "timestamp_ns": 1794025839199259726,
+        "sequence": 172,
+        "data": {
+          "imu": {
+            "source": "chassis_imu",
+            "timestamp_ns": 1794025839194348000,
+            "accel": {
+              "x": -0.047183881010557524,
+              "y": 0.0055980877226480515,
+              "z": 9.813048176604509
+            },
+            "gyro": {
+              "x": -0.0007417649399022298,
+              "y": -0.002181661565,
+              "z": 0.0009817476782425674
+            },
+            "magnet": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            }
+          },
+          "bms": {
+            "voltage": 47.72999954223633,
+            "current": -5.210000038146973,
+            "battery_level": 43.20000076293945,
+            "temperature": 31.700000762939453,
+            "charging_status": false,
+            "health_status": false,
+            "capacity": 28.34000015258789
+          },
+          "grippers": {
+            "left": {
+              "width": 0.12000132751464844,
+              "velocity": -5.247104167938232e-05,
+              "effort": 4.142857074737549,
+              "is_moving": false,
+              "timestamp_ns": 1794025839191434752
+            },
+            "right": {
+              "width": 0.024308334350585936,
+              "velocity": -5.247104167938232e-05,
+              "effort": 8.216300964355469,
+              "is_moving": false,
+              "timestamp_ns": 1794025839191434752
+            }
+          }
+        }
+      }
+    },
+    {
+      "received_ns": 1794025840125834200,
+      "event": {
+        "type": "navigation_state",
+        "timestamp_ns": 1794025839403520671,
+        "sequence": 173,
+        "data": {
+          "connected": true,
+          "localized": true,
+          "pose": {
+            "x": -1.1501964330673218,
+            "y": 0.024608643725514412,
+            "z": -0.006862288806587458,
+            "qx": 0.0004942347166205095,
+            "qy": -0.0008880303757352221,
+            "qz": -0.6917937018075555,
+            "qw": 0.7220944822344896,
+            "frame_id": "map"
+          },
+          "status": "UNKNOWN",
+          "task_id": null,
+          "detail": ""
+        }
+      }
+    },
+    {
+      "received_ns": 1794025840125834200,
+      "event": {
+        "type": "joint_state",
+        "timestamp_ns": 1794025839404000491,
+        "sequence": 174,
+        "data": [
+          {
+            "name": "chassis_joint1",
+            "position": -0.0002562737762928009,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "chassis_joint2",
+            "position": -0.0008168695569038391,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "chassis_joint3",
+            "position": -0.0005030962228775024,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "chassis_joint4",
+            "position": -0.0003882456123828888,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "head_joint1",
+            "position": 0.01726926863193512,
+            "velocity": 0.000107858024421148,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "head_joint2",
+            "position": -0.00015579492901451886,
+            "velocity": -3.5952674807049334e-05,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "left_arm_joint1",
+            "position": 1.2188435792922974,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "left_arm_joint2",
+            "position": -1.4435460567474365,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "left_arm_joint3",
+            "position": -0.7255246639251709,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "left_arm_joint4",
+            "position": -1.6905885934829712,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "left_arm_joint5",
+            "position": -0.05165301635861397,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "left_arm_joint6",
+            "position": 0.21979105472564697,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "left_arm_joint7",
+            "position": 0.045900411903858185,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "right_arm_joint1",
+            "position": -0.966575562953949,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "right_arm_joint2",
+            "position": 1.180781602859497,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "right_arm_joint3",
+            "position": 0.18422123789787292,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "right_arm_joint4",
+            "position": 1.489636778831482,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "right_arm_joint5",
+            "position": -1.1517810821533203,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "right_arm_joint6",
+            "position": -0.31413131952285767,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "right_arm_joint7",
+            "position": 0.03082251362502575,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "leg_joint1",
+            "position": 0.4981363117694855,
+            "velocity": 4.793690095539205e-05,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "leg_joint2",
+            "position": 1.4937736988067627,
+            "velocity": 0.00032357408781535923,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "leg_joint3",
+            "position": 1.0012580156326294,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "leg_joint4",
+            "position": -0.0005992112564854324,
+            "velocity": 2.3968450477696024e-05,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          },
+          {
+            "name": "leg_joint5",
+            "position": -0.0019414444686844945,
+            "velocity": -0.0002996056282427162,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839388933888
+          }
+        ]
+      }
+    },
+    {
+      "received_ns": 1794025840125834200,
+      "event": {
+        "type": "robot_sensors",
+        "timestamp_ns": 1794025839404007403,
+        "sequence": 175,
+        "data": {
+          "imu": {
+            "source": "chassis_imu",
+            "timestamp_ns": 1794025839392558000,
+            "accel": {
+              "x": -0.05038279121629893,
+              "y": 0.0033988389540783827,
+              "z": 9.8116488312006
+            },
+            "gyro": {
+              "x": -0.0006981316851955406,
+              "y": -0.00229074453922027,
+              "z": 0.0006544984955074325
+            },
+            "magnet": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            }
+          },
+          "bms": {
+            "voltage": 47.72999954223633,
+            "current": -5.210000038146973,
+            "battery_level": 43.20000076293945,
+            "temperature": 31.700000762939453,
+            "charging_status": false,
+            "health_status": false,
+            "capacity": 28.34000015258789
+          },
+          "grippers": {
+            "left": {
+              "width": 0.12000132751464844,
+              "velocity": -5.247104167938232e-05,
+              "effort": 4.142857074737549,
+              "is_moving": false,
+              "timestamp_ns": 1794025839391609856
+            },
+            "right": {
+              "width": 0.024308334350585936,
+              "velocity": -5.247104167938232e-05,
+              "effort": 8.216300964355469,
+              "is_moving": false,
+              "timestamp_ns": 1794025839391609856
+            }
+          }
+        }
+      }
+    },
+    {
+      "received_ns": 1794025840125834200,
+      "event": {
+        "type": "navigation_state",
+        "timestamp_ns": 1794025839605415551,
+        "sequence": 176,
+        "data": {
+          "connected": true,
+          "localized": true,
+          "pose": {
+            "x": -1.1511597633361816,
+            "y": 0.029928702861070633,
+            "z": -0.005420573987066746,
+            "qx": 0.0004553917234329564,
+            "qy": -0.0008459108103108562,
+            "qz": -0.6917250215309111,
+            "qw": 0.7221603503664128,
+            "frame_id": "map"
+          },
+          "status": "UNKNOWN",
+          "task_id": null,
+          "detail": ""
+        }
+      }
+    },
+    {
+      "received_ns": 1794025840125834200,
+      "event": {
+        "type": "joint_state",
+        "timestamp_ns": 1794025839605811113,
+        "sequence": 177,
+        "data": [
+          {
+            "name": "chassis_joint1",
+            "position": -0.0002561253011226654,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "chassis_joint2",
+            "position": -0.0008166220784187317,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "chassis_joint3",
+            "position": -0.0005027993321418762,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "chassis_joint4",
+            "position": -0.0003878992199897766,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "head_joint1",
+            "position": 0.017305221408605576,
+            "velocity": 0.0010426276130601764,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "head_joint2",
+            "position": -0.00017976337403524667,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "left_arm_joint1",
+            "position": 1.2188663482666016,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "left_arm_joint2",
+            "position": -1.4435949325561523,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "left_arm_joint3",
+            "position": -0.7255473136901855,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "left_arm_joint4",
+            "position": -1.6906131505966187,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "left_arm_joint5",
+            "position": -0.05165301635861397,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "left_arm_joint6",
+            "position": 0.219813734292984,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "left_arm_joint7",
+            "position": 0.04587597772479057,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "right_arm_joint1",
+            "position": -0.966575562953949,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "right_arm_joint2",
+            "position": 1.1808059215545654,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "right_arm_joint3",
+            "position": 0.18422123789787292,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "right_arm_joint4",
+            "position": 1.4896122217178345,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "right_arm_joint5",
+            "position": -1.1517810821533203,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "right_arm_joint6",
+            "position": -0.3141784369945526,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "right_arm_joint7",
+            "position": 0.030799824744462967,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "leg_joint1",
+            "position": 0.4981482923030853,
+            "velocity": -3.5952674807049334e-05,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "leg_joint2",
+            "position": 1.493797779083252,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "leg_joint3",
+            "position": 1.0012221336364746,
+            "velocity": 0.00014381069922819734,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "leg_joint4",
+            "position": -0.0006231797160580754,
+            "velocity": 0.0,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          },
+          {
+            "name": "leg_joint5",
+            "position": -0.0019534286111593246,
+            "velocity": -0.00015579492901451886,
+            "effort": 0.0,
+            "timestamp_ns": 1794025839588225792
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [],
+  "finished_ns": 1794025840125834200
+}

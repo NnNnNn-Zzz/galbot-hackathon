@@ -1,0 +1,69 @@
+{
+  "schema": "manual_waypoint_demonstration/1",
+  "session": "pregrasp_to_initial_20261107_200135",
+  "direction": "pre_grasp_to_initial",
+  "status": "awaiting_next_waypoint",
+  "capture_mode": "operator_triggered_stationary_waypoints",
+  "purpose": "Constrain later initial-to-pregrasp approach with recorded joint configurations",
+  "motion_commands_sent": [],
+  "points": [
+    {
+      "id": "P0",
+      "role": "pre_grasp_preparation",
+      "source_manifest": "../grasp_capture_20261107_194545/manifest.json",
+      "operator_confirmed_same_position": true,
+      "capture_synchronized": false,
+      "source_quality_flags": {
+        "wrist_right": [
+          "rgb_depth_skew",
+          "depth_error_or_stale",
+          "joint_state_not_numeric",
+          "geometry_calibration_unverified"
+        ],
+        "wrist_left": [
+          "depth_error_or_stale",
+          "joint_state_not_numeric",
+          "geometry_calibration_unverified"
+        ],
+        "head_right": [],
+        "head_left": []
+      }
+    },
+    {
+      "id": "P1",
+      "source_manifest": "../pregrasp_to_initial_20261107_200135_P1/manifest.json",
+      "results": {
+        "state": {
+          "samples": 20,
+          "exit_code": 0,
+          "joint_count": 25,
+          "errors": []
+        }
+      }
+    },
+    {
+      "id": "P2",
+      "source_manifest": "../pregrasp_to_initial_20261107_200135_P2/manifest.json",
+      "results": {
+        "state": {
+          "samples": 20,
+          "exit_code": 0,
+          "joint_count": 25,
+          "errors": []
+        },
+        "cameras": {
+          "wrist": 0,
+          "head": 0
+        }
+      }
+    }
+  ],
+  "endpoint_initial_recorded": false,
+  "continuous_recording_active": false,
+  "reverse_execution_validated": false,
+  "notes": [
+    "Waypoint poses do not capture the continuous path between points.",
+    "Record joint configuration at each waypoint to distinguish IK solutions.",
+    "Raw sample timestamps retained."
+  ]
+}

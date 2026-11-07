@@ -1,0 +1,1110 @@
+{
+  "schema": "handoff_integrity/1",
+  "files": [
+    {
+      "path": ".gitattributes",
+      "bytes": 9,
+      "sha256": "8b9c3028d6467ff3be7c793141927841d70f47f52d0590677438f488ca154992"
+    },
+    {
+      "path": "ASSET_POLICY.json",
+      "bytes": 14498,
+      "sha256": "e54741982a1f61ec1826105fd0d2dcf6e8c1727ab04d3ec719f43bcd320eaff0"
+    },
+    {
+      "path": "CLEANUP.json",
+      "bytes": 20124,
+      "sha256": "83562bf39f48a3ed0ffd696c9c1e76374a212a1491892f44b5a8973d7814adfe"
+    },
+    {
+      "path": "DATA.md",
+      "bytes": 3505,
+      "sha256": "5d07629d78844e39df8a3b036cbb7c499d7c4c455ae3041d4fe2fb00bcb9045a"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_125552/after_stop_record.json",
+      "bytes": 2224,
+      "sha256": "0b7a3809a44bc8c78e37aafb82a6b2093025ca4033e07d22bd36d30457739ecc"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_125552/close_step_01.json",
+      "bytes": 3467,
+      "sha256": "65ad441afd1046a7d8e2c28cbec885af8c38638e7beacf49ad12e09a4d0aad9c"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_125552/close_step_01_after.json",
+      "bytes": 30797,
+      "sha256": "ef25009951c22e6509d22fd2df4576880c61f2ee2f1c759bb9c75deb42a9c043"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_125552/close_step_01_before.json",
+      "bytes": 30817,
+      "sha256": "e0b674d1d9e0ce1218346215b68fae164f26572e3e01b13f5b2eceabf9e0a37a"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_125552/force_baseline.json",
+      "bytes": 660,
+      "sha256": "6e14c3497290408aa97299bc6df43a5d39b90ee4b77608994d0c09764aa100c6"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_125552/initial_record.json",
+      "bytes": 3407,
+      "sha256": "2e9eba6d58f45608d18e43db0ac698ac56e60a5d3f9e9464dc82daf91e1ea8b9"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_125552/initial_state.json",
+      "bytes": 30925,
+      "sha256": "27eff3753616e32df0701105f628be4f1868f3676ac5141c9e195fe84f2ea602"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_130612_probe2/after_stop_record.json",
+      "bytes": 2285,
+      "sha256": "f66f51bc6e3ea41f765831c0b0f2dfee88d8e84dd461080d359b6e8aa93eb351"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_130612_probe2/close_step_02.json",
+      "bytes": 3680,
+      "sha256": "b82feb0c4a7438ebd4a5bd1a058feadaaeff0d9a1be84813909ca51e0dcb9717"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_130612_probe2/close_step_02_after.json",
+      "bytes": 30892,
+      "sha256": "f8f432ea2df34ef2f8fcaede7e1fed59cb226bf4f86d504431549a52c5186b1a"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_130612_probe2/close_step_02_before.json",
+      "bytes": 30770,
+      "sha256": "bce5975f2c8faf93aad45e2df2dbc32831577855931176adc7bbcbf64c60869b"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_130612_probe2/controller_switch.json",
+      "bytes": 4217,
+      "sha256": "8a1821105557e439b7716ebabb75aebdf38b06dd18844b2b786a470db24dc664"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_130612_probe2/controller_switch_after.json",
+      "bytes": 30868,
+      "sha256": "2f1532849012e07010365a92a2e50e97d382d18bc81c123ca55f1813722276af"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_130612_probe2/controller_switch_after_regrip_before.json",
+      "bytes": 30860,
+      "sha256": "3715b0857ed102524171ce9aaa0acb39346a8384956bf5f9cfed37ef9f633e5e"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_130612_probe2/controller_switch_before.json",
+      "bytes": 30902,
+      "sha256": "081475d98c609c25bb930d08d523f3dbd96d69998290b713d0304807434afb46"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_130612_probe2/controller_switch_confirmed_before.json",
+      "bytes": 30786,
+      "sha256": "bcc62d5c019fbe5a145f1280692a62dc792823c8b210b304dc830cd2edb174fd"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_130612_probe2/controller_switch_exclusive_before.json",
+      "bytes": 30827,
+      "sha256": "4b609e0db35af94c08afb536d8314ba8b2253c25269e529c939e1705d47e7d9b"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_130612_probe2/controller_switch_near_regrip_before.json",
+      "bytes": 30823,
+      "sha256": "433024416edf25b1289f9b52f125527c41fad484320d2d607131694a62a2ee80"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_130612_probe2/force_baseline.json",
+      "bytes": 674,
+      "sha256": "6c26d1c680f506b82e321717798bdc5a670cdcf0de41755419deb802b812ba21"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_130612_probe2/initial_record.json",
+      "bytes": 3460,
+      "sha256": "6674db2637267c512b15432578b9feac111c44fad563ce174105e596817e802f"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_130612_probe2/initial_state.json",
+      "bytes": 30836,
+      "sha256": "116ad63f893f3e4a1866d09ba0850e4fc0d5e405753d7f5edaa3e18c4a94e521"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_130612_probe2/regrip_after.json",
+      "bytes": 30766,
+      "sha256": "2752cc0872e56b5d4441d0ba0c70bf2e8a44d4c15100285708948541f267eb91"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_130612_probe2/regrip_after_unexpected_open.json",
+      "bytes": 2201,
+      "sha256": "2c5a192129b855203d3a35c210bfc61c2dc7bddded300a633b9309e5c595ca76"
+    },
+    {
+      "path": "evidence/drawer_close_20261107_130612_probe2/regrip_before.json",
+      "bytes": 30859,
+      "sha256": "09b4e915a905c870e43743854eb6b3565781a4e3207704a2241e2258ae4b19c2"
+    },
+    {
+      "path": "evidence/drawer_replay_20261107_185938/controller_switch.json",
+      "bytes": 5370,
+      "sha256": "f96708859bf68b716cb153c2aea738d502c70db25a40765536da950638982077"
+    },
+    {
+      "path": "evidence/drawer_replay_20261107_185938/controller_switch_after.json",
+      "bytes": 29860,
+      "sha256": "7f9369266944a0be40aab1ab79b3f3111bfabfa6f85f0afbb3108150c5a2d901"
+    },
+    {
+      "path": "evidence/drawer_replay_20261107_185938/controller_switch_before_1794049192304115800.json",
+      "bytes": 29719,
+      "sha256": "bb6f7b3469d32a166a8be9f353f2a4fc2efcbc2cdcb11b4ba799115ad4d27064"
+    },
+    {
+      "path": "evidence/drawer_replay_20261107_185938/observation_pre_switch_1794049181769142900.json",
+      "bytes": 2744,
+      "sha256": "047df60e1e1f55e726878564cefe0e733b21331a8005d7d754da83140f984c39"
+    },
+    {
+      "path": "evidence/drawer_replay_20261107_185938/observation_pre_switch_1794049181769142900_state.json",
+      "bytes": 26592,
+      "sha256": "ffe5b7652d117c233c37ea458aeb67cd64c956a02bc8a424dc6f61c6694952cd"
+    },
+    {
+      "path": "evidence/drawer_replay_20261107_190843/prepare.json",
+      "bytes": 2597,
+      "sha256": "f24b253de1b5f7d2d28b4d9e238e963ab5f014af246b53aab929f7f172a06d8d"
+    },
+    {
+      "path": "evidence/drawer_replay_20261107_190843/prepare_state.json",
+      "bytes": 29841,
+      "sha256": "482ec9e5cc2eb8d2dd92828e984e09c670f190532a542932fd8a384242603118"
+    },
+    {
+      "path": "FAILURES.md",
+      "bytes": 4364,
+      "sha256": "819a35f63c79c6528991e2d509567db083f30b8c6d426d052e63bd625b89d189"
+    },
+    {
+      "path": "galbot-hackathon/scenes/scene_medicine_check/data/recorded_drawer_pull_20261107.json",
+      "bytes": 5526,
+      "sha256": "d042ae343ca2c3b5e208d5430b02c6c88417979057bfde49965aea4b2055c142"
+    },
+    {
+      "path": "galbot-hackathon/scenes/scene_medicine_check/data/recorded_drawer_regrip_close_20261107.json",
+      "bytes": 4862,
+      "sha256": "6ba164148773255963f0cbabc87268437797ed731729c59b16160ba937fd71f3"
+    },
+    {
+      "path": "galbot-hackathon/scenes/scene_medicine_check/drawer_replay.py",
+      "bytes": 10594,
+      "sha256": "d6d5c02229166127c8d20028e741cc55450d7992f25430156b1f57fa4e9208f7"
+    },
+    {
+      "path": "galbot-hackathon/scenes/scene_medicine_check/tests/verify_drawer_replay.py",
+      "bytes": 4448,
+      "sha256": "7a19acc5282e849cfa1a2c1daf9f1b9e275ced3a4b97ad7fb8c8346769408015"
+    },
+    {
+      "path": "medicine_frontend/__init__.py",
+      "bytes": 83,
+      "sha256": "ddfefeccb411bcac7838383a5fc29eed2a4855bedac7d579687c308adb57dd24"
+    },
+    {
+      "path": "medicine_frontend/core.py",
+      "bytes": 4854,
+      "sha256": "cd4a3730c64cdd239a380b8c69f77963297a73c1fc0a277937ed61feefc53489"
+    },
+    {
+      "path": "medicine_frontend/data/handle/Model/bashou(1).3mf",
+      "bytes": 76407,
+      "sha256": "824f9b6021f105543b8541586aa20476f4ec3d75793a562c59bde4c5d4129859"
+    },
+    {
+      "path": "medicine_frontend/data/handle/Model/bashou(1).STEP",
+      "bytes": 56729,
+      "sha256": "e2539334dd96e3557ebc8cfe253fcbd498ecc9b476e4bfd34389adcfb3faf4ef"
+    },
+    {
+      "path": "medicine_frontend/data/handle/scene_measurements.json",
+      "bytes": 890,
+      "sha256": "adaa4cc502ca6d9a231c2a07a4b3b332e9e878137cc7e820c2d1f735fcffd638"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_956924Z.json",
+      "bytes": 3184,
+      "sha256": "1ed2848cb38e292991952be40070ad1a9103f063f7fb9757f27576632db8e052"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_final_20261107_121006/camera_info_1794024606953927600.json",
+      "bytes": 6728,
+      "sha256": "1274ea8decaf2887a44ec1d2e57f2125ff0325e10160e92ccd979fdd3f316355"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_final_20261107_121006/session_index.jsonl",
+      "bytes": 153,
+      "sha256": "e329177015a88acfeeb4719ccca329128fb824664a652b7fa226105e964f4fb6"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_grip_verify_20261107_121348/0001_none_drawer_handle_20261107T041348_968320Z.json",
+      "bytes": 2668,
+      "sha256": "f3f35704e5ea0df3604e1b34760f78d5cbe1caafacf308f9b04786d3ee179134"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_084939Z.json",
+      "bytes": 3190,
+      "sha256": "9a437f56ea9d80e2b2eaf9ee540549c4259cff208aaa1451e0676a206c1879ca"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_grip_verify_20261107_121348/camera_info_1794024828964309300.json",
+      "bytes": 6728,
+      "sha256": "1af5730f0478bc6abfcb43181b35199334818f3141811160a62ee3803bf1cf9c"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_grip_verify_20261107_121348/camera_info_1794025016080941700.json",
+      "bytes": 6728,
+      "sha256": "96d4f5cd2ee9bd72c92a3e1d94d5d876b296e9c2a9fcacfe3f49c69295a76e8d"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_grip_verify_20261107_121348/session_index.jsonl",
+      "bytes": 311,
+      "sha256": "83fa5dd751566fa3eb691e26e8166fecc502242f0cd75c1370881375c0746a67"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0001_none_drawer_pull_pre_20261107T042209_120471Z.json",
+      "bytes": 3152,
+      "sha256": "ad09868e757fe79b45669d15f3964095f9d93cbf7975655f23e09e84b82dd009"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0002_none_drawer_pull_step_01_20261107T042811_185984Z.json",
+      "bytes": 2679,
+      "sha256": "b812de50a088d0a52e65799fedab483433f3e0cefa0c464e09cd7e46bdcd2b06"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0003_none_drawer_pull_step_02_20261107T042844_829244Z.json",
+      "bytes": 2690,
+      "sha256": "dfe5ffba5fbe4790728e1008caff03274a34e191a610a7ad4817d99786026d2e"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0004_none_drawer_pull_step_04_20261107T042943_258934Z.json",
+      "bytes": 2691,
+      "sha256": "902e89d7ec488fc0541e0555e3bad215e9e41518e2145cbf97d2d34136a04d50"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0005_none_drawer_pull_step_05_20261107T043017_859147Z.json",
+      "bytes": 2691,
+      "sha256": "8dc34d51de47d703537435fc3d8638100c526f9962134c141b1f3b1904cf3a27"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0006_none_drawer_pull_final_25cm_20261107T043116_022066Z.json",
+      "bytes": 3185,
+      "sha256": "c9a7b7d7b19bf47ec2498507ad4d53b69d47e40b4e265cdba5d592a97e0f1c7a"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0007_none_drawer_pull_27_5cm_20261107T043305_947220Z.json",
+      "bytes": 2704,
+      "sha256": "2f1b75cebb810821b8d49cf1bf25dd21966c8b15cd18074fc9a78696048b99a0"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_527328Z.json",
+      "bytes": 3195,
+      "sha256": "d628a1684e665a5ea761f9a5dd519243f41ce1c942505ad586c27a030be4db8c"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/camera_info_1794025329118465600.json",
+      "bytes": 6728,
+      "sha256": "073851a94c30d452960072f46360e9d07b0c132868be604ec5706434b95e99a7"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/camera_info_1794025691182971200.json",
+      "bytes": 6728,
+      "sha256": "5da1696ebec4eeec702bafc6c662b3f317122bcbd2fe32a5ef0e1362425682a7"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/camera_info_1794025724826733100.json",
+      "bytes": 6728,
+      "sha256": "5884a26843c47cf07e90e4d8883c4fe753110fc21958e6c55082c49b3cf46161"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/camera_info_1794025783256065100.json",
+      "bytes": 6728,
+      "sha256": "8b5c93cd08f2de04c24e2d301f9da159ef9e53f8d54709f13e05860fc962d695"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/camera_info_1794025817858146300.json",
+      "bytes": 6728,
+      "sha256": "c8a60bdb27525071313acb5d2eed011291c63d729429f34cbb64c2908ef1d3e0"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/camera_info_1794025876018770800.json",
+      "bytes": 6728,
+      "sha256": "95cd7e20528036b3ebf7b3f5e80f91208497d552e28a91ef06794d03bd4921ba"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/camera_info_1794025985944222700.json",
+      "bytes": 6728,
+      "sha256": "d8d6b138c2c9d75796586a0b0c6d851c4e69971cd42415ff763dd6fb7a01b2cb"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/camera_info_1794026046525328200.json",
+      "bytes": 6728,
+      "sha256": "c28bd93335f001b126a6636818fbd8e946e871224e01bec9804546d5b5597f69"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/drawer_pull_20261107_122158/session_index.jsonl",
+      "bytes": 1281,
+      "sha256": "fe3e4cd701bbfec704c15fd2a582eab66e2192743ffea906aefbcdf6fa988a9e"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/grasp_capture_20261107_194545/0001_none_pre_grasp_preparation_20261107T115242_143384Z.json",
+      "bytes": 3212,
+      "sha256": "e88808c02a6e386e935961161dceb8a10fca0d96744f772a6a86ec0f01e25a29"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/grasp_capture_20261107_194545/camera_info_1794052362137868400.json",
+      "bytes": 6728,
+      "sha256": "83584236c8d3f19eaf7c5e126a9a4cd66d8eaf2e94edd0e25dcaa0215d13495f"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/grasp_capture_20261107_194545/session_index.jsonl",
+      "bytes": 162,
+      "sha256": "d79650987d44437efe6cf02fb8dc7cd2c6fd7019b43e9001252e0aef62474c56"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/pregrasp_to_initial_20261107_200135_P1/0001_none_return_waypoint_P1_20261107T120900_600375Z.json",
+      "bytes": 3203,
+      "sha256": "4f6b111e879ccd18fcf4290774c20d5902862478c7f4cc71c3bba098c4ef0268"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/pregrasp_to_initial_20261107_200135_P1/camera_info_1794053340575508400.json",
+      "bytes": 6728,
+      "sha256": "3ce33d6fbe183655f6702985bfe3ceceafa0d417b8f2c8024a4f71846a71571a"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/pregrasp_to_initial_20261107_200135_P1/session_index.jsonl",
+      "bytes": 159,
+      "sha256": "093a3c5d09998a4224dfea1a933d1aaf5e2c44fd78fe84c8404ba84a749056f1"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/pregrasp_to_initial_20261107_200135_P2/0001_none_return_waypoint_P2_20261107T121804_947567Z.json",
+      "bytes": 3202,
+      "sha256": "0a01cb54d97d5f25cad1561e12cc700bb39046fe79b8cd2c4400a4ea38d6a40c"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/pregrasp_to_initial_20261107_200135_P2/camera_info_1794053884946559600.json",
+      "bytes": 6728,
+      "sha256": "0535383ae32f41ada033e5aa07bf854debd3d88d165ba8fa76ce73c9e9ff9774"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/head/pregrasp_to_initial_20261107_200135_P2/session_index.jsonl",
+      "bytes": 159,
+      "sha256": "e64e7362d775fd79418dfe572915897dcaabe1f60e9dcbb5d88c7884222ff9ac"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_957925Z.json",
+      "bytes": 4344,
+      "sha256": "599e2097f32189e062dd4c53182dc48fd60c740589f7aac6a3b0afc0057fd256"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_957925Z_wrist_left_depth.bin",
+      "bytes": 460800,
+      "sha256": "f5a4203e5cfbc9ffecb807343e73943403b0c459adfbc1e704c67fbe24e226ca"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_957925Z_wrist_right_depth.bin",
+      "bytes": 460800,
+      "sha256": "63d55c1da2ecf549067516444bb4f62907386e777e4e83389945eec0ae19fac7"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_final_20261107_121006/camera_info_1794024606955926300.json",
+      "bytes": 6728,
+      "sha256": "38dffe507787a106389dccfc2fafece4a863aa779b16a39ebca0563782903093"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_final_20261107_121006/session_index.jsonl",
+      "bytes": 154,
+      "sha256": "5b09f3c45d4898c6996afd2e847525a1e331280d8649a86d52d7906014892db2"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_grip_verify_20261107_121348/0001_none_drawer_handle_20261107T041348_966322Z.json",
+      "bytes": 3248,
+      "sha256": "baea0c1a1e0dd3dc7d919d27349cf31d75d2d23d29d9eb565aac1d38d4b0a9db"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_grip_verify_20261107_121348/0001_none_drawer_handle_20261107T041348_966322Z_wrist_right_depth.bin",
+      "bytes": 460800,
+      "sha256": "f8bb4e5b73ea30b26cb128c2010684a11332c45af0c03178ef0edc256ef08a5e"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_083939Z.json",
+      "bytes": 4355,
+      "sha256": "86b9724b745bdc62a01d8725b886749551d9a152d0d31388c1e3fd40ac06cf1c"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_083939Z_wrist_left_depth.bin",
+      "bytes": 460800,
+      "sha256": "b90ed4ac97a17283b0bc92eb031e67499b4be55b751f8f06cb2253b6ecf718b5"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_083939Z_wrist_right_depth.bin",
+      "bytes": 460800,
+      "sha256": "4bb20aabef2bafe4185f1a90fe5a0607fc2c13acf36c8fcb5eaf9b01adf66f4b"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_grip_verify_20261107_121348/camera_info_1794024828961695900.json",
+      "bytes": 6728,
+      "sha256": "86547d58f88ba3603db6eb0452b33202d1b01ed411ce25a4210bac56284055ab"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_grip_verify_20261107_121348/camera_info_1794025016081943100.json",
+      "bytes": 6728,
+      "sha256": "807190dd312f27197e11cea335006f681876712a133d0f78bc7a7b4bf22c686f"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_grip_verify_20261107_121348/session_index.jsonl",
+      "bytes": 313,
+      "sha256": "08940e67546ff2d3dc3289504165ac53da7116fb1c09d0949b5e7a8977040111"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0001_none_drawer_pull_pre_20261107T042209_120471Z.json",
+      "bytes": 4317,
+      "sha256": "c012a3ce70d88b1b2fa66946bcb1812f99c76423456cc7c8d729110716f7fd62"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0001_none_drawer_pull_pre_20261107T042209_120471Z_wrist_left_depth.bin",
+      "bytes": 460800,
+      "sha256": "6f65b24e5d6146bb5a5abf146da4d0ce910d2f56d7d5947edc003130f83270bf"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0001_none_drawer_pull_pre_20261107T042209_120471Z_wrist_right_depth.bin",
+      "bytes": 460800,
+      "sha256": "d869e98c62d31be7e23de813f9ac7580042eb7a0914ac11d2164b20e9a26abbe"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0002_none_drawer_pull_step_01_20261107T042811_186983Z.json",
+      "bytes": 3265,
+      "sha256": "330018ccff04e1e89b66c6f5aaa91864ed1a9bef916178c1e0ce8a3a276fb150"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0002_none_drawer_pull_step_01_20261107T042811_186983Z_wrist_right_depth.bin",
+      "bytes": 460800,
+      "sha256": "563560d9518cb67cf6949b137eeff2141d1b5ae380f0a2f465607ab62485a76a"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0003_none_drawer_pull_step_02_20261107T042844_830260Z.json",
+      "bytes": 3276,
+      "sha256": "b827da12cfe2793cd31b7a60c75b73f734cd9c7d0c055687cd9de4fa67c6a63b"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0003_none_drawer_pull_step_02_20261107T042844_830260Z_wrist_right_depth.bin",
+      "bytes": 460800,
+      "sha256": "e3b3d8e3ce95d3aeaee552ce5a51e41ca12a3bdd558076b60b96ba7ad05156a8"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0004_none_drawer_pull_step_04_20261107T042943_199328Z.json",
+      "bytes": 3277,
+      "sha256": "8d0116dd4c9ca886ccc3fa1f7d0f46e18cb6dc2579de3aeb53bbda52a8b32bec"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0004_none_drawer_pull_step_04_20261107T042943_199328Z_wrist_right_depth.bin",
+      "bytes": 460800,
+      "sha256": "cc626a970a52a1b6519c0d0f0684728468997742ef03416baf9f85e0b94f8a12"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0005_none_drawer_pull_step_05_20261107T043017_821183Z.json",
+      "bytes": 3278,
+      "sha256": "3143df1fe67a6e1d25733d52f3f1f07aa0ce005f50cecb68843abb89dc11b6aa"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0005_none_drawer_pull_step_05_20261107T043017_821183Z_wrist_right_depth.bin",
+      "bytes": 460800,
+      "sha256": "7da95bb8f91f9efee5ee4a36fa42d73682c94c4b5ffca314e619df4c1a162bef"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0006_none_drawer_pull_final_25cm_20261107T043116_023721Z.json",
+      "bytes": 4363,
+      "sha256": "d0029dda386c3f739e3593f63afde9405144da9e09f57feecbafac6f6a02b4d8"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0006_none_drawer_pull_final_25cm_20261107T043116_023721Z_wrist_left_depth.bin",
+      "bytes": 460800,
+      "sha256": "e96f957bb64b3805e60f73c17f31be787c52045f4d3c37b734da8c3dc5816595"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0006_none_drawer_pull_final_25cm_20261107T043116_023721Z_wrist_right_depth.bin",
+      "bytes": 460800,
+      "sha256": "62aa94ee0efc50b07197b82c273363ae49e0a5add9715c16c4305a18e5e22878"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0007_none_drawer_pull_27_5cm_20261107T043305_948220Z.json",
+      "bytes": 3290,
+      "sha256": "c68e0a2899c9aac3272cdb426257f37cab703b68db4173a5d52cb971231727c2"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0007_none_drawer_pull_27_5cm_20261107T043305_948220Z_wrist_right_depth.bin",
+      "bytes": 460800,
+      "sha256": "72264461d61103a88c1bf6529a9397d119acecd59bdb2fa9d521c9a69eb392ae"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_528327Z.json",
+      "bytes": 4372,
+      "sha256": "ee1c0d4b4e8070cafc3f67a8e6a53837f40e4753be14a50089537802353d8f0a"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_528327Z_wrist_left_depth.bin",
+      "bytes": 460800,
+      "sha256": "2e057f1b9aec601af13d9b0ffd9fa90d0f3ceb0325f02bc810f0a9f2221ab524"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_528327Z_wrist_right_depth.bin",
+      "bytes": 460800,
+      "sha256": "cadc77339d097985e8aa6f2a7808ea7379eb3aaa32e5cc77eba71a94197e2f1c"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/camera_info_1794025329119472600.json",
+      "bytes": 6728,
+      "sha256": "e171ac69e203724d78a372d94c9a0050047ddab79e1468f400a95ba2a6783df2"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/camera_info_1794025691184034400.json",
+      "bytes": 6728,
+      "sha256": "8e2e42593ae2565c46b363013cf3f5953e78345ab0cea602fa4bb7cd4a7849b8"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/camera_info_1794025724827730700.json",
+      "bytes": 6728,
+      "sha256": "5abaaf421fce69f0b859e319b6cf5a3f8490eda5a7d3e761a0b3af0f7c2ef798"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/camera_info_1794025783197821500.json",
+      "bytes": 6728,
+      "sha256": "57fdafc05f696f9c453ead6d0241ef954fa01a16d9bb10ec6e86c037442748f6"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/camera_info_1794025817820117100.json",
+      "bytes": 6728,
+      "sha256": "f24ecda0a151db375719fd41acb3921bf08523b7626a1c40c122327ac623d4bf"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/camera_info_1794025876020415000.json",
+      "bytes": 6728,
+      "sha256": "51846c0f3d891ef799f883acb473777231ee7aa5e734f64b56df5eab94ac5efc"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/camera_info_1794025985945293900.json",
+      "bytes": 6728,
+      "sha256": "257488e6d2ec4cf70a5a6fec6ba0552dab97100ac3744cac207988d59959529f"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/camera_info_1794026046526331500.json",
+      "bytes": 6728,
+      "sha256": "2d87ba261a4e798f05a7f6e5a30e7cd3c2101341d72a9c6a1089ac0538248e7f"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/drawer_pull_20261107_122158/session_index.jsonl",
+      "bytes": 1289,
+      "sha256": "b92e9d3de409825fb37715461b9e029acec6a1822d3e9eb21cc0503458dea759"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/grasp_capture_20261107_194545/0001_none_pre_grasp_preparation_20261107T115154_998437Z.json",
+      "bytes": 4446,
+      "sha256": "8edaf49110e4d2db6cce7f7c068118daa567e59cb0652adcaafb2d19a39a8abb"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/grasp_capture_20261107_194545/0001_none_pre_grasp_preparation_20261107T115154_998437Z_wrist_left_depth.bin",
+      "bytes": 460800,
+      "sha256": "3b53753eee60abae3466375124da6316b5f78642dc23208cde7deaa546e32655"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/grasp_capture_20261107_194545/0001_none_pre_grasp_preparation_20261107T115154_998437Z_wrist_right_depth.bin",
+      "bytes": 460800,
+      "sha256": "68a9c5fd868aeb76f332befc7cd1bc6fce16aa01f10b5c74467caa07d56d3778"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/grasp_capture_20261107_194545/camera_info_1794052314969750800.json",
+      "bytes": 6728,
+      "sha256": "69b67079f45dfe28d0661f25e99b885f96579394ebe47b6d7b8bcf4dda7a2b15"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/grasp_capture_20261107_194545/session_index.jsonl",
+      "bytes": 163,
+      "sha256": "fe57d6fb09b72b8331ef80f6fdde2e1fd3bdb40b21eb99553cb1f922e32ed308"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/pregrasp_to_initial_20261107_200135_P1/0001_none_return_waypoint_P1_20261107T120729_684496Z.json",
+      "bytes": 4492,
+      "sha256": "037bd513b71eca7007eb2ee144473a210ee4dd38f2e0e5444c3feaaf2d81efaa"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/pregrasp_to_initial_20261107_200135_P1/0001_none_return_waypoint_P1_20261107T120729_684496Z_wrist_left_depth.bin",
+      "bytes": 460800,
+      "sha256": "265c9b6bdf06209cac2849a0643e70b2d63916320e3c66e7183893df89b4df40"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/pregrasp_to_initial_20261107_200135_P1/0001_none_return_waypoint_P1_20261107T120729_684496Z_wrist_right_depth.bin",
+      "bytes": 460800,
+      "sha256": "62ad091c07c44315509368bcf9f7d597b7ff26f8f6575571c22e21c751f808a1"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/pregrasp_to_initial_20261107_200135_P1/camera_info_1794053249682489300.json",
+      "bytes": 6728,
+      "sha256": "3c975645d3d75a6f2e6501a681d7d05858b95e66fb7a6e1d719b78c0e469bc3a"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/pregrasp_to_initial_20261107_200135_P1/session_index.jsonl",
+      "bytes": 160,
+      "sha256": "3fe44224ee2b47a15d0481b7d4a39888b2081eee6f4498593f4f7589002e2f53"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/pregrasp_to_initial_20261107_200135_P2/0001_none_return_waypoint_P2_20261107T121554_452383Z.json",
+      "bytes": 4489,
+      "sha256": "138b6919f04adf43d648f364cd207f08aed5a2dfda1b4ad627f309f01fab2d0d"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/pregrasp_to_initial_20261107_200135_P2/0001_none_return_waypoint_P2_20261107T121554_452383Z_wrist_left_depth.bin",
+      "bytes": 460800,
+      "sha256": "4b7d50ccb24db61014cf0723a202d0298e7da3767e0914fc23606597b3e60615"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/pregrasp_to_initial_20261107_200135_P2/0001_none_return_waypoint_P2_20261107T121554_452383Z_wrist_right_depth.bin",
+      "bytes": 460800,
+      "sha256": "ccaea1340e9f1396cfc488f878b176602974192a3be37e96b0c08a3bb45680d6"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/pregrasp_to_initial_20261107_200135_P2/camera_info_1794053754450330100.json",
+      "bytes": 6728,
+      "sha256": "ed39f8031f0087149620e03c9b42ec0ae78a8a09c4d8b718bd57ec068aef9e10"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/raw/wrist/pregrasp_to_initial_20261107_200135_P2/session_index.jsonl",
+      "bytes": 160,
+      "sha256": "3d5971fffae1811c1387b43345f054cab699659f25cf2cfb586ce9952a6ae0c8"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_final_20261107_121006/README.md",
+      "bytes": 2603,
+      "sha256": "b71aaba1541778a1e82a09ada6634aa61ba93f7c46648da3795e3afac2dd2334"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_final_20261107_121006/sdk_snapshot.json",
+      "bytes": 30676,
+      "sha256": "51405ee56df05d07c54d23c2e0429370e648a0959b6d93401c02e5eaf6e94e41"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_final_20261107_121006/teaching_record.json",
+      "bytes": 4228,
+      "sha256": "a381d7a9d4cb7dc3b340b98b472569f61051efb458fb361f502ee46ef8a93fb2"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_grip_verify_20261107_121348/before_state.json",
+      "bytes": 31822,
+      "sha256": "bc9f4ae8a6829c4102853ede6b8a1f53dbc6b2c412f79fd5981fa796a4f25c6a"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_grip_verify_20261107_121348/post_command_state.json",
+      "bytes": 30756,
+      "sha256": "7547eefb30044f340972c455bad2cf34de7908b90da46efc8c182ce28c1d9beb"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_grip_verify_20261107_121348/pre_command_state.json",
+      "bytes": 30739,
+      "sha256": "43615ab98545e15291b4b19241680b1060ac2b5e571a870d78d70ab345f611c1"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_grip_verify_20261107_121348/stability_state.json",
+      "bytes": 30801,
+      "sha256": "31e987e11a0e97e6715e8f63d95755a441c2566a20199f276b144a8763e743e9"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_grip_verify_20261107_121348/verification.json",
+      "bytes": 3488,
+      "sha256": "a9611aca132f501d515a8924418833fde4093898dd394a4d2b5d9c4f550ed9bb"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_extend_step_01.json",
+      "bytes": 2664,
+      "sha256": "7762dae5a6bf4b8d12a34018788c528671464e4fb12899f843ad961010babdc1"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_extend_step_01_after.json",
+      "bytes": 30830,
+      "sha256": "4e9c49dbc4915ae0f2b8e70d8d165d2f590a31ce8f1a273ba680a4169c11e200"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_extend_step_01_before.json",
+      "bytes": 30786,
+      "sha256": "81c36bba7f2b1ea563b2abed412c7de3e78ee2c5a82eb73350cf3792fa8ef641"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_extend_step_02.json",
+      "bytes": 2912,
+      "sha256": "350fe29e1973dcaafb87add516e2b2fbd3b7cca43951221fe05ce3ff5e8fd35c"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_extend_step_02_after.json",
+      "bytes": 30748,
+      "sha256": "47f442f02001c90712404f6dcdcfe84e3ad27135e84f2893057c6949ed483500"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_extend_step_02_before.json",
+      "bytes": 30755,
+      "sha256": "a553d8358dbc26c6e20b135c365d35ed81ed73b000c23c01877769254c26314b"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_pull_step_01.json",
+      "bytes": 2580,
+      "sha256": "204d7fa5b5dec026d63edcda964ee6fb1b30f2e23f05a168d823a2e90a58068a"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_pull_step_01_after.json",
+      "bytes": 30936,
+      "sha256": "9af7664f52d274ca8f06ffbe7b14d6ae676627bd60f2206d7d2bc1046f0576de"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_pull_step_01_before.json",
+      "bytes": 30759,
+      "sha256": "5d548c205c49ddf227a143ab79e04e1322e716459e3b50ecd8a2b061673948cf"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_pull_step_02.json",
+      "bytes": 2572,
+      "sha256": "a35a2333dfc32a0bc7914e888d7892ade0229835787de06aafe28a8fecf35407"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_pull_step_02_after.json",
+      "bytes": 30818,
+      "sha256": "79e19c3cc44a1731f7830bf93dab8f24a836be68894661b0cc2a728d7b5cbf94"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_pull_step_02_before.json",
+      "bytes": 30846,
+      "sha256": "e19dd5ca8a67a10dd86c4802cc789638ba5428ce036518ac7cb74b6c15971b59"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_pull_step_03.json",
+      "bytes": 2579,
+      "sha256": "340b60cb775712c1a798fe6602542af61d746d7c0e209892d6401707e9482894"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_pull_step_03_after.json",
+      "bytes": 30883,
+      "sha256": "73cb38310becd1db31bebea03b4500194d5a7717ed5a6e24efb5b8b934f03ede"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_pull_step_03_before.json",
+      "bytes": 30793,
+      "sha256": "6d795da504908c2736f4158f2b23af8f4bfe295fa9137ea7743fe44aca2c35a5"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_pull_step_04.json",
+      "bytes": 2580,
+      "sha256": "7050a12a808740a0a822a81a1236f56f6b2f4e725daa105b754cd01d56b298f7"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_pull_step_04_after.json",
+      "bytes": 30800,
+      "sha256": "0cb05ed61e5f8f1239015210a08fea6ea78d60209e88b3f50946cf546a4f3f10"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_pull_step_04_before.json",
+      "bytes": 30759,
+      "sha256": "b60022a49aab7ced03055186a65b9df4c314010eb1675a78a1b6c24b330a0365"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_pull_step_05.json",
+      "bytes": 2575,
+      "sha256": "a33856a7de7d6be41b1cad0fac714d47e7f91e1ce66937c75856c5fe7aceef01"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_pull_step_05_after.json",
+      "bytes": 30864,
+      "sha256": "51b223511856c3d6a5e725cf6729859828a2d728fd18b340426ffae4e97e052c"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_pull_step_05_before.json",
+      "bytes": 30740,
+      "sha256": "756d0890c55f9502100d6cf55b4cc4bad8836b3b081b5b368a5ace2c8e5bad8e"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_pull_step_06.json",
+      "bytes": 2826,
+      "sha256": "2cc3bfb2cad2f432ab8687f2512a9ad9e13483eb82c2e983300eb283eb85dc95"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_pull_step_06_after.json",
+      "bytes": 30743,
+      "sha256": "136c741327bbf051574a11c643e9c553ba52ae15b3db5690ff7c0294d706d94c"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/arm_pull_step_06_before.json",
+      "bytes": 30826,
+      "sha256": "65a2e542759abdb0bbaa32bef50b4c54260931ba9ca9315c72000db2a595fef7"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/demonstration.json",
+      "bytes": 66899,
+      "sha256": "b5c4ce16e8b9d13d3ee13d0b38c8f315f705f70f181704d49f029cb8e5f9cab9"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/extension_controller_snapshot.json",
+      "bytes": 535,
+      "sha256": "d22f73507ac128b9d1cd262f27507a49385dad21bb2df12607d105922e88ee51"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/extension_pre_state.json",
+      "bytes": 30798,
+      "sha256": "b67d11a4826b38db0b615dc03c07e23d46304990dc0a62e9af15d7d67ce56641"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/final_state.json",
+      "bytes": 30831,
+      "sha256": "302993a11f1e75ef8f0e3d537a550f7f30e24fa36ce809cfb511a305483d4c91"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/pre_state.json",
+      "bytes": 30708,
+      "sha256": "305443a0c016e5ac774785634d69b403780430bc5485857c79d62131e03c90b1"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/pull_record.json",
+      "bytes": 4900,
+      "sha256": "25f7354c798221dbd0a62c6c34115aadf77e4fd0f32e41c20329b1c2eb3743a3"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/drawer_pull_20261107_122158/README.md",
+      "bytes": 5852,
+      "sha256": "3b1dd965e1ad222da94019a9702d080d372a6c0b5418454ce6449bcf8e8cb4b2"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/grasp_capture_20261107_194545/capture_log.txt",
+      "bytes": 191809,
+      "sha256": "26e88ab294b9606d452da346eaa6a09788748563aaa5512f73ff16214e16a261"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/grasp_capture_20261107_194545/manifest.json",
+      "bytes": 2144,
+      "sha256": "d5b02e792f9d48031767316077604b89650f62ce7e85abbeea41ab603cf54831"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/grasp_capture_20261107_194545/states.ndjson",
+      "bytes": 191457,
+      "sha256": "6de6d71e20f7534546ffaa132abc31a88edfe9b242678987c8f4d7c479f2015c"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/pregrasp_to_initial_20261107_200135/manifest.json",
+      "bytes": 2049,
+      "sha256": "0af0f6bbc9b04f28bb6724bb91a7861c69c2f41422637fb7474f93e0e798723e"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/pregrasp_to_initial_20261107_200135_P1/capture_log.txt",
+      "bytes": 75918,
+      "sha256": "70c397b91744b95ae7bdde591aeba7f1138067e34881e5632ff3283464cd414e"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/pregrasp_to_initial_20261107_200135_P1/manifest.json",
+      "bytes": 1846,
+      "sha256": "765e2b1f78112a2b3b039f6f66897a1d1c709b91bb51a11a53163e72324d3b06"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/pregrasp_to_initial_20261107_200135_P1/states.ndjson",
+      "bytes": 75776,
+      "sha256": "e005c4a4f843d9526583433180f998f43ec87ebe1cbd639ad805bd37637f6d46"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/pregrasp_to_initial_20261107_200135_P2/capture_log.txt",
+      "bytes": 75693,
+      "sha256": "105b03714cef5dcf37cee00e546025f3370f0f4526f821398316044ae2eac0d7"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/pregrasp_to_initial_20261107_200135_P2/manifest.json",
+      "bytes": 1915,
+      "sha256": "f2769a5baa859bb19ba8811d920a7263c49c69674ba2de74b4cfec33364f47e8"
+    },
+    {
+      "path": "medicine_frontend/data/medicine_dataset/teaching/pregrasp_to_initial_20261107_200135_P2/states.ndjson",
+      "bytes": 75551,
+      "sha256": "e5e5528a9ac91b3c4bd8885f6f70b70cedac53b20d7c26c984e723ecd962b558"
+    },
+    {
+      "path": "medicine_frontend/dataset.py",
+      "bytes": 18843,
+      "sha256": "d5016eb1009744e6498f55b8a7701578a5378fa58b587fc10e41a5620fdb2d5b"
+    },
+    {
+      "path": "medicine_frontend/drawer_geometry.py",
+      "bytes": 6842,
+      "sha256": "475b787fa851ec2e3dc0c807d0d9868ca63ac41f40a2802b1f102e66959b2a58"
+    },
+    {
+      "path": "medicine_frontend/drawer_open.py",
+      "bytes": 6775,
+      "sha256": "635fbbf6944d026c98ab5c74ffa04e915bc99a95c6a51a3bed898c3d7ba9bbfb"
+    },
+    {
+      "path": "medicine_frontend/drawer_perception.py",
+      "bytes": 4201,
+      "sha256": "677e9b34a00861cbfa0fab1e4306792f2f3658d9ced1bc5657d0d5d9b153ddb8"
+    },
+    {
+      "path": "medicine_frontend/drawer_regrip_close.py",
+      "bytes": 39782,
+      "sha256": "6524a6229975924c0c2b029bff07b7be0cbc7c98625f4448f6021d91c4c09e4e"
+    },
+    {
+      "path": "medicine_frontend/drawer_sdk.py",
+      "bytes": 5426,
+      "sha256": "ddc8e66b7c671f1a972197fb39cb5e4b566e580e81f3da0a32db35d065a36876"
+    },
+    {
+      "path": "medicine_frontend/drawer_stationary.py",
+      "bytes": 7157,
+      "sha256": "a8a4ea079245e93db0d25348aea92422b6b2f834a90aa88aace159d622b5c3cc"
+    },
+    {
+      "path": "medicine_frontend/test_capture_waypoint.py",
+      "bytes": 2146,
+      "sha256": "94b24231e163fe23496ee91643581a2841ccd4e63504876c6e34c567512bedbe"
+    },
+    {
+      "path": "medicine_frontend/test_collect.py",
+      "bytes": 2295,
+      "sha256": "6ce9937f113e279759cc302e769904b07ab94acc773db99801cac870a5b52110"
+    },
+    {
+      "path": "medicine_frontend/test_dataset.py",
+      "bytes": 7305,
+      "sha256": "69653a556367357bf4fa319fcd812ece8e205af5e968b0e8ee825a4f67e4c4b9"
+    },
+    {
+      "path": "medicine_frontend/test_drawer_open.py",
+      "bytes": 6802,
+      "sha256": "4089d68e8cfb028659309df27be33bb1655669feb6e9d40fe5e483ba4b2d168d"
+    },
+    {
+      "path": "medicine_frontend/test_drawer_regrip_close.py",
+      "bytes": 21488,
+      "sha256": "ac9de69c1b9fd01342128803fc7a559a9b4a6b91a02beb4af681e4d37027e0f3"
+    },
+    {
+      "path": "medicine_frontend/test_drawer_sdk.py",
+      "bytes": 1989,
+      "sha256": "e85923a1bc1da257e2428a0c90528d6cc0bb36cb2b342274cf9399491579a073"
+    },
+    {
+      "path": "medicine_frontend/test_drawer_stationary.py",
+      "bytes": 18028,
+      "sha256": "b86bab43016ccd2b73d5370f14cfcbf7e6e274b6f1c7fd95302ffe4ecde6bbd2"
+    },
+    {
+      "path": "medicine_frontend/test_record_drawer_stream.py",
+      "bytes": 4337,
+      "sha256": "21b898b30b1a63c084e58080d66330ee1204c326cd097bb6662aae5336e9375e"
+    },
+    {
+      "path": "medicine_frontend/test_regrip_and_close_drawer.py",
+      "bytes": 16631,
+      "sha256": "2ad1340964046d1f097d32f89dc2dde2946c5fcd50e1fa893d39b13bcd00fd1b"
+    },
+    {
+      "path": "medicine_frontend/test_replay_drawer_pull.py",
+      "bytes": 9998,
+      "sha256": "f994a8f75400dd628e6c32a5721f35db482b61b794eefac5db92c3d0f242d1bd"
+    },
+    {
+      "path": "medicine_frontend/tools/align_drawer_replay.py",
+      "bytes": 16811,
+      "sha256": "156e97cc7672a3797ba828b2d36c84468318935cba31e8615b864af80aeeb24c"
+    },
+    {
+      "path": "medicine_frontend/tools/analyze_drawer_stationary.py",
+      "bytes": 7372,
+      "sha256": "cdd6d56fc23cf1ef74ee2a64ab14f5298fa4d4a7670e90cb2a728df9755a2903"
+    },
+    {
+      "path": "medicine_frontend/tools/build_drawer_demonstration.py",
+      "bytes": 12966,
+      "sha256": "bd2a343e148ab5fd81207bbd4ebbcb4c0b2cbd56cc06b5477c250be608311abb"
+    },
+    {
+      "path": "medicine_frontend/tools/capture_final_drawer.py",
+      "bytes": 7981,
+      "sha256": "5ba4880868bc9bcea00ffe100e622b53af828757eb0dc7c1ffbc9ff66d5667f6"
+    },
+    {
+      "path": "medicine_frontend/tools/capture_waypoint.py",
+      "bytes": 5224,
+      "sha256": "ea646dd435f30bc37b31ff272379e78a181d6ecbf9360575838b3f889ccf28c1"
+    },
+    {
+      "path": "medicine_frontend/tools/close_drawer_second_probe.py",
+      "bytes": 17111,
+      "sha256": "679e41e464fa451d37692b80a836ed838bdb077e2583569a0d54b2bf15cfdead"
+    },
+    {
+      "path": "medicine_frontend/tools/collect.py",
+      "bytes": 15879,
+      "sha256": "8d4c08be28ce4cad49c95d0857f8208483daf48a35ca7ed75804578d93635014"
+    },
+    {
+      "path": "medicine_frontend/tools/collect_drawer_stationary.py",
+      "bytes": 14389,
+      "sha256": "15c9ff8af6ea1d773b57a0e597eb850878f332f2769c6a895d0d0f9187f07dfa"
+    },
+    {
+      "path": "medicine_frontend/tools/probe_drawer_force.py",
+      "bytes": 5216,
+      "sha256": "12157b27a0184a89968dd39d4bc547d4b6f2552fd25839f8310954ab8f51b0c1"
+    },
+    {
+      "path": "medicine_frontend/tools/pull_drawer_arm_step.py",
+      "bytes": 9363,
+      "sha256": "dd23d0f62abc8065cfc6251e08c9fecb4bd7a1ad55965527897ab0ca8d9c11f1"
+    },
+    {
+      "path": "medicine_frontend/tools/record_drawer_cameras.py",
+      "bytes": 16783,
+      "sha256": "ed2d9a66dd50525a459ef895cd3707e75acf9b4d440db5fdf200c8faca64ae79"
+    },
+    {
+      "path": "medicine_frontend/tools/record_drawer_stream.py",
+      "bytes": 10446,
+      "sha256": "7c15c0823f0333b259d00711a378ef02f05607a483ef5e46bf8ac934f9e639fe"
+    },
+    {
+      "path": "medicine_frontend/tools/regrip_and_close_drawer.py",
+      "bytes": 54940,
+      "sha256": "227880555db13f46993b0fd800661312c751286decf3939afafa616c1c71709c"
+    },
+    {
+      "path": "medicine_frontend/tools/replay_drawer_pull.py",
+      "bytes": 31868,
+      "sha256": "99068b198e5fb5dadc5262bc59364f8e4d85886faa00b3156d138b3053471d08"
+    },
+    {
+      "path": "README.md",
+      "bytes": 6188,
+      "sha256": "da7ee94357c4bd32c26488b54c4f3ffe224b5513d27ae44ef9d06643017777ae"
+    },
+    {
+      "path": "reference/front_view.jpg",
+      "bytes": 110648,
+      "sha256": "726f67386b546993428b1f5258790b932924d54d27ec8b7740276d9fb03c4a07"
+    },
+    {
+      "path": "SOURCE_INDEX.json",
+      "bytes": 27304,
+      "sha256": "33d789b4e5e10b4c13f08c97ceb9540a1215b17eaf7067b2069c1817e38a6d1c"
+    },
+    {
+      "path": "VALIDATION.md",
+      "bytes": 987,
+      "sha256": "96cfaf6dc825650bf4323ae6304a3b3b2ede2014cd0d79ce56aeab496f7e3e79"
+    },
+    {
+      "path": "verify_package.py",
+      "bytes": 538,
+      "sha256": "4f1b8e2b60648b98991bf99cf6725d0857f7a7ef9c58b06bb960c2de8f2545a1"
+    },
+    {
+      "path": "WAYPOINTS.json",
+      "bytes": 20575,
+      "sha256": "86a2069b80ee3983d559af759354826021a8658d05e6502edf735c4bef372003"
+    }
+  ]
+}

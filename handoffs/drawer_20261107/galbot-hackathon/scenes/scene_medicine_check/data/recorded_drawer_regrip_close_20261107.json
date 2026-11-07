@@ -1,0 +1,163 @@
+{
+  "schema": "drawer_regrip_close_recipe/1",
+  "source_session": "drawer_pull_20261107_122158",
+  "source_state_path": "teaching/drawer_pull_20261107_122158/final_state.json",
+  "source_state_sha256": "302993a11f1e75ef8f0e3d537a550f7f30e24fa36ce809cfb511a305483d4c91",
+  "release_tcp_base_link": [
+    0.45057945185170784,
+    -0.24548309334690083,
+    0.8058501752866395,
+    -0.7060083959912233,
+    0.06861056373600881,
+    0.02458000631155894,
+    0.704443438910074
+  ],
+  "release_base_map": {
+    "x": -1.1465532779693604,
+    "y": 0.03197624161839485,
+    "z": -0.0020578699186444283,
+    "qx": 0.0010003455658091718,
+    "qy": -0.0009227152231145595,
+    "qz": -0.6913003917103313,
+    "qw": 0.7225662020372309,
+    "frame_id": "map"
+  },
+  "release_chassis_joints_rad": {
+    "chassis_joint1": -0.0002561253011226654,
+    "chassis_joint2": -0.0008168695569038391,
+    "chassis_joint3": -0.0005000777244567871,
+    "chassis_joint4": -0.00037696343660354614
+  },
+  "release_right_arm_joints_rad": {
+    "right_arm_joint1": -1.190920114517212,
+    "right_arm_joint2": 1.1243131160736084,
+    "right_arm_joint3": 0.20818985998630524,
+    "right_arm_joint4": 1.6669080257415771,
+    "right_arm_joint5": -1.1602407693862915,
+    "right_arm_joint6": -0.3760887682437897,
+    "right_arm_joint7": 0.045755550265312195
+  },
+  "release_right_gripper": {
+    "width": 0.02448311424255371,
+    "velocity": -5.247104167938232e-05,
+    "effort": 8.216300964355469,
+    "is_moving": false,
+    "timestamp_ns": 1794026047295378432
+  },
+  "closed_tcp_base_link": [
+    0.7517159151349785,
+    -0.23833378914136763,
+    0.8228021291251474,
+    -0.6999928554886117,
+    0.04285705794988759,
+    0.014406175256119397,
+    0.7127171507430347
+  ],
+  "push_path_tcp_base_link": [
+    [
+      0.45057945185170784,
+      -0.24548309334690083,
+      0.8058501752866395,
+      -0.7060083959912233,
+      0.06861056373600881,
+      0.02458000631155894,
+      0.704443438910074
+    ],
+    [
+      0.4756901822621389,
+      -0.2432021831046329,
+      0.8108487432904493,
+      -0.6999928554886117,
+      0.04285705794988759,
+      0.014406175256119397,
+      0.7127171507430347
+    ],
+    [
+      0.5013436027539022,
+      -0.24156875713674397,
+      0.8151147534938391,
+      -0.6999928554886117,
+      0.04285705794988759,
+      0.014406175256119397,
+      0.7127171507430347
+    ],
+    [
+      0.5310189150433373,
+      -0.23987631178963487,
+      0.8192751235451999,
+      -0.6999928554886117,
+      0.04285705794988759,
+      0.014406175256119397,
+      0.7127171507430347
+    ],
+    [
+      0.5814268911147711,
+      -0.23898667658267816,
+      0.8215444785886837,
+      -0.6999928554886117,
+      0.04285705794988759,
+      0.014406175256119397,
+      0.7127171507430347
+    ],
+    [
+      0.6313093014125617,
+      -0.23783709917598006,
+      0.8237117096894682,
+      -0.6999928554886117,
+      0.04285705794988759,
+      0.014406175256119397,
+      0.7127171507430347
+    ],
+    [
+      0.681345995146441,
+      -0.23792986018337056,
+      0.8239060998186913,
+      -0.6999928554886117,
+      0.04285705794988759,
+      0.014406175256119397,
+      0.7127171507430347
+    ],
+    [
+      0.7315524677380626,
+      -0.23789631622769347,
+      0.8229764748639061,
+      -0.6999928554886117,
+      0.04285705794988759,
+      0.014406175256119397,
+      0.7127171507430347
+    ],
+    [
+      0.7517159151349785,
+      -0.23833378914136763,
+      0.8228021291251474,
+      -0.6999928554886117,
+      0.04285705794988759,
+      0.014406175256119397,
+      0.7127171507430347
+    ]
+  ],
+  "approach_standoff_m": 0.09,
+  "grip_command": {
+    "side": "right",
+    "width": 0.02,
+    "speed": 0.01,
+    "effort": 10.0
+  },
+  "open_command": {
+    "side": "right",
+    "width": 0.05,
+    "speed": 0.02,
+    "effort": 5.0
+  },
+  "reference_wrist_image": "raw/wrist/drawer_close_regrip_check_20261107_1316/0001_none_drawer_close_regrip_check_20261107T051720_508772Z_wrist_right.jpg",
+  "wrist_image_rotation_quarter_turns": 1,
+  "wrist_camera_note": "mounted 90 deg rotated: the horizontal handle bar appears vertical in raw wrist frames",
+  "frame_id": "base_link",
+  "control_semantics": "short pose-goal offsets, verified after every command",
+  "verified_on_robot": false,
+  "limitations": [
+    "Release pose is the recorded TCP before the gripper opened; if the drawer moved since then, the handle is no longer at this pose.",
+    "Base repeatability after driving away and back is unverified; base_link poses are only valid within the recorded base_map tolerance.",
+    "No independent drawer travel measurement exists; TCP advance plus intact grip is the proxy, confirmed visually by the operator at the end."
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "schema": "medicine_capture/1",
+  "capture_session": "drawer_pull_20261107_122158",
+  "seq": 7,
+  "kind": "head",
+  "drug": "none",
+  "drug_cn": "无",
+  "arrangement": "drawer_pull_27_5cm",
+  "distance_cm": 30.0,
+  "lighting": "demo",
+  "grasp_state": "right_gripper_holding",
+  "operator_note": "After 27.5 cm right-arm pull; check remaining drawer travel and contact.",
+  "captured_local": "2026-11-07T12:33:05.947",
+  "camera_info_file": "camera_info_1794025985944222700.json",
+  "label_truth": {
+    "entity_id": null,
+    "expiry": null,
+    "source": "operator_metadata_not_ocr"
+  },
+  "sources": {
+    "head_right": {
+      "file": "0007_none_drawer_pull_27_5cm_20261107T043305_947220Z_head_right.jpg",
+      "camera_id": "HEAD_RIGHT_CAMERA",
+      "frame_timestamp_ns": 1794025988929038678,
+      "host_captured_ns": 1794025989012468219,
+      "age_ms": 842.5,
+      "stale": false,
+      "jpeg_bytes": 173114,
+      "jpeg_sha256": "349ad4e442c7f546a3782df3cf9b4c056817d9431010c7545d74b7d9b4b74114",
+      "camera_error": null
+    }
+  },
+  "requested_sources": [
+    "head_right"
+  ],
+  "joint_state": {
+    "joint_state": [
+      "<galbot_sdk.JointState object at 0xffff79d20a70>",
+      "<galbot_sdk.JointState object at 0xffff7e02ce70>",
+      "<galbot_sdk.JointState object at 0xffff7e02cd30>",
+      "<galbot_sdk.JointState object at 0xffff7e02cef0>",
+      "<galbot_sdk.JointState object at 0xffff081fa730>",
+      "<galbot_sdk.JointState object at 0xffff081fa070>",
+      "<galbot_sdk.JointState object at 0xffff081fa830>",
+      "<galbot_sdk.JointState object at 0xffff081faf70>",
+      "<galbot_sdk.JointState object at 0xffff081fa470>",
+      "<galbot_sdk.JointState object at 0xffff081fabf0>",
+      "<galbot_sdk.JointState object at 0xffff081fa330>",
+      "<galbot_sdk.JointState object at 0xffff081fa4f0>",
+      "<galbot_sdk.JointState object at 0xffff081fa570>",
+      "<galbot_sdk.JointState object at 0xffff081fa8b0>",
+      "<galbot_sdk.JointState object at 0xffff081fa7b0>",
+      "<galbot_sdk.JointState object at 0xffff081faa70>",
+      "<galbot_sdk.JointState object at 0xffff081fa270>",
+      "<galbot_sdk.JointState object at 0xffff081fa7f0>",
+      "<galbot_sdk.JointState object at 0xffff081fa0b0>",
+      "<galbot_sdk.JointState object at 0xffff081fa8f0>",
+      "<galbot_sdk.JointState object at 0xffff081fa3b0>",
+      "<galbot_sdk.JointState object at 0xffff081fa770>",
+      "<galbot_sdk.JointState object at 0xffff79cbe930>",
+      "<galbot_sdk.JointState object at 0xffff79cbe1f0>",
+      "<galbot_sdk.JointState object at 0xffff79cbe170>"
+    ],
+    "timestamp_ns": 1794025986253669099
+  }
+}

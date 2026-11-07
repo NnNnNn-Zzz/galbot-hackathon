@@ -1,0 +1,83 @@
+{
+  "schema": "drawer_close_start/1",
+  "recorded_ns": 1794027352357755800,
+  "session": "drawer_close_20261107_125552",
+  "reference_pull_session": "drawer_pull_20261107_122158",
+  "motion_commands_sent": [],
+  "checks": {
+    "camera_groups_ok": true,
+    "all_four_cameras": true,
+    "sdk_errors": [],
+    "tcp_shift_from_pull_final_m": 0.0017126392038390276,
+    "base_shift_from_pull_final_m": 0.014130578365397805,
+    "current_right_gripper": {
+      "width": 0.024692840576171875,
+      "velocity": -5.247104167938232e-05,
+      "effort": 8.216300964355469,
+      "is_moving": false,
+      "timestamp_ns": 1794027353551362560
+    },
+    "current_tcp_base_link": [
+      0.45079415369931575,
+      -0.24484697121912877,
+      0.8074257338535353,
+      -0.7056425223656801,
+      0.06690214956521993,
+      0.02378554738420691,
+      0.7050014047848325
+    ],
+    "current_base_map": {
+      "x": -1.159308671951294,
+      "y": 0.025895684957504272,
+      "z": -0.0007849503890611231,
+      "qx": -0.00028435892084492816,
+      "qy": -0.0012449476448598905,
+      "qz": -0.6906111664827879,
+      "qw": 0.7232251281410574,
+      "frame_id": "map"
+    },
+    "pose_and_grip_match_pull_final": true
+  },
+  "initial_state_file": "teaching/drawer_close_20261107_125552/initial_state.json",
+  "initial_state_sha256": "27eff3753616e32df0701105f628be4f1868f3676ac5141c9e195fe84f2ea602",
+  "camera_frames": [
+    {
+      "source": "wrist_right",
+      "id": "617d03ac-4efb-592b-a3f0-721a783237fb:wrist_right",
+      "image_path": "raw/wrist/drawer_close_20261107_125552/0001_none_drawer_close_initial_20261107T045552_493147Z_wrist_right.jpg",
+      "image_sha256": "8e7ed5334bf1387b51d52e3e3340a450e981005f2e642a12fe065050226e98a7",
+      "depth_path": "raw/wrist/drawer_close_20261107_125552/0001_none_drawer_close_initial_20261107T045552_493147Z_wrist_right_depth.bin",
+      "quality_flags": [
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ]
+    },
+    {
+      "source": "wrist_left",
+      "id": "617d03ac-4efb-592b-a3f0-721a783237fb:wrist_left",
+      "image_path": "raw/wrist/drawer_close_20261107_125552/0001_none_drawer_close_initial_20261107T045552_493147Z_wrist_left.jpg",
+      "image_sha256": "780471325cfce21d866e7defdc8861d445e515bceead2c8888a41920719c0f78",
+      "depth_path": "raw/wrist/drawer_close_20261107_125552/0001_none_drawer_close_initial_20261107T045552_493147Z_wrist_left_depth.bin",
+      "quality_flags": [
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ]
+    },
+    {
+      "source": "head_right",
+      "id": "bb53b7bd-b92f-5d2c-8afa-4d8f52e8f6d6:head_right",
+      "image_path": "raw/head/drawer_close_20261107_125552/0001_none_drawer_close_initial_20261107T045552_493147Z_head_right.jpg",
+      "image_sha256": "7596832e610a6c92f5d75f951555012dd7b74621e552b91bb3b2960c1bea613d",
+      "depth_path": null,
+      "quality_flags": []
+    },
+    {
+      "source": "head_left",
+      "id": "bb53b7bd-b92f-5d2c-8afa-4d8f52e8f6d6:head_left",
+      "image_path": "raw/head/drawer_close_20261107_125552/0001_none_drawer_close_initial_20261107T045552_493147Z_head_left.jpg",
+      "image_sha256": "c087349894c371f6cc00f1eac34345468b07b4ae15218dea53992bd6a6b82a60",
+      "depth_path": null,
+      "quality_flags": []
+    }
+  ]
+}

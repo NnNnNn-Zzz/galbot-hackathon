@@ -1,0 +1,170 @@
+{
+  "schema": "drawer_controller_switch/1",
+  "session": "drawer_replay_20261107_185938",
+  "recorded_ns": 1794049192346619600,
+  "phase": "replay_prepare",
+  "operator_confirmed": true,
+  "technician_confirmed": true,
+  "reference_file": "teaching/drawer_replay_20261107_185938/observation_pre_switch_1794049181769142900.json",
+  "before_state_file": "teaching/drawer_replay_20261107_185938/controller_switch_before_1794049192304115800.json",
+  "before_controller": {
+    "group": "right_arm",
+    "active": "right_arm_pvt_ctrl_teleop",
+    "available": [
+      "CHASSIS_POSE_CTRL",
+      "CHASSIS_TWIST_CTRL",
+      "CONTROLLER_NAME_NUM",
+      "HEAD_PVT_BYPASS_CTRL",
+      "HEAD_PVT_CTRL",
+      "LEFT_ARM_PVT_BYPASS_CTRL",
+      "LEFT_ARM_PVT_CTRL",
+      "LEFT_DEXHAND_CTRL",
+      "LEFT_GRIPPER_CTRL",
+      "LEG_HEIGHT_CTRL",
+      "LEG_PVT_BYPASS_CTRL",
+      "LEG_PVT_CTRL",
+      "RIGHT_ARM_PVT_BYPASS_CTRL",
+      "RIGHT_ARM_PVT_CTRL",
+      "RIGHT_DEXHAND_CTRL",
+      "RIGHT_GRIPPER_CTRL"
+    ],
+    "dry_run": false
+  },
+  "before": {
+    "tcp": [
+      0.6198127488524441,
+      -0.20134569630950508,
+      0.8506734724508127,
+      -0.7189581910879156,
+      0.06690957774035254,
+      0.06244039216256735,
+      0.6890017600128355
+    ],
+    "base_map": {
+      "x": -1.1400530338287354,
+      "y": 0.05076998099684715,
+      "z": -0.025174379348754883,
+      "qx": 0.0007558904502987682,
+      "qy": -0.0017404633973198338,
+      "qz": -0.6953228476230303,
+      "qw": 0.718695023629766,
+      "frame_id": "map"
+    },
+    "right_arm_joints_rad": {
+      "right_arm_joint1": -0.7544552087783813,
+      "right_arm_joint2": 1.4788784980773926,
+      "right_arm_joint3": 0.40861472487449646,
+      "right_arm_joint4": 1.300286054611206,
+      "right_arm_joint5": -1.528421401977539,
+      "right_arm_joint6": -0.07936011999845505,
+      "right_arm_joint7": -0.20881293714046478
+    },
+    "chassis_joints_rad": {
+      "chassis_joint1": 0.0014742546081542968,
+      "chassis_joint2": -0.0005419405698776246,
+      "chassis_joint3": -0.002560114860534668,
+      "chassis_joint4": 0.0010280145406723023
+    },
+    "right_gripper": {
+      "width": 0.050003677368164065,
+      "velocity": -5.247104167938232e-05,
+      "effort": 2.914285659790039,
+      "is_moving": false,
+      "timestamp_ns": 1794049192654062080
+    },
+    "sample_finished_ns": 1794049192304115800
+  },
+  "command": {
+    "controller": "RIGHT_ARM_PVT_CTRL",
+    "confirmed": true
+  },
+  "status": "failed",
+  "submission": "not_started",
+  "arm_offsets_sent": [],
+  "base_commands_sent": [],
+  "gripper_commands_sent": [],
+  "error": "RuntimeError: Right wrist force baseline did not arrive",
+  "force_samples": 299,
+  "max_raw_force_delta_N": 0.6136049644088971,
+  "force_trip_reason": "Right wrist force baseline did not arrive",
+  "force_file": "teaching/drawer_replay_20261107_185938/controller_switch_wrist_force.ndjson",
+  "force_sha256": "361001d3d40b00d80ec1f4a02774d5061f4a210acb011a472e965ef55ce3bdc1",
+  "command_finished_ns": 1794049220126843300,
+  "after_state_file": "teaching/drawer_replay_20261107_185938/controller_switch_after.json",
+  "after_controller": {
+    "group": "right_arm",
+    "active": "right_arm_pvt_ctrl_teleop",
+    "available": [
+      "CHASSIS_POSE_CTRL",
+      "CHASSIS_TWIST_CTRL",
+      "CONTROLLER_NAME_NUM",
+      "HEAD_PVT_BYPASS_CTRL",
+      "HEAD_PVT_CTRL",
+      "LEFT_ARM_PVT_BYPASS_CTRL",
+      "LEFT_ARM_PVT_CTRL",
+      "LEFT_DEXHAND_CTRL",
+      "LEFT_GRIPPER_CTRL",
+      "LEG_HEIGHT_CTRL",
+      "LEG_PVT_BYPASS_CTRL",
+      "LEG_PVT_CTRL",
+      "RIGHT_ARM_PVT_BYPASS_CTRL",
+      "RIGHT_ARM_PVT_CTRL",
+      "RIGHT_DEXHAND_CTRL",
+      "RIGHT_GRIPPER_CTRL"
+    ],
+    "dry_run": false
+  },
+  "after": {
+    "tcp": [
+      0.619846547250051,
+      -0.20131966960656208,
+      0.85072050249718,
+      -0.7189588005600678,
+      0.06686117520560457,
+      0.06243025785550078,
+      0.6890067410783799
+    ],
+    "base_map": {
+      "x": -1.1526023149490356,
+      "y": 0.05311226472258568,
+      "z": -0.011522085405886173,
+      "qx": 0.000422948607259313,
+      "qy": -0.0009534687418443439,
+      "qz": -0.6944909011569045,
+      "qw": 0.7195007298273606,
+      "frame_id": "map"
+    },
+    "right_arm_joints_rad": {
+      "right_arm_joint1": -0.754477858543396,
+      "right_arm_joint2": 1.4789011478424072,
+      "right_arm_joint3": 0.40859028697013855,
+      "right_arm_joint4": 1.300214409828186,
+      "right_arm_joint5": -1.5284440517425537,
+      "right_arm_joint6": -0.07933568209409714,
+      "right_arm_joint7": -0.20879024267196655
+    },
+    "chassis_joints_rad": {
+      "chassis_joint1": 0.0014742050170898438,
+      "chassis_joint2": -0.0005382293462753296,
+      "chassis_joint3": -0.0025516533851623535,
+      "chassis_joint4": 0.0010355855226516723
+    },
+    "right_gripper": {
+      "width": 0.050003677368164065,
+      "velocity": -5.247104167938232e-05,
+      "effort": 2.914285659790039,
+      "is_moving": false,
+      "timestamp_ns": 1794049222718026240
+    },
+    "sample_finished_ns": 1794049222428846100
+  },
+  "postcheck_error": "RuntimeError: Controller, TCP, base or gripper failed post-switch guard",
+  "stop_result": {
+    "accepted": true,
+    "dry_run": false,
+    "status": "CONTROLLER_STOPPED",
+    "group": "right_arm",
+    "sdk_result": "ControlStatus.SUCCESS"
+  },
+  "stop_confirmed": true
+}

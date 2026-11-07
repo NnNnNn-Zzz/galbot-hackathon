@@ -1,0 +1,1732 @@
+{
+  "schema": "drawer_demonstration/1",
+  "recorded_ns": 1794026047387517500,
+  "source_sessions": {
+    "alignment": "drawer_final_20261107_121006",
+    "grip": "drawer_grip_verify_20261107_121348",
+    "pull": "drawer_pull_20261107_122158"
+  },
+  "robot": "Galbot G1",
+  "sdk_version_at_site": "1.10",
+  "coordinate_frame": "base_link for TCP; map for base navigation observation",
+  "operator_reports": [
+    "At alignment, operator confirmed the gripper was correctly placed around the handle.",
+    "For the pull, operator confirmed a person would steady the drawer and the rear path was clear.",
+    "After 25 cm, operator confirmed at least 5 cm more travel and approved using then-current TCP height."
+  ],
+  "alignment_reference": {
+    "tcp_base_link": [
+      0.7517217473786474,
+      -0.23831644265708138,
+      0.8228363829304625,
+      -0.6999693863327615,
+      0.04283559458454876,
+      0.014368136352929684,
+      0.7127422582471656
+    ],
+    "base_map": {
+      "x": -1.1458178758621216,
+      "y": 0.03721839189529419,
+      "z": 0.005743397865444422,
+      "qx": 0.0011808873140023751,
+      "qy": -0.0007000516504119481,
+      "qz": -0.699129085456931,
+      "qw": 0.714994151934821,
+      "frame_id": "map"
+    },
+    "right_arm_joints_rad": {
+      "right_arm_joint1": -0.23596850037574768,
+      "right_arm_joint2": 1.4272971153259277,
+      "right_arm_joint3": 0.13781817257404327,
+      "right_arm_joint4": 0.43826088309288025,
+      "right_arm_joint5": -1.1546800136566162,
+      "right_arm_joint6": -0.0747821182012558,
+      "right_arm_joint7": 0.2716098725795746
+    },
+    "right_gripper": {
+      "width": 0.050003677368164065,
+      "velocity": -5.247104167938232e-05,
+      "effort": 2.914285659790039,
+      "is_moving": false,
+      "timestamp_ns": 1794024609079285760
+    },
+    "sample_finished_ns": 1794024608858840200,
+    "read_errors": []
+  },
+  "grip": {
+    "command_file": "teaching/drawer_grip_verify_20261107_121348/verification.json",
+    "command_sha256": "a9611aca132f501d515a8924418833fde4093898dd394a4d2b5d9c4f550ed9bb",
+    "command_payload": {
+      "service": "robot",
+      "method": "set_gripper_command",
+      "side": "right",
+      "width": 0.02,
+      "speed": 0.02,
+      "effort": 10.0
+    },
+    "command_started_ns": 1794024995553272000,
+    "command_finished_ns": 1794024996264959600,
+    "sdk_result": "ControlStatus.SUCCESS",
+    "before": {
+      "tcp_base_link": [
+        0.7517159151349785,
+        -0.23833378914136763,
+        0.8228021291251474,
+        -0.6999928554886117,
+        0.04285705794988759,
+        0.014406175256119397,
+        0.7127171507430347
+      ],
+      "base_map": {
+        "x": -1.1509361267089844,
+        "y": 0.034632716327905655,
+        "z": 0.0008714088471606374,
+        "qx": 0.001123029119114175,
+        "qy": -0.0008305967819841342,
+        "qz": -0.6965863731312308,
+        "qw": 0.7174715838850074,
+        "frame_id": "map"
+      },
+      "right_arm_joints_rad": {
+        "right_arm_joint1": -0.2359929382801056,
+        "right_arm_joint2": 1.4272971153259277,
+        "right_arm_joint3": 0.13781817257404327,
+        "right_arm_joint4": 0.43823644518852234,
+        "right_arm_joint5": -1.1546800136566162,
+        "right_arm_joint6": -0.0747821182012558,
+        "right_arm_joint7": 0.2716343104839325
+      },
+      "right_gripper": {
+        "width": 0.05001082992553711,
+        "velocity": -5.247104167938232e-05,
+        "effort": 2.914285659790039,
+        "is_moving": false,
+        "timestamp_ns": 1794024995399429376
+      },
+      "sample_finished_ns": 1794024995504546800,
+      "read_errors": []
+    },
+    "after": {
+      "tcp_base_link": [
+        0.751737740690266,
+        -0.23832524425117224,
+        0.8227461180332702,
+        -0.7000042538343753,
+        0.04290738290838688,
+        0.014442974770645992,
+        0.7127021829526743
+      ],
+      "base_map": {
+        "x": -1.1561031341552734,
+        "y": 0.04256312549114227,
+        "z": -0.001337045687250793,
+        "qx": 0.001078640046232051,
+        "qy": -0.0008214931737531259,
+        "qz": -0.6962800973581706,
+        "qw": 0.7177688957509323,
+        "frame_id": "map"
+      },
+      "right_arm_joints_rad": {
+        "right_arm_joint1": -0.2360418140888214,
+        "right_arm_joint2": 1.4272499084472656,
+        "right_arm_joint3": 0.13779547810554504,
+        "right_arm_joint4": 0.43826088309288025,
+        "right_arm_joint5": -1.1546800136566162,
+        "right_arm_joint6": -0.07480655610561371,
+        "right_arm_joint7": 0.2715138792991638
+      },
+      "right_gripper": {
+        "width": 0.024266365051269532,
+        "velocity": -5.247104167938232e-05,
+        "effort": 8.216300964355469,
+        "is_moving": false,
+        "timestamp_ns": 1794024997303330304
+      },
+      "sample_finished_ns": 1794024997445722200,
+      "read_errors": []
+    }
+  },
+  "pull_start": {
+    "tcp_base_link": [
+      0.7517225644448471,
+      -0.23828862110962604,
+      0.8228781845459961,
+      -0.6999736785862247,
+      0.042799810058088354,
+      0.014358759240094315,
+      0.7127403816106853
+    ],
+    "base_map": {
+      "x": -1.155635952949524,
+      "y": 0.02838755212724209,
+      "z": 0.0013579707592725754,
+      "qx": 0.00038866418107654806,
+      "qy": -0.000635229843868845,
+      "qz": -0.6940899751867504,
+      "qw": 0.7198878744418857,
+      "frame_id": "map"
+    },
+    "right_arm_joints_rad": {
+      "right_arm_joint1": -0.2360418140888214,
+      "right_arm_joint2": 1.4272743463516235,
+      "right_arm_joint3": 0.13779547810554504,
+      "right_arm_joint4": 0.4383080005645752,
+      "right_arm_joint5": -1.1547045707702637,
+      "right_arm_joint6": -0.07475768774747849,
+      "right_arm_joint7": 0.2716343104839325
+    },
+    "right_gripper": {
+      "width": 0.024259376525878906,
+      "velocity": -5.247104167938232e-05,
+      "effort": 8.216300964355469,
+      "is_moving": false,
+      "timestamp_ns": 1794025597551461376
+    },
+    "sample_finished_ns": 1794025597650863200,
+    "read_errors": []
+  },
+  "extra_5cm_start": {
+    "tcp_base_link": [
+      0.50131202485709,
+      -0.24153042021484994,
+      0.8150232988039909,
+      -0.7027242954665468,
+      0.055451638027983564,
+      0.019428205733624623,
+      0.7090318929519539
+    ],
+    "base_map": {
+      "x": -1.1441515684127808,
+      "y": 0.021753842011094093,
+      "z": 0.002128163818269968,
+      "qx": 0.0004847177167065032,
+      "qy": -0.0014245978074289998,
+      "qz": -0.6917720196739414,
+      "qw": 0.7221144011623492,
+      "frame_id": "map"
+    },
+    "right_arm_joints_rad": {
+      "right_arm_joint1": -1.050058126449585,
+      "right_arm_joint2": 1.158036470413208,
+      "right_arm_joint3": 0.1925150603055954,
+      "right_arm_joint4": 1.5636037588119507,
+      "right_arm_joint5": -1.1551356315612793,
+      "right_arm_joint6": -0.33946651220321655,
+      "right_arm_joint7": 0.029361672699451447
+    },
+    "right_gripper": {
+      "width": 0.024469129562377928,
+      "velocity": -5.247104167938232e-05,
+      "effort": 8.216300964355469,
+      "is_moving": false,
+      "timestamp_ns": 1794025930127375616
+    },
+    "sample_finished_ns": 1794025931463489900,
+    "read_errors": []
+  },
+  "pull_steps": [
+    {
+      "order": 1,
+      "phase": "initial_25cm",
+      "command_file": "teaching/drawer_pull_20261107_122158/arm_pull_step_01.json",
+      "command_sha256": "204d7fa5b5dec026d63edcda964ee6fb1b30f2e23f05a168d823a2e90a58068a",
+      "command_started_ns": 1794025678211438500,
+      "command_finished_ns": 1794025679821921100,
+      "command_payload": {
+        "arm": "right_arm",
+        "dx": -0.01996431841738311,
+        "dy": 3.0886602826823983e-05,
+        "dz": 7.280097046868939e-05,
+        "roll": 0.0,
+        "pitch": 0.0,
+        "yaw": 0.0,
+        "confirmed": true
+      },
+      "sdk_result": "MotionStatus.SUCCESS",
+      "target_cumulative_x_m": 0.02,
+      "target_tcp_base_link": [
+        0.7317225644448471,
+        -0.23828862110962604,
+        0.8228781845459961,
+        -0.6999736785862247,
+        0.042799810058088354,
+        0.014358759240094315,
+        0.7127403816106853
+      ],
+      "before_state_file": "teaching/drawer_pull_20261107_122158/arm_pull_step_01_before.json",
+      "before_state_sha256": "5d548c205c49ddf227a143ab79e04e1322e716459e3b50ecd8a2b061673948cf",
+      "before": {
+        "tcp_base_link": [
+          0.7516868828622302,
+          -0.23831950771245286,
+          0.8228053835755275,
+          -0.6999886192409119,
+          0.04285060123856799,
+          0.014418979147441892,
+          0.712721440639357
+        ],
+        "base_map": {
+          "x": -1.156336784362793,
+          "y": 0.033683646470308304,
+          "z": -0.00056900066556409,
+          "qx": 9.625329611782293e-05,
+          "qy": -0.0012125059750378428,
+          "qz": -0.6938139523591236,
+          "qw": 0.7201532615189459,
+          "frame_id": "map"
+        },
+        "right_arm_joints_rad": {
+          "right_arm_joint1": -0.2360173761844635,
+          "right_arm_joint2": 1.4272971153259277,
+          "right_arm_joint3": 0.13781817257404327,
+          "right_arm_joint4": 0.43826088309288025,
+          "right_arm_joint5": -1.1546800136566162,
+          "right_arm_joint6": -0.0747821182012558,
+          "right_arm_joint7": 0.2716343104839325
+        },
+        "right_gripper": {
+          "width": 0.024259376525878906,
+          "velocity": -5.247104167938232e-05,
+          "effort": 8.216300964355469,
+          "is_moving": false,
+          "timestamp_ns": 1794025678151348736
+        },
+        "sample_finished_ns": 1794025678198780200,
+        "read_errors": []
+      },
+      "after_state_file": "teaching/drawer_pull_20261107_122158/arm_pull_step_01_after.json",
+      "after_state_sha256": "9af7664f52d274ca8f06ffbe7b14d6ae676627bd60f2206d7d2bc1046f0576de",
+      "after": {
+        "tcp_base_link": [
+          0.7315524677380626,
+          -0.23789631622769347,
+          0.8229764748639061,
+          -0.6998279792165785,
+          0.04266943075976734,
+          0.014832893387203071,
+          0.7128815500895235
+        ],
+        "base_map": {
+          "x": -1.1494550704956055,
+          "y": 0.026241160929203033,
+          "z": 0.0018374993233010173,
+          "qx": 0.00021249141923308958,
+          "qy": -0.001195726345115812,
+          "qz": -0.6939636782884891,
+          "qw": 0.7200089848760324,
+          "frame_id": "map"
+        },
+        "right_arm_joints_rad": {
+          "right_arm_joint1": -0.33888882398605347,
+          "right_arm_joint2": 1.3894758224487305,
+          "right_arm_joint3": 0.14088647067546844,
+          "right_arm_joint4": 0.6236323118209839,
+          "right_arm_joint5": -1.1529784202575684,
+          "right_arm_joint6": -0.11166965961456299,
+          "right_arm_joint7": 0.20370784401893616
+        },
+        "right_gripper": {
+          "width": 0.024301345825195313,
+          "velocity": -5.247104167938232e-05,
+          "effort": 8.216300964355469,
+          "is_moving": false,
+          "timestamp_ns": 1794025680735450880
+        },
+        "sample_finished_ns": 1794025680980240200,
+        "read_errors": []
+      },
+      "target_and_other_axes_within_tolerance": true,
+      "stop_result": null,
+      "error": null
+    },
+    {
+      "order": 2,
+      "phase": "initial_25cm",
+      "command_file": "teaching/drawer_pull_20261107_122158/arm_pull_step_02.json",
+      "command_sha256": "a35a2333dfc32a0bc7914e888d7892ade0229835787de06aafe28a8fecf35407",
+      "command_started_ns": 1794025710211812200,
+      "command_finished_ns": 1794025711976844700,
+      "command_payload": {
+        "arm": "right_arm",
+        "dx": -0.04998689346755769,
+        "dy": -2.632270710603568e-05,
+        "dz": 2.7369886930639353e-05,
+        "roll": 0.0,
+        "pitch": 0.0,
+        "yaw": 0.0,
+        "confirmed": true
+      },
+      "sdk_result": "MotionStatus.SUCCESS",
+      "target_cumulative_x_m": 0.07,
+      "target_tcp_base_link": [
+        0.681722564444847,
+        -0.23828862110962604,
+        0.8228781845459961,
+        -0.6999736785862247,
+        0.042799810058088354,
+        0.014358759240094315,
+        0.7127403816106853
+      ],
+      "before_state_file": "teaching/drawer_pull_20261107_122158/arm_pull_step_02_before.json",
+      "before_state_sha256": "e19dd5ca8a67a10dd86c4802cc789638ba5428ce036518ac7cb74b6c15971b59",
+      "before": {
+        "tcp_base_link": [
+          0.7317094579124047,
+          -0.23826229840252,
+          0.8228508146590655,
+          -0.699983508224532,
+          0.04283050676268908,
+          0.014431812521327412,
+          0.7127274084048382
+        ],
+        "base_map": {
+          "x": -1.1543352603912354,
+          "y": 0.03807782009243965,
+          "z": -0.0098580876365304,
+          "qx": 0.0006110301240784237,
+          "qy": -0.0004873587426449597,
+          "qz": -0.6930863889238452,
+          "qw": 0.7208541091040183,
+          "frame_id": "map"
+        },
+        "right_arm_joints_rad": {
+          "right_arm_joint1": -0.33761999011039734,
+          "right_arm_joint2": 1.3896433115005493,
+          "right_arm_joint3": 0.1412215679883957,
+          "right_arm_joint4": 0.6208764314651489,
+          "right_arm_joint5": -1.1529784202575684,
+          "right_arm_joint6": -0.11176564544439316,
+          "right_arm_joint7": 0.2054566740989685
+        },
+        "right_gripper": {
+          "width": 0.024301345825195313,
+          "velocity": -5.247104167938232e-05,
+          "effort": 8.216300964355469,
+          "is_moving": false,
+          "timestamp_ns": 1794025710055426816
+        },
+        "sample_finished_ns": 1794025710191902700,
+        "read_errors": []
+      },
+      "after_state_file": "teaching/drawer_pull_20261107_122158/arm_pull_step_02_after.json",
+      "after_state_sha256": "79e19c3cc44a1731f7830bf93dab8f24a836be68894661b0cc2a728d7b5cbf94",
+      "after": {
+        "tcp_base_link": [
+          0.681345995146441,
+          -0.23792986018337056,
+          0.8239060998186913,
+          -0.6997589223589123,
+          0.04231307327729474,
+          0.014149437348628837,
+          0.7129844653508528
+        ],
+        "base_map": {
+          "x": -1.1534055471420288,
+          "y": 0.033645763993263245,
+          "z": -0.011503901332616806,
+          "qx": 0.0003021070052207684,
+          "qy": -0.0007034747935358423,
+          "qz": -0.6927440120060786,
+          "qw": 0.7211831582089908,
+          "frame_id": "map"
+        },
+        "right_arm_joints_rad": {
+          "right_arm_joint1": -0.5278573632240295,
+          "right_arm_joint2": 1.3211897611618042,
+          "right_arm_joint3": 0.1496829241514206,
+          "right_arm_joint4": 0.9344789385795593,
+          "right_arm_joint5": -1.1504144668579102,
+          "right_arm_joint6": -0.17858906090259552,
+          "right_arm_joint7": 0.1095595508813858
+        },
+        "right_gripper": {
+          "width": 0.024308334350585936,
+          "velocity": -5.247104167938232e-05,
+          "effort": 8.216300964355469,
+          "is_moving": false,
+          "timestamp_ns": 1794025712975513088
+        },
+        "sample_finished_ns": 1794025713139971700,
+        "read_errors": []
+      },
+      "target_and_other_axes_within_tolerance": true,
+      "stop_result": null,
+      "error": null
+    },
+    {
+      "order": 3,
+      "phase": "initial_25cm",
+      "command_file": "teaching/drawer_pull_20261107_122158/arm_pull_step_03.json",
+      "command_sha256": "340b60cb775712c1a798fe6602542af61d746d7c0e209892d6401707e9482894",
+      "command_started_ns": 1794025745588191800,
+      "command_finished_ns": 1794025747155487200,
+      "command_payload": {
+        "arm": "right_arm",
+        "dx": -0.04995680386090828,
+        "dy": 2.0703964369594985e-05,
+        "dz": -7.677680800599607e-05,
+        "roll": 0.0,
+        "pitch": 0.0,
+        "yaw": 0.0,
+        "confirmed": true
+      },
+      "sdk_result": "MotionStatus.SUCCESS",
+      "target_cumulative_x_m": 0.12,
+      "target_tcp_base_link": [
+        0.6317225644448471,
+        -0.23828862110962604,
+        0.8228781845459961,
+        -0.6999736785862247,
+        0.042799810058088354,
+        0.014358759240094315,
+        0.7127403816106853
+      ],
+      "before_state_file": "teaching/drawer_pull_20261107_122158/arm_pull_step_03_before.json",
+      "before_state_sha256": "6d795da504908c2736f4158f2b23af8f4bfe295fa9137ea7743fe44aca2c35a5",
+      "before": {
+        "tcp_base_link": [
+          0.6816793683057554,
+          -0.23830932507399563,
+          0.8229549613540021,
+          -0.7000094646929347,
+          0.04279589322708973,
+          0.014418184152553767,
+          0.7127042702474496
+        ],
+        "base_map": {
+          "x": -1.155824065208435,
+          "y": 0.03642287850379944,
+          "z": -0.0036241014022380114,
+          "qx": 0.0003642110523861467,
+          "qy": -0.0008613029007607807,
+          "qz": -0.6929723646104852,
+          "qw": 0.7209635409601345,
+          "frame_id": "map"
+        },
+        "right_arm_joints_rad": {
+          "right_arm_joint1": -0.5262272357940674,
+          "right_arm_joint2": 1.321980357170105,
+          "right_arm_joint3": 0.14977890253067017,
+          "right_arm_joint4": 0.9295414090156555,
+          "right_arm_joint5": -1.1506065130233765,
+          "right_arm_joint6": -0.1774633377790451,
+          "right_arm_joint7": 0.11140436679124832
+        },
+        "right_gripper": {
+          "width": 0.024308334350585936,
+          "velocity": -5.247104167938232e-05,
+          "effort": 8.216300964355469,
+          "is_moving": false,
+          "timestamp_ns": 1794025745479376384
+        },
+        "sample_finished_ns": 1794025745538978300,
+        "read_errors": []
+      },
+      "after_state_file": "teaching/drawer_pull_20261107_122158/arm_pull_step_03_after.json",
+      "after_state_sha256": "73cb38310becd1db31bebea03b4500194d5a7717ed5a6e24efb5b8b934f03ede",
+      "after": {
+        "tcp_base_link": [
+          0.6313093014125617,
+          -0.23783709917598006,
+          0.8237117096894682,
+          -0.6997816789130842,
+          0.04213986296778063,
+          0.01439057767623757,
+          0.7129675624323916
+        ],
+        "base_map": {
+          "x": -1.1589951515197754,
+          "y": 0.03902316093444824,
+          "z": -0.0031991268042474985,
+          "qx": -8.103789496299094e-05,
+          "qy": -0.000923931241669572,
+          "qz": -0.6926373488790056,
+          "qw": 0.7212854100297489,
+          "frame_id": "map"
+        },
+        "right_arm_joints_rad": {
+          "right_arm_joint1": -0.6838670969009399,
+          "right_arm_joint2": 1.2673324346542358,
+          "right_arm_joint3": 0.1581442803144455,
+          "right_arm_joint4": 1.1592075824737549,
+          "right_arm_joint5": -1.1486639976501465,
+          "right_arm_joint6": -0.22964167594909668,
+          "right_arm_joint7": 0.060615282505750656
+        },
+        "right_gripper": {
+          "width": 0.024308334350585936,
+          "velocity": -5.247104167938232e-05,
+          "effort": 8.216300964355469,
+          "is_moving": false,
+          "timestamp_ns": 1794025748383606784
+        },
+        "sample_finished_ns": 1794025748684290700,
+        "read_errors": []
+      },
+      "target_and_other_axes_within_tolerance": true,
+      "stop_result": null,
+      "error": null
+    },
+    {
+      "order": 4,
+      "phase": "initial_25cm",
+      "command_file": "teaching/drawer_pull_20261107_122158/arm_pull_step_04.json",
+      "command_sha256": "7050a12a808740a0a822a81a1236f56f6b2f4e725daa105b754cd01d56b298f7",
+      "command_started_ns": 1794025766242241700,
+      "command_finished_ns": 1794025768192985500,
+      "command_payload": {
+        "arm": "right_arm",
+        "dx": -0.050038161881874266,
+        "dy": -2.6703572712782897e-06,
+        "dz": 9.211760516858458e-05,
+        "roll": 0.0,
+        "pitch": 0.0,
+        "yaw": 0.0,
+        "confirmed": true
+      },
+      "sdk_result": "MotionStatus.SUCCESS",
+      "target_cumulative_x_m": 0.17,
+      "target_tcp_base_link": [
+        0.581722564444847,
+        -0.23828862110962604,
+        0.8228781845459961,
+        -0.6999736785862247,
+        0.042799810058088354,
+        0.014358759240094315,
+        0.7127403816106853
+      ],
+      "before_state_file": "teaching/drawer_pull_20261107_122158/arm_pull_step_04_before.json",
+      "before_state_sha256": "b60022a49aab7ced03055186a65b9df4c314010eb1675a78a1b6c24b330a0365",
+      "before": {
+        "tcp_base_link": [
+          0.6317607263267213,
+          -0.23828595075235476,
+          0.8227860669408276,
+          -0.6999676186808751,
+          0.04285566013578042,
+          0.01445894121147913,
+          0.7127409516869327
+        ],
+        "base_map": {
+          "x": -1.1516810655593872,
+          "y": 0.029630713164806366,
+          "z": -0.009251491166651249,
+          "qx": 8.409011207071403e-05,
+          "qy": -0.000909560918226981,
+          "qz": -0.6926934969939397,
+          "qw": 0.7212315057248235,
+          "frame_id": "map"
+        },
+        "right_arm_joints_rad": {
+          "right_arm_joint1": -0.6820467114448547,
+          "right_arm_joint2": 1.2680269479751587,
+          "right_arm_joint3": 0.15862424671649933,
+          "right_arm_joint4": 1.1550378799438477,
+          "right_arm_joint5": -1.1487371921539307,
+          "right_arm_joint6": -0.22933103144168854,
+          "right_arm_joint7": 0.06193475425243378
+        },
+        "right_gripper": {
+          "width": 0.024308334350585936,
+          "velocity": -5.247104167938232e-05,
+          "effort": 8.216300964355469,
+          "is_moving": false,
+          "timestamp_ns": 1794025766119567616
+        },
+        "sample_finished_ns": 1794025766223894500,
+        "read_errors": []
+      },
+      "after_state_file": "teaching/drawer_pull_20261107_122158/arm_pull_step_04_after.json",
+      "after_state_sha256": "0cb05ed61e5f8f1239015210a08fea6ea78d60209e88b3f50946cf546a4f3f10",
+      "after": {
+        "tcp_base_link": [
+          0.5814268911147711,
+          -0.23898667658267816,
+          0.8215444785886837,
+          -0.7002339050500591,
+          0.04442180117310727,
+          0.014948061519452896,
+          0.7123733131271078
+        ],
+        "base_map": {
+          "x": -1.1579349040985107,
+          "y": 0.042305197566747665,
+          "z": -0.014352868311107159,
+          "qx": -0.0001304643212218207,
+          "qy": -0.0009240320967351723,
+          "qz": -0.6926362128910568,
+          "qw": 0.7212864935209031,
+          "frame_id": "map"
+        },
+        "right_arm_joints_rad": {
+          "right_arm_joint1": -0.827247679233551,
+          "right_arm_joint2": 1.2215995788574219,
+          "right_arm_joint3": 0.17087121307849884,
+          "right_arm_joint4": 1.3368855714797974,
+          "right_arm_joint5": -1.1494319438934326,
+          "right_arm_joint6": -0.2739119529724121,
+          "right_arm_joint7": 0.03729419782757759
+        },
+        "right_gripper": {
+          "width": 0.024308334350585936,
+          "velocity": -5.247104167938232e-05,
+          "effort": 8.278552055358887,
+          "is_moving": false,
+          "timestamp_ns": 1794025769871604480
+        },
+        "sample_finished_ns": 1794025769969823900,
+        "read_errors": []
+      },
+      "target_and_other_axes_within_tolerance": true,
+      "stop_result": null,
+      "error": null
+    },
+    {
+      "order": 5,
+      "phase": "initial_25cm",
+      "command_file": "teaching/drawer_pull_20261107_122158/arm_pull_step_05.json",
+      "command_sha256": "a33856a7de7d6be41b1cad0fac714d47e7f91e1ce66937c75856c5fe7aceef01",
+      "command_started_ns": 1794025802584747200,
+      "command_finished_ns": 1794025804178733000,
+      "command_payload": {
+        "arm": "right_arm",
+        "dx": -0.049834581544517254,
+        "dy": 0.0006054279508676541,
+        "dz": 0.0012925060669300992,
+        "roll": 0.0,
+        "pitch": 0.0,
+        "yaw": 0.0,
+        "confirmed": true
+      },
+      "sdk_result": "MotionStatus.SUCCESS",
+      "target_cumulative_x_m": 0.22,
+      "target_tcp_base_link": [
+        0.5317225644448471,
+        -0.23828862110962604,
+        0.8228781845459961,
+        -0.6999736785862247,
+        0.042799810058088354,
+        0.014358759240094315,
+        0.7127403816106853
+      ],
+      "before_state_file": "teaching/drawer_pull_20261107_122158/arm_pull_step_05_before.json",
+      "before_state_sha256": "756d0890c55f9502100d6cf55b4cc4bad8836b3b081b5b368a5ace2c8e5bad8e",
+      "before": {
+        "tcp_base_link": [
+          0.5815571459893644,
+          -0.2388940490604937,
+          0.821585678479066,
+          -0.700225481467597,
+          0.04424893172516685,
+          0.014939984509018506,
+          0.7123925210216093
+        ],
+        "base_map": {
+          "x": -1.1584008932113647,
+          "y": 0.031170746311545372,
+          "z": -0.009447460062801838,
+          "qx": 0.00027152585560104265,
+          "qy": -0.0007141784043507552,
+          "qz": -0.6927873261494837,
+          "qw": 0.7211415512571477,
+          "frame_id": "map"
+        },
+        "right_arm_joints_rad": {
+          "right_arm_joint1": -0.826718807220459,
+          "right_arm_joint2": 1.221744418144226,
+          "right_arm_joint3": 0.17077521979808807,
+          "right_arm_joint4": 1.3367894887924194,
+          "right_arm_joint5": -1.1493358612060547,
+          "right_arm_joint6": -0.27357685565948486,
+          "right_arm_joint7": 0.0377252921462059
+        },
+        "right_gripper": {
+          "width": 0.024308334350585936,
+          "velocity": -5.247104167938232e-05,
+          "effort": 8.216300964355469,
+          "is_moving": false,
+          "timestamp_ns": 1794025801967456256
+        },
+        "sample_finished_ns": 1794025802565195900,
+        "read_errors": []
+      },
+      "after_state_file": "teaching/drawer_pull_20261107_122158/arm_pull_step_05_after.json",
+      "after_state_sha256": "51b223511856c3d6a5e725cf6729859828a2d728fd18b340426ffae4e97e052c",
+      "after": {
+        "tcp_base_link": [
+          0.5310189150433373,
+          -0.23987631178963487,
+          0.8192751235451999,
+          -0.7010882046071522,
+          0.04814682337643746,
+          0.016491039849140056,
+          0.7112561130592638
+        ],
+        "base_map": {
+          "x": -1.1552516222000122,
+          "y": 0.026906432583928108,
+          "z": -0.008770875632762909,
+          "qx": 0.0004396672475008769,
+          "qy": -0.0006912501577532602,
+          "qz": -0.6927538239132345,
+          "qw": 0.721173674172541,
+          "frame_id": "map"
+        },
+        "right_arm_joints_rad": {
+          "right_arm_joint1": -0.9679421186447144,
+          "right_arm_joint2": 1.180111289024353,
+          "right_arm_joint3": 0.18424567580223083,
+          "right_arm_joint4": 1.4897083044052124,
+          "right_arm_joint5": -1.1518281698226929,
+          "right_arm_joint6": -0.31456243991851807,
+          "right_arm_joint7": 0.030487410724163055
+        },
+        "right_gripper": {
+          "width": 0.024308334350585936,
+          "velocity": -5.247104167938232e-05,
+          "effort": 8.216300964355469,
+          "is_moving": false,
+          "timestamp_ns": 1794025805111438080
+        },
+        "sample_finished_ns": 1794025805490444700,
+        "read_errors": []
+      },
+      "target_and_other_axes_within_tolerance": true,
+      "stop_result": null,
+      "error": null
+    },
+    {
+      "order": 6,
+      "phase": "initial_25cm",
+      "command_file": "teaching/drawer_pull_20261107_122158/arm_pull_step_06.json",
+      "command_sha256": "2cc3bfb2cad2f432ab8687f2512a9ad9e13483eb82c2e983300eb283eb85dc95",
+      "command_started_ns": 1794025840162400000,
+      "command_finished_ns": 1794025855653107500,
+      "command_payload": {
+        "arm": "right_arm",
+        "dx": -0.02977764436938557,
+        "dy": 0.0012912190449671235,
+        "dz": 0.0030607713122814406,
+        "roll": 0.0,
+        "pitch": 0.0,
+        "yaw": 0.0,
+        "confirmed": true
+      },
+      "sdk_result": "MotionStatus.SUCCESS",
+      "target_cumulative_x_m": 0.25,
+      "target_tcp_base_link": [
+        0.5017225644448471,
+        -0.23828862110962604,
+        0.8228781845459961,
+        -0.6999736785862247,
+        0.042799810058088354,
+        0.014358759240094315,
+        0.7127403816106853
+      ],
+      "before_state_file": "teaching/drawer_pull_20261107_122158/arm_pull_step_06_before.json",
+      "before_state_sha256": "65a2e542759abdb0bbaa32bef50b4c54260931ba9ca9315c72000db2a595fef7",
+      "before": {
+        "tcp_base_link": [
+          0.5315002088142327,
+          -0.23957984015459316,
+          0.8198174132337147,
+          -0.7009087423309005,
+          0.04743732126591944,
+          0.016188784815285278,
+          0.7114875675100962
+        ],
+        "base_map": {
+          "x": -1.1517502069473267,
+          "y": 0.030034150928258896,
+          "z": -0.006523897871375084,
+          "qx": 0.0005873136124151979,
+          "qy": -0.0009254000620997884,
+          "qz": -0.6919557010690821,
+          "qw": 0.7219391293283949,
+          "frame_id": "map"
+        },
+        "right_arm_joints_rad": {
+          "right_arm_joint1": -0.966575562953949,
+          "right_arm_joint2": 1.1808059215545654,
+          "right_arm_joint3": 0.18424567580223083,
+          "right_arm_joint4": 1.4896610975265503,
+          "right_arm_joint5": -1.1517810821533203,
+          "right_arm_joint6": -0.3141557574272156,
+          "right_arm_joint7": 0.03082251362502575
+        },
+        "right_gripper": {
+          "width": 0.024308334350585936,
+          "velocity": -5.247104167938232e-05,
+          "effort": 8.216300964355469,
+          "is_moving": false,
+          "timestamp_ns": 1794025839391609856
+        },
+        "sample_finished_ns": 1794025840125834200,
+        "read_errors": []
+      },
+      "after_state_file": "teaching/drawer_pull_20261107_122158/arm_pull_step_06_after.json",
+      "after_state_sha256": "136c741327bbf051574a11c643e9c553ba52ae15b3db5690ff7c0294d706d94c",
+      "after": {
+        "tcp_base_link": [
+          0.5013436027539022,
+          -0.24156875713674397,
+          0.8151147534938391,
+          -0.7027255586313852,
+          0.05541481647189809,
+          0.019318807784977438,
+          0.7090365089523674
+        ],
+        "base_map": {
+          "x": -1.1511406898498535,
+          "y": 0.03096560575067997,
+          "z": -0.0027871644124388695,
+          "qx": 0.0008928532562519841,
+          "qy": -0.0008479667726517008,
+          "qz": -0.6911007859430475,
+          "qw": 0.7227573503149708,
+          "frame_id": "map"
+        },
+        "right_arm_joints_rad": {
+          "right_arm_joint1": -1.050058126449585,
+          "right_arm_joint2": 1.158036470413208,
+          "right_arm_joint3": 0.19253948330879211,
+          "right_arm_joint4": 1.5635548830032349,
+          "right_arm_joint5": -1.1551356315612793,
+          "right_arm_joint6": -0.33946651220321655,
+          "right_arm_joint7": 0.02938436158001423
+        },
+        "right_gripper": {
+          "width": 0.024469129562377928,
+          "velocity": -5.247104167938232e-05,
+          "effort": 8.216300964355469,
+          "is_moving": false,
+          "timestamp_ns": 1794025856783492864
+        },
+        "sample_finished_ns": 1794025856839124500,
+        "read_errors": []
+      },
+      "target_and_other_axes_within_tolerance": false,
+      "stop_result": {
+        "accepted": true,
+        "dry_run": false,
+        "status": "CONTROLLER_STOPPED",
+        "group": "right_arm",
+        "sdk_result": "ControlStatus.SUCCESS"
+      },
+      "error": "Post-step TCP, base or gripper feedback outside guard"
+    },
+    {
+      "order": 7,
+      "phase": "extra_5cm_current_height",
+      "command_file": "teaching/drawer_pull_20261107_122158/arm_extend_step_01.json",
+      "command_sha256": "7762dae5a6bf4b8d12a34018788c528671464e4fb12899f843ad961010babdc1",
+      "command_started_ns": 1794025967838911600,
+      "command_finished_ns": 1794025969255926300,
+      "command_payload": {
+        "arm": "right_arm",
+        "dx": -0.02502153816259589,
+        "dy": 3.247963004793242e-05,
+        "dz": -5.921104263595378e-05,
+        "roll": 0.0,
+        "pitch": 0.0,
+        "yaw": 0.0,
+        "confirmed": true
+      },
+      "sdk_result": "MotionStatus.SUCCESS",
+      "target_cumulative_x_m": 0.275,
+      "target_tcp_base_link": [
+        0.47631202485709,
+        -0.24153042021484994,
+        0.8150232988039909,
+        -0.7027242954665468,
+        0.055451638027983564,
+        0.019428205733624623,
+        0.7090318929519539
+      ],
+      "before_state_file": "teaching/drawer_pull_20261107_122158/arm_extend_step_01_before.json",
+      "before_state_sha256": "81c36bba7f2b1ea563b2abed412c7de3e78ee2c5a82eb73350cf3792fa8ef641",
+      "before": {
+        "tcp_base_link": [
+          0.5013335630196859,
+          -0.24156289984489787,
+          0.8150825098466269,
+          -0.7027108322059858,
+          0.05544262883074292,
+          0.019347574330412343,
+          0.709048145457159
+        ],
+        "base_map": {
+          "x": -1.1472365856170654,
+          "y": 0.020049016922712326,
+          "z": 0.005988274700939655,
+          "qx": 0.0001114236747849641,
+          "qy": -0.001489189878951688,
+          "qz": -0.6917238983652787,
+          "qw": 0.7221605211645197,
+          "frame_id": "map"
+        },
+        "right_arm_joints_rad": {
+          "right_arm_joint1": -1.050058126449585,
+          "right_arm_joint2": 1.1580119132995605,
+          "right_arm_joint3": 0.19256217777729034,
+          "right_arm_joint4": 1.5636037588119507,
+          "right_arm_joint5": -1.1551129817962646,
+          "right_arm_joint6": -0.33944207429885864,
+          "right_arm_joint7": 0.029361672699451447
+        },
+        "right_gripper": {
+          "width": 0.024469129562377928,
+          "velocity": -5.247104167938232e-05,
+          "effort": 8.216300964355469,
+          "is_moving": false,
+          "timestamp_ns": 1794025967447440896
+        },
+        "sample_finished_ns": 1794025967797056200,
+        "read_errors": []
+      },
+      "after_state_file": "teaching/drawer_pull_20261107_122158/arm_extend_step_01_after.json",
+      "after_state_sha256": "4e9c49dbc4915ae0f2b8e70d8d165d2f590a31ce8f1a273ba680a4169c11e200",
+      "after": {
+        "tcp_base_link": [
+          0.4756901822621389,
+          -0.2432021831046329,
+          0.8108487432904493,
+          -0.703654837308119,
+          0.059923490091757466,
+          0.021400018212985813,
+          0.7076871374333378
+        ],
+        "base_map": {
+          "x": -1.1474913358688354,
+          "y": 0.020059609785676003,
+          "z": 0.0010248785838484764,
+          "qx": 0.0004355286408714432,
+          "qy": -0.0012567491810126898,
+          "qz": -0.6918614178555913,
+          "qw": 0.7220290917817301,
+          "frame_id": "map"
+        },
+        "right_arm_joints_rad": {
+          "right_arm_joint1": -1.1216026544570923,
+          "right_arm_joint2": 1.1407541036605835,
+          "right_arm_joint3": 0.2006884217262268,
+          "right_arm_joint4": 1.6187543869018555,
+          "right_arm_joint5": -1.156022310256958,
+          "right_arm_joint6": -0.355884850025177,
+          "right_arm_joint7": 0.03969227522611618
+        },
+        "right_gripper": {
+          "width": 0.024476118087768554,
+          "velocity": -5.247104167938232e-05,
+          "effort": 8.278552055358887,
+          "is_moving": false,
+          "timestamp_ns": 1794025970415498240
+        },
+        "sample_finished_ns": 1794025970571135200,
+        "read_errors": []
+      },
+      "target_and_other_axes_within_tolerance": true,
+      "stop_result": null,
+      "error": null
+    },
+    {
+      "order": 8,
+      "phase": "extra_5cm_current_height",
+      "command_file": "teaching/drawer_pull_20261107_122158/arm_extend_step_02.json",
+      "command_sha256": "350fe29e1973dcaafb87add516e2b2fbd3b7cca43951221fe05ce3ff5e8fd35c",
+      "command_started_ns": 1794026009613071900,
+      "command_finished_ns": 1794026025563862500,
+      "command_payload": {
+        "arm": "right_arm",
+        "dx": -0.024708095661733542,
+        "dy": 0.001575726383433007,
+        "dz": 0.0037190372146913564,
+        "roll": 0.0,
+        "pitch": 0.0,
+        "yaw": 0.0,
+        "confirmed": true
+      },
+      "sdk_result": "MotionStatus.SUCCESS",
+      "target_cumulative_x_m": 0.3,
+      "target_tcp_base_link": [
+        0.45131202485709004,
+        -0.24153042021484994,
+        0.8150232988039909,
+        -0.7027242954665468,
+        0.055451638027983564,
+        0.019428205733624623,
+        0.7090318929519539
+      ],
+      "before_state_file": "teaching/drawer_pull_20261107_122158/arm_extend_step_02_before.json",
+      "before_state_sha256": "a553d8358dbc26c6e20b135c365d35ed81ed73b000c23c01877769254c26314b",
+      "before": {
+        "tcp_base_link": [
+          0.4760201205188236,
+          -0.24310614659828295,
+          0.8113042615892996,
+          -0.7036356484439008,
+          0.05924402870487269,
+          0.020855408032024788,
+          0.7077796770588751
+        ],
+        "base_map": {
+          "x": -1.154929518699646,
+          "y": 0.024919787421822548,
+          "z": -0.003533503506332636,
+          "qx": 0.0002104952723076621,
+          "qy": -0.0014088797636770153,
+          "qz": -0.6912810418570993,
+          "qw": 0.7225845915313414,
+          "frame_id": "map"
+        },
+        "right_arm_joints_rad": {
+          "right_arm_joint1": -1.1207159757614136,
+          "right_arm_joint2": 1.1409950256347656,
+          "right_arm_joint3": 0.20078441500663757,
+          "right_arm_joint4": 1.6187543869018555,
+          "right_arm_joint5": -1.1563103199005127,
+          "right_arm_joint6": -0.35569286346435547,
+          "right_arm_joint7": 0.040601592510938644
+        },
+        "right_gripper": {
+          "width": 0.024476118087768554,
+          "velocity": -5.247104167938232e-05,
+          "effort": 8.216300964355469,
+          "is_moving": false,
+          "timestamp_ns": 1794026009391620608
+        },
+        "sample_finished_ns": 1794026009567633500,
+        "read_errors": []
+      },
+      "after_state_file": "teaching/drawer_pull_20261107_122158/arm_extend_step_02_after.json",
+      "after_state_sha256": "47f442f02001c90712404f6dcdcfe84e3ad27135e84f2893057c6949ed483500",
+      "after": {
+        "tcp_base_link": [
+          0.45055324572686806,
+          -0.2455046147673976,
+          0.8058114192620804,
+          -0.7060338539355646,
+          0.06864588889891708,
+          0.024624652630234126,
+          0.7044129225937098
+        ],
+        "base_map": {
+          "x": -1.1503549814224243,
+          "y": 0.0332946740090847,
+          "z": -0.002178683178499341,
+          "qx": 0.0006188199477093999,
+          "qy": -0.0011826252548956552,
+          "qz": -0.6909103288003922,
+          "qw": 0.7229392339722011,
+          "frame_id": "map"
+        },
+        "right_arm_joints_rad": {
+          "right_arm_joint1": -1.190920114517212,
+          "right_arm_joint2": 1.1242399215698242,
+          "right_arm_joint3": 0.2081427127122879,
+          "right_arm_joint4": 1.6669080257415771,
+          "right_arm_joint5": -1.1602181196212769,
+          "right_arm_joint6": -0.3760887682437897,
+          "right_arm_joint7": 0.04573111608624458
+        },
+        "right_gripper": {
+          "width": 0.02448311424255371,
+          "velocity": -5.247104167938232e-05,
+          "effort": 8.216300964355469,
+          "is_moving": false,
+          "timestamp_ns": 1794026026799444480
+        },
+        "sample_finished_ns": 1794026027549786800,
+        "read_errors": []
+      },
+      "target_and_other_axes_within_tolerance": false,
+      "stop_result": {
+        "accepted": true,
+        "dry_run": false,
+        "status": "CONTROLLER_STOPPED",
+        "group": "right_arm",
+        "sdk_result": "ControlStatus.SUCCESS"
+      },
+      "error": "Post-step TCP, base or gripper feedback outside guard"
+    }
+  ],
+  "pull_summary_file": "teaching/drawer_pull_20261107_122158/pull_record.json",
+  "pull_summary_sha256": "25f7354c798221dbd0a62c6c34115aadf77e4fd0f32e41c20329b1c2eb3743a3",
+  "final": {
+    "tcp_base_link": [
+      0.45057945185170784,
+      -0.24548309334690083,
+      0.8058501752866395,
+      -0.7060083959912233,
+      0.06861056373600881,
+      0.02458000631155894,
+      0.704443438910074
+    ],
+    "base_map": {
+      "x": -1.1465532779693604,
+      "y": 0.03197624161839485,
+      "z": -0.0020578699186444283,
+      "qx": 0.0010003455658091718,
+      "qy": -0.0009227152231145595,
+      "qz": -0.6913003917103313,
+      "qw": 0.7225662020372309,
+      "frame_id": "map"
+    },
+    "right_arm_joints_rad": {
+      "right_arm_joint1": -1.190920114517212,
+      "right_arm_joint2": 1.1243131160736084,
+      "right_arm_joint3": 0.20818985998630524,
+      "right_arm_joint4": 1.6669080257415771,
+      "right_arm_joint5": -1.1602407693862915,
+      "right_arm_joint6": -0.3760887682437897,
+      "right_arm_joint7": 0.045755550265312195
+    },
+    "right_gripper": {
+      "width": 0.02448311424255371,
+      "velocity": -5.247104167938232e-05,
+      "effort": 8.216300964355469,
+      "is_moving": false,
+      "timestamp_ns": 1794026047295378432
+    },
+    "sample_finished_ns": 1794026047387517500,
+    "read_errors": [],
+    "observed_tcp_delta_from_pull_start_m": [
+      -0.30114311259313925,
+      -0.0071944722372747905,
+      -0.017028009259356658
+    ],
+    "observed_extra_5cm_tcp_delta_m": [
+      -0.0507325730053822,
+      -0.003952673132050888,
+      -0.009173123517351445
+    ],
+    "orientation_delta_from_pull_start_deg": 3.3915809013478255,
+    "base_commands_sent": [],
+    "final_right_arm_stop_result": {
+      "accepted": true,
+      "dry_run": false,
+      "status": "CONTROLLER_STOPPED",
+      "group": "right_arm",
+      "sdk_result": "ControlStatus.SUCCESS"
+    }
+  },
+  "camera_frames": [
+    {
+      "session": "drawer_final_20261107_121006",
+      "source": "head_right",
+      "timestamp_ns": 1794024607493918000,
+      "image_file": "raw/head/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_956924Z_head_right.jpg",
+      "image_sha256": "e2d7304b75376dee5638c70d1fd8f0243b516d5bec850d5055e6ff79504e3052",
+      "quality_flags": [],
+      "depth_file": null
+    },
+    {
+      "session": "drawer_final_20261107_121006",
+      "source": "head_left",
+      "timestamp_ns": 1794024607927261525,
+      "image_file": "raw/head/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_956924Z_head_left.jpg",
+      "image_sha256": "655ee528488c7068bf8543cd39d71f7d07442614d7df39ce38b98424b8ae4b52",
+      "quality_flags": [],
+      "depth_file": null
+    },
+    {
+      "session": "drawer_final_20261107_121006",
+      "source": "wrist_right",
+      "timestamp_ns": 1794024608040468224,
+      "image_file": "raw/wrist/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_957925Z_wrist_right.jpg",
+      "image_sha256": "54d1f4430ecb51a90ac4374aeb2a5d994675da82210ee4fd47a34e51049e21a9",
+      "quality_flags": [
+        "clock_offset_detected",
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ],
+      "depth_file": "raw/wrist/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_957925Z_wrist_right_depth.bin",
+      "depth_sha256": "63d55c1da2ecf549067516444bb4f62907386e777e4e83389945eec0ae19fac7"
+    },
+    {
+      "session": "drawer_final_20261107_121006",
+      "source": "wrist_left",
+      "timestamp_ns": 1794024608884487424,
+      "image_file": "raw/wrist/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_957925Z_wrist_left.jpg",
+      "image_sha256": "66b5917e0e2962740274767d0a2ebd8337bf49636003e03a6ed1c4e12d0c5956",
+      "quality_flags": [
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ],
+      "depth_file": "raw/wrist/drawer_final_20261107_121006/0001_none_drawer_final_20261107T041006_957925Z_wrist_left_depth.bin",
+      "depth_sha256": "f5a4203e5cfbc9ffecb807343e73943403b0c459adfbc1e704c67fbe24e226ca"
+    },
+    {
+      "session": "drawer_grip_verify_20261107_121348",
+      "source": "wrist_right",
+      "timestamp_ns": 1794024829096895488,
+      "image_file": "raw/wrist/drawer_grip_verify_20261107_121348/0001_none_drawer_handle_20261107T041348_966322Z_wrist_right.jpg",
+      "image_sha256": "e16c47cc8e5f213e7b0fabf55d30d421723bb9f0d05484b50ef9bb2952fa4fbf",
+      "quality_flags": [
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ],
+      "depth_file": "raw/wrist/drawer_grip_verify_20261107_121348/0001_none_drawer_handle_20261107T041348_966322Z_wrist_right_depth.bin",
+      "depth_sha256": "f8bb4e5b73ea30b26cb128c2010684a11332c45af0c03178ef0edc256ef08a5e"
+    },
+    {
+      "session": "drawer_grip_verify_20261107_121348",
+      "source": "head_right",
+      "timestamp_ns": 1794024831566276302,
+      "image_file": "raw/head/drawer_grip_verify_20261107_121348/0001_none_drawer_handle_20261107T041348_968320Z_head_right.jpg",
+      "image_sha256": "d56937ca5148d11f56ca83b2b4e902d1adfbfebf1b70dc1e8921d50fe36b343a",
+      "quality_flags": [],
+      "depth_file": null
+    },
+    {
+      "session": "drawer_grip_verify_20261107_121348",
+      "source": "wrist_right",
+      "timestamp_ns": 1794025016177684480,
+      "image_file": "raw/wrist/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_083939Z_wrist_right.jpg",
+      "image_sha256": "63171e9b86f9839098dcfa9ebdb2e40a5ec59f03f2ae64af88aa47299e849827",
+      "quality_flags": [
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ],
+      "depth_file": "raw/wrist/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_083939Z_wrist_right_depth.bin",
+      "depth_sha256": "4bb20aabef2bafe4185f1a90fe5a0607fc2c13acf36c8fcb5eaf9b01adf66f4b"
+    },
+    {
+      "session": "drawer_grip_verify_20261107_121348",
+      "source": "head_right",
+      "timestamp_ns": 1794025016637646151,
+      "image_file": "raw/head/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_084939Z_head_right.jpg",
+      "image_sha256": "1d540b209c9b1f8d96f2668c8d5153f22e0835f73094160f0738424ac80a6034",
+      "quality_flags": [],
+      "depth_file": null
+    },
+    {
+      "session": "drawer_grip_verify_20261107_121348",
+      "source": "wrist_left",
+      "timestamp_ns": 1794025017020821504,
+      "image_file": "raw/wrist/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_083939Z_wrist_left.jpg",
+      "image_sha256": "ef2c9e289a2fe09034156a67004c659cceb33622f04b6a50b134dd385f11bccb",
+      "quality_flags": [
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ],
+      "depth_file": "raw/wrist/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_083939Z_wrist_left_depth.bin",
+      "depth_sha256": "b90ed4ac97a17283b0bc92eb031e67499b4be55b751f8f06cb2253b6ecf718b5"
+    },
+    {
+      "session": "drawer_grip_verify_20261107_121348",
+      "source": "head_left",
+      "timestamp_ns": 1794025017070989824,
+      "image_file": "raw/head/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_084939Z_head_left.jpg",
+      "image_sha256": "32a05e3d44c6eb831dabc6ca8f951c5fe3fbb53ee1e1bd2b17c75eadc89ef652",
+      "quality_flags": [],
+      "depth_file": null
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "source": "wrist_right",
+      "timestamp_ns": 1794025329291140864,
+      "image_file": "raw/wrist/drawer_pull_20261107_122158/0001_none_drawer_pull_pre_20261107T042209_120471Z_wrist_right.jpg",
+      "image_sha256": "d311ff4a6349796f78267aaf7aac545725cda76b5ff23f7e1150f81f72513807",
+      "quality_flags": [
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ],
+      "depth_file": "raw/wrist/drawer_pull_20261107_122158/0001_none_drawer_pull_pre_20261107T042209_120471Z_wrist_right_depth.bin",
+      "depth_sha256": "d869e98c62d31be7e23de813f9ac7580042eb7a0914ac11d2164b20e9a26abbe"
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "source": "wrist_left",
+      "timestamp_ns": 1794025331100208896,
+      "image_file": "raw/wrist/drawer_pull_20261107_122158/0001_none_drawer_pull_pre_20261107T042209_120471Z_wrist_left.jpg",
+      "image_sha256": "254ed552ba58d4a9c6666219a22303b03d9b68d132af891c60b5fe85ad77932e",
+      "quality_flags": [
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ],
+      "depth_file": "raw/wrist/drawer_pull_20261107_122158/0001_none_drawer_pull_pre_20261107T042209_120471Z_wrist_left_depth.bin",
+      "depth_sha256": "6f65b24e5d6146bb5a5abf146da4d0ce910d2f56d7d5947edc003130f83270bf"
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "source": "head_right",
+      "timestamp_ns": 1794025331712320739,
+      "image_file": "raw/head/drawer_pull_20261107_122158/0001_none_drawer_pull_pre_20261107T042209_120471Z_head_right.jpg",
+      "image_sha256": "1c5e9e6cbf1cbf9c31c09b9d022c1d157d7fc800a9890b8fd72278c6f5c4c1e7",
+      "quality_flags": [],
+      "depth_file": null
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "source": "head_left",
+      "timestamp_ns": 1794025332178999983,
+      "image_file": "raw/head/drawer_pull_20261107_122158/0001_none_drawer_pull_pre_20261107T042209_120471Z_head_left.jpg",
+      "image_sha256": "81088abac7bf10b2d88a7cfeddf66875b7381f89eb794ef79fb5364443427d41",
+      "quality_flags": [],
+      "depth_file": null
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "source": "head_right",
+      "timestamp_ns": 1794025690821451613,
+      "image_file": "raw/head/drawer_pull_20261107_122158/0002_none_drawer_pull_step_01_20261107T042811_185984Z_head_right.jpg",
+      "image_sha256": "a28842299859fb2d6b696333dadb5e5c2616dd945c41d8c147876c4c0683e0a3",
+      "quality_flags": [],
+      "depth_file": null
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "source": "wrist_right",
+      "timestamp_ns": 1794025691417165568,
+      "image_file": "raw/wrist/drawer_pull_20261107_122158/0002_none_drawer_pull_step_01_20261107T042811_186983Z_wrist_right.jpg",
+      "image_sha256": "f222609cd15563703ab984c9f40becb2245a1e22bdb028ad24cec73abe15db34",
+      "quality_flags": [
+        "clock_offset_detected",
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ],
+      "depth_file": "raw/wrist/drawer_pull_20261107_122158/0002_none_drawer_pull_step_01_20261107T042811_186983Z_wrist_right_depth.bin",
+      "depth_sha256": "563560d9518cb67cf6949b137eeff2141d1b5ae380f0a2f465607ab62485a76a"
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "source": "head_right",
+      "timestamp_ns": 1794025724822316968,
+      "image_file": "raw/head/drawer_pull_20261107_122158/0003_none_drawer_pull_step_02_20261107T042844_829244Z_head_right.jpg",
+      "image_sha256": "130909eee3bc0e4e92200bb94fe5ac9eae24b5f8abb3e8d188178740e849976b",
+      "quality_flags": [],
+      "depth_file": null
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "source": "wrist_right",
+      "timestamp_ns": 1794025725425690112,
+      "image_file": "raw/wrist/drawer_pull_20261107_122158/0003_none_drawer_pull_step_02_20261107T042844_830260Z_wrist_right.jpg",
+      "image_sha256": "b4b0f84f3b84b85d49782e9d8965ea665293988fed0cae6f10d0f2acba29a947",
+      "quality_flags": [
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ],
+      "depth_file": "raw/wrist/drawer_pull_20261107_122158/0003_none_drawer_pull_step_02_20261107T042844_830260Z_wrist_right_depth.bin",
+      "depth_sha256": "e3b3d8e3ce95d3aeaee552ce5a51e41ca12a3bdd558076b60b96ba7ad05156a8"
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "source": "wrist_right",
+      "timestamp_ns": 1794025783440593408,
+      "image_file": "raw/wrist/drawer_pull_20261107_122158/0004_none_drawer_pull_step_04_20261107T042943_199328Z_wrist_right.jpg",
+      "image_sha256": "d1c022aa89b85eb851190c5b45a71b92568dd7a65b6ab712d57d6718d9d51156",
+      "quality_flags": [
+        "clock_offset_detected",
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ],
+      "depth_file": "raw/wrist/drawer_pull_20261107_122158/0004_none_drawer_pull_step_04_20261107T042943_199328Z_wrist_right_depth.bin",
+      "depth_sha256": "cc626a970a52a1b6519c0d0f0684728468997742ef03416baf9f85e0b94f8a12"
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "source": "head_right",
+      "timestamp_ns": 1794025783857156808,
+      "image_file": "raw/head/drawer_pull_20261107_122158/0004_none_drawer_pull_step_04_20261107T042943_258934Z_head_right.jpg",
+      "image_sha256": "73590a8597530f729727fe9fef3cfaa5e1c69eec65c4984d9e2f61935426efb5",
+      "quality_flags": [],
+      "depth_file": null
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "source": "head_right",
+      "timestamp_ns": 1794025817891352659,
+      "image_file": "raw/head/drawer_pull_20261107_122158/0005_none_drawer_pull_step_05_20261107T043017_859147Z_head_right.jpg",
+      "image_sha256": "9c223e43a2b03efd6ccffaab52e3737a2b50bea819c248792b79eda9606176f9",
+      "quality_flags": [],
+      "depth_file": null
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "source": "wrist_right",
+      "timestamp_ns": 1794025818449529600,
+      "image_file": "raw/wrist/drawer_pull_20261107_122158/0005_none_drawer_pull_step_05_20261107T043017_821183Z_wrist_right.jpg",
+      "image_sha256": "96782303cd5d6700db6495524edaae3de10d79b2afeb6ed10ab3b1b1624dc47b",
+      "quality_flags": [
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ],
+      "depth_file": "raw/wrist/drawer_pull_20261107_122158/0005_none_drawer_pull_step_05_20261107T043017_821183Z_wrist_right_depth.bin",
+      "depth_sha256": "7da95bb8f91f9efee5ee4a36fa42d73682c94c4b5ffca314e619df4c1a162bef"
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "source": "wrist_right",
+      "timestamp_ns": 1794025876497884672,
+      "image_file": "raw/wrist/drawer_pull_20261107_122158/0006_none_drawer_pull_final_25cm_20261107T043116_023721Z_wrist_right.jpg",
+      "image_sha256": "ef25a0fb33fc28d8c4a3e4944cbad88ac3c8d2b9795e36ffa07941a1b68caca5",
+      "quality_flags": [
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ],
+      "depth_file": "raw/wrist/drawer_pull_20261107_122158/0006_none_drawer_pull_final_25cm_20261107T043116_023721Z_wrist_right_depth.bin",
+      "depth_sha256": "62aa94ee0efc50b07197b82c273363ae49e0a5add9715c16c4305a18e5e22878"
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "source": "wrist_left",
+      "timestamp_ns": 1794025878304597760,
+      "image_file": "raw/wrist/drawer_pull_20261107_122158/0006_none_drawer_pull_final_25cm_20261107T043116_023721Z_wrist_left.jpg",
+      "image_sha256": "bdd004fdf3b5eb70e462884c8833917909eb4eb69666e1b5513c641e65c6551d",
+      "quality_flags": [
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ],
+      "depth_file": "raw/wrist/drawer_pull_20261107_122158/0006_none_drawer_pull_final_25cm_20261107T043116_023721Z_wrist_left_depth.bin",
+      "depth_sha256": "e96f957bb64b3805e60f73c17f31be787c52045f4d3c37b734da8c3dc5816595"
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "source": "head_right",
+      "timestamp_ns": 1794025878892904393,
+      "image_file": "raw/head/drawer_pull_20261107_122158/0006_none_drawer_pull_final_25cm_20261107T043116_022066Z_head_right.jpg",
+      "image_sha256": "525ca7040f15c1d75fafa57970b4cb51be5272b59b5f10bfdb1b1c1b93f9bbaa",
+      "quality_flags": [],
+      "depth_file": null
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "source": "head_left",
+      "timestamp_ns": 1794025881326300595,
+      "image_file": "raw/head/drawer_pull_20261107_122158/0006_none_drawer_pull_final_25cm_20261107T043116_022066Z_head_left.jpg",
+      "image_sha256": "975273340207035cec4ffe4fa7addc8cd9706799bd75c4fa500bde619c8b1899",
+      "quality_flags": [],
+      "depth_file": null
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "source": "wrist_right",
+      "timestamp_ns": 1794025987526154240,
+      "image_file": "raw/wrist/drawer_pull_20261107_122158/0007_none_drawer_pull_27_5cm_20261107T043305_948220Z_wrist_right.jpg",
+      "image_sha256": "25130ebd089a6f74465af012ff0fe8d8cfa922fb6fbcaa1b66b4e0c67606bd73",
+      "quality_flags": [
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ],
+      "depth_file": "raw/wrist/drawer_pull_20261107_122158/0007_none_drawer_pull_27_5cm_20261107T043305_948220Z_wrist_right_depth.bin",
+      "depth_sha256": "72264461d61103a88c1bf6529a9397d119acecd59bdb2fa9d521c9a69eb392ae"
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "source": "head_right",
+      "timestamp_ns": 1794025988929038678,
+      "image_file": "raw/head/drawer_pull_20261107_122158/0007_none_drawer_pull_27_5cm_20261107T043305_947220Z_head_right.jpg",
+      "image_sha256": "349ad4e442c7f546a3782df3cf9b4c056817d9431010c7545d74b7d9b4b74114",
+      "quality_flags": [],
+      "depth_file": null
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "source": "wrist_right",
+      "timestamp_ns": 1794026046541281536,
+      "image_file": "raw/wrist/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_528327Z_wrist_right.jpg",
+      "image_sha256": "04c59f4f19f0c22b7936c51567b8e7c870be548feb648ae4088ddc4391b1aba5",
+      "quality_flags": [
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ],
+      "depth_file": "raw/wrist/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_528327Z_wrist_right_depth.bin",
+      "depth_sha256": "cadc77339d097985e8aa6f2a7808ea7379eb3aaa32e5cc77eba71a94197e2f1c"
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "source": "head_right",
+      "timestamp_ns": 1794026046963848867,
+      "image_file": "raw/head/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_527328Z_head_right.jpg",
+      "image_sha256": "765c96e52116455cb487fd48e1ae338d7e734d220c439901b878274f28e64d08",
+      "quality_flags": [],
+      "depth_file": null
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "source": "wrist_left",
+      "timestamp_ns": 1794026048347435264,
+      "image_file": "raw/wrist/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_528327Z_wrist_left.jpg",
+      "image_sha256": "0188da38178b0d5b1d4cbf056ed00aa8129f18a44bac02f269beb51d9e901846",
+      "quality_flags": [
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ],
+      "depth_file": "raw/wrist/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_528327Z_wrist_left_depth.bin",
+      "depth_sha256": "2e057f1b9aec601af13d9b0ffd9fa90d0f3ceb0325f02bc810f0a9f2221ab524"
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "source": "head_left",
+      "timestamp_ns": 1794026048397218907,
+      "image_file": "raw/head/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_527328Z_head_left.jpg",
+      "image_sha256": "8350de267e9e322ba1ee80ed93caa31dff429a029d73e323a64bb6d5d5dd831f",
+      "quality_flags": [],
+      "depth_file": null
+    }
+  ],
+  "state_snapshot_files": [
+    {
+      "session": "drawer_final_20261107_121006",
+      "file": "teaching/drawer_final_20261107_121006/sdk_snapshot.json",
+      "sha256": "51405ee56df05d07c54d23c2e0429370e648a0959b6d93401c02e5eaf6e94e41",
+      "recorded_ns": 1794024608858840200
+    },
+    {
+      "session": "drawer_grip_verify_20261107_121348",
+      "file": "teaching/drawer_grip_verify_20261107_121348/before_state.json",
+      "sha256": "bc9f4ae8a6829c4102853ede6b8a1f53dbc6b2c412f79fd5981fa796a4f25c6a",
+      "recorded_ns": 1794024831833280600
+    },
+    {
+      "session": "drawer_grip_verify_20261107_121348",
+      "file": "teaching/drawer_grip_verify_20261107_121348/pre_command_state.json",
+      "sha256": "43615ab98545e15291b4b19241680b1060ac2b5e571a870d78d70ab345f611c1",
+      "recorded_ns": 1794024995504546800
+    },
+    {
+      "session": "drawer_grip_verify_20261107_121348",
+      "file": "teaching/drawer_grip_verify_20261107_121348/post_command_state.json",
+      "sha256": "7547eefb30044f340972c455bad2cf34de7908b90da46efc8c182ce28c1d9beb",
+      "recorded_ns": 1794024997445722200
+    },
+    {
+      "session": "drawer_grip_verify_20261107_121348",
+      "file": "teaching/drawer_grip_verify_20261107_121348/stability_state.json",
+      "sha256": "31e987e11a0e97e6715e8f63d95755a441c2566a20199f276b144a8763e743e9",
+      "recorded_ns": 1794025034388187800
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "file": "teaching/drawer_pull_20261107_122158/pre_state.json",
+      "sha256": "305443a0c016e5ac774785634d69b403780430bc5485857c79d62131e03c90b1",
+      "recorded_ns": 1794025597650863200
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "file": "teaching/drawer_pull_20261107_122158/arm_pull_step_01_before.json",
+      "sha256": "5d548c205c49ddf227a143ab79e04e1322e716459e3b50ecd8a2b061673948cf",
+      "recorded_ns": 1794025678198780200
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "file": "teaching/drawer_pull_20261107_122158/arm_pull_step_01_after.json",
+      "sha256": "9af7664f52d274ca8f06ffbe7b14d6ae676627bd60f2206d7d2bc1046f0576de",
+      "recorded_ns": 1794025680980240200
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "file": "teaching/drawer_pull_20261107_122158/arm_pull_step_02_before.json",
+      "sha256": "e19dd5ca8a67a10dd86c4802cc789638ba5428ce036518ac7cb74b6c15971b59",
+      "recorded_ns": 1794025710191902700
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "file": "teaching/drawer_pull_20261107_122158/arm_pull_step_02_after.json",
+      "sha256": "79e19c3cc44a1731f7830bf93dab8f24a836be68894661b0cc2a728d7b5cbf94",
+      "recorded_ns": 1794025713139971700
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "file": "teaching/drawer_pull_20261107_122158/arm_pull_step_03_before.json",
+      "sha256": "6d795da504908c2736f4158f2b23af8f4bfe295fa9137ea7743fe44aca2c35a5",
+      "recorded_ns": 1794025745538978300
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "file": "teaching/drawer_pull_20261107_122158/arm_pull_step_03_after.json",
+      "sha256": "73cb38310becd1db31bebea03b4500194d5a7717ed5a6e24efb5b8b934f03ede",
+      "recorded_ns": 1794025748684290700
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "file": "teaching/drawer_pull_20261107_122158/arm_pull_step_04_before.json",
+      "sha256": "b60022a49aab7ced03055186a65b9df4c314010eb1675a78a1b6c24b330a0365",
+      "recorded_ns": 1794025766223894500
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "file": "teaching/drawer_pull_20261107_122158/arm_pull_step_04_after.json",
+      "sha256": "0cb05ed61e5f8f1239015210a08fea6ea78d60209e88b3f50946cf546a4f3f10",
+      "recorded_ns": 1794025769969823900
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "file": "teaching/drawer_pull_20261107_122158/arm_pull_step_05_before.json",
+      "sha256": "756d0890c55f9502100d6cf55b4cc4bad8836b3b081b5b368a5ace2c8e5bad8e",
+      "recorded_ns": 1794025802565195900
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "file": "teaching/drawer_pull_20261107_122158/arm_pull_step_05_after.json",
+      "sha256": "51b223511856c3d6a5e725cf6729859828a2d728fd18b340426ffae4e97e052c",
+      "recorded_ns": 1794025805490444700
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "file": "teaching/drawer_pull_20261107_122158/arm_pull_step_06_before.json",
+      "sha256": "65a2e542759abdb0bbaa32bef50b4c54260931ba9ca9315c72000db2a595fef7",
+      "recorded_ns": 1794025840125834200
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "file": "teaching/drawer_pull_20261107_122158/arm_pull_step_06_after.json",
+      "sha256": "136c741327bbf051574a11c643e9c553ba52ae15b3db5690ff7c0294d706d94c",
+      "recorded_ns": 1794025856839124500
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "file": "teaching/drawer_pull_20261107_122158/extension_pre_state.json",
+      "sha256": "b67d11a4826b38db0b615dc03c07e23d46304990dc0a62e9af15d7d67ce56641",
+      "recorded_ns": 1794025931463489900
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "file": "teaching/drawer_pull_20261107_122158/arm_extend_step_01_before.json",
+      "sha256": "81c36bba7f2b1ea563b2abed412c7de3e78ee2c5a82eb73350cf3792fa8ef641",
+      "recorded_ns": 1794025967797056200
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "file": "teaching/drawer_pull_20261107_122158/arm_extend_step_01_after.json",
+      "sha256": "4e9c49dbc4915ae0f2b8e70d8d165d2f590a31ce8f1a273ba680a4169c11e200",
+      "recorded_ns": 1794025970571135200
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "file": "teaching/drawer_pull_20261107_122158/arm_extend_step_02_before.json",
+      "sha256": "a553d8358dbc26c6e20b135c365d35ed81ed73b000c23c01877769254c26314b",
+      "recorded_ns": 1794026009567633500
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "file": "teaching/drawer_pull_20261107_122158/arm_extend_step_02_after.json",
+      "sha256": "47f442f02001c90712404f6dcdcfe84e3ad27135e84f2893057c6949ed483500",
+      "recorded_ns": 1794026027549786800
+    },
+    {
+      "session": "drawer_pull_20261107_122158",
+      "file": "teaching/drawer_pull_20261107_122158/final_state.json",
+      "sha256": "302993a11f1e75ef8f0e3d537a550f7f30e24fa36ce809cfb511a305483d4c91",
+      "recorded_ns": 1794026047387517500
+    }
+  ],
+  "sampling_scope": {
+    "continuous_joint_trajectory_recorded": false,
+    "continuous_tcp_trajectory_recorded": false,
+    "calibrated_drawer_slide_displacement_recorded": false,
+    "direct_force_torque_recorded": false,
+    "camera_and_sdk_clock_synchronized": false,
+    "human_support_force_recorded": false,
+    "checkpoint_states_and_rgbd_recorded": true
+  },
+  "replay_assessment": {
+    "command_sequence_reconstructable": true,
+    "exact_physical_trajectory_reconstructable": false,
+    "all_other_tcp_axes_held_constant": false,
+    "safe_for_unattended_automatic_replay": false,
+    "reason": "At 25 and 30 cm the TCP exceeded the 5 mm Y/Z guard; the pose-goal API does not enforce a straight Cartesian path."
+  }
+}

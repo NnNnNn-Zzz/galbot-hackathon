@@ -1,0 +1,534 @@
+{
+  "units": {
+    "joint_position": "rad",
+    "gripper_width": "m"
+  },
+  "derived_summary_not_motion_command": true,
+  "points": [
+    {
+      "point": "P0",
+      "sample_count": 50,
+      "source": "teaching/grasp_capture_20261107_194545/states.ndjson",
+      "first_received_ns": 1794051961400866392,
+      "last_received_ns": 1794051966335703864,
+      "joints": {
+        "chassis_joint1": {
+          "mean_position_rad": -0.0004844677549600601,
+          "min_position_rad": -0.0004849853515625,
+          "max_position_rad": -0.00048399567604064944,
+          "device_timestamps_unique": 50
+        },
+        "chassis_joint2": {
+          "mean_position_rad": -0.0003930039221048355,
+          "min_position_rad": -0.00039383721351623536,
+          "max_position_rad": -0.0003923032283782959,
+          "device_timestamps_unique": 50
+        },
+        "chassis_joint3": {
+          "mean_position_rad": -0.00047313807666301725,
+          "min_position_rad": -0.00047370317578315736,
+          "max_position_rad": -0.0004725155532360077,
+          "device_timestamps_unique": 50
+        },
+        "chassis_joint4": {
+          "mean_position_rad": 0.00017357041209936142,
+          "min_position_rad": 0.00017324084043502806,
+          "max_position_rad": 0.0001738346517086029,
+          "device_timestamps_unique": 50
+        },
+        "head_joint1": {
+          "mean_position_rad": -3.8349520691554064e-05,
+          "min_position_rad": -7.190534961409867e-05,
+          "max_position_rad": -1.1984225238848012e-05,
+          "device_timestamps_unique": 50
+        },
+        "head_joint2": {
+          "mean_position_rad": -4.601942458975827e-05,
+          "min_position_rad": -7.190534961409867e-05,
+          "max_position_rad": 0.0,
+          "device_timestamps_unique": 50
+        },
+        "left_arm_joint1": {
+          "mean_position_rad": 2.1299164199829104,
+          "min_position_rad": 2.1298112869262695,
+          "max_position_rad": 2.1302669048309326,
+          "device_timestamps_unique": 50
+        },
+        "left_arm_joint2": {
+          "mean_position_rad": -1.5558910155296326,
+          "min_position_rad": -1.5560308694839478,
+          "max_position_rad": -1.5558388233184814,
+          "device_timestamps_unique": 50
+        },
+        "left_arm_joint3": {
+          "mean_position_rad": -0.5678120219707489,
+          "min_position_rad": -0.5678603053092957,
+          "max_position_rad": -0.5677642822265625,
+          "device_timestamps_unique": 50
+        },
+        "left_arm_joint4": {
+          "mean_position_rad": -1.9485288286209106,
+          "min_position_rad": -1.9493284225463867,
+          "max_position_rad": -1.9481538534164429,
+          "device_timestamps_unique": 50
+        },
+        "left_arm_joint5": {
+          "mean_position_rad": 0.07409599915146828,
+          "min_position_rad": 0.07401417195796967,
+          "max_position_rad": 0.0742061585187912,
+          "device_timestamps_unique": 50
+        },
+        "left_arm_joint6": {
+          "mean_position_rad": -0.6215574932098389,
+          "min_position_rad": -0.6218851804733276,
+          "max_position_rad": -0.6213110089302063,
+          "device_timestamps_unique": 50
+        },
+        "left_arm_joint7": {
+          "mean_position_rad": -0.01402954949066043,
+          "min_position_rad": -0.01406909804791212,
+          "max_position_rad": -0.01392598170787096,
+          "device_timestamps_unique": 50
+        },
+        "right_arm_joint1": {
+          "mean_position_rad": 1.2101477026939391,
+          "min_position_rad": 1.210116982460022,
+          "max_position_rad": 1.2102129459381104,
+          "device_timestamps_unique": 50
+        },
+        "right_arm_joint2": {
+          "mean_position_rad": 0.7310304141044617,
+          "min_position_rad": 0.7309665679931641,
+          "max_position_rad": 0.7310852408409119,
+          "device_timestamps_unique": 50
+        },
+        "right_arm_joint3": {
+          "mean_position_rad": -1.5415034174919129,
+          "min_position_rad": -1.541577696800232,
+          "max_position_rad": -1.541459083557129,
+          "device_timestamps_unique": 50
+        },
+        "right_arm_joint4": {
+          "mean_position_rad": 1.631141517162323,
+          "min_position_rad": 1.6310992240905762,
+          "max_position_rad": 1.6312178373336792,
+          "device_timestamps_unique": 50
+        },
+        "right_arm_joint5": {
+          "mean_position_rad": 0.5171743392944336,
+          "min_position_rad": 0.5171427726745605,
+          "max_position_rad": 0.5172143578529358,
+          "device_timestamps_unique": 50
+        },
+        "right_arm_joint6": {
+          "mean_position_rad": -0.5624797344207764,
+          "min_position_rad": -0.5625160932540894,
+          "max_position_rad": -0.5624445676803589,
+          "device_timestamps_unique": 50
+        },
+        "right_arm_joint7": {
+          "mean_position_rad": -1.4594875240325929,
+          "min_position_rad": -1.459559440612793,
+          "max_position_rad": -1.4594147205352783,
+          "device_timestamps_unique": 50
+        },
+        "leg_joint1": {
+          "mean_position_rad": 0.4999339282512665,
+          "min_position_rad": 0.4999339282512665,
+          "max_position_rad": 0.4999339282512665,
+          "device_timestamps_unique": 50
+        },
+        "leg_joint2": {
+          "mean_position_rad": 1.4977046251296997,
+          "min_position_rad": 1.4977046251296997,
+          "max_position_rad": 1.4977046251296997,
+          "device_timestamps_unique": 50
+        },
+        "leg_joint3": {
+          "mean_position_rad": 1.0017014741897583,
+          "min_position_rad": 1.0017014741897583,
+          "max_position_rad": 1.0017014741897583,
+          "device_timestamps_unique": 50
+        },
+        "leg_joint4": {
+          "mean_position_rad": 0.00023968450841493905,
+          "min_position_rad": 0.00023968450841493905,
+          "max_position_rad": 0.00023968450841493905,
+          "device_timestamps_unique": 50
+        },
+        "leg_joint5": {
+          "mean_position_rad": 4.793690095539205e-05,
+          "min_position_rad": 4.793690095539205e-05,
+          "max_position_rad": 4.793690095539205e-05,
+          "device_timestamps_unique": 50
+        }
+      },
+      "last_grippers": {
+        "left": {
+          "width": 0.050003677368164065,
+          "velocity": -5.247104167938232e-05,
+          "effort": 4.142857074737549,
+          "is_moving": false,
+          "timestamp_ns": 1794051966334079744
+        },
+        "right": {
+          "width": 0.050003677368164065,
+          "velocity": -5.247104167938232e-05,
+          "effort": 2.914285659790039,
+          "is_moving": false,
+          "timestamp_ns": 1794051966334079744
+        }
+      }
+    },
+    {
+      "point": "P1",
+      "sample_count": 20,
+      "source": "teaching/pregrasp_to_initial_20261107_200135_P1/states.ndjson",
+      "first_received_ns": 1794053503977740490,
+      "last_received_ns": 1794053505890688946,
+      "joints": {
+        "chassis_joint1": {
+          "mean_position_rad": -0.00044975080490112303,
+          "min_position_rad": -0.0004499512016773224,
+          "max_position_rad": -0.0004495058655738831,
+          "device_timestamps_unique": 20
+        },
+        "chassis_joint2": {
+          "mean_position_rad": -0.00035966902524232864,
+          "min_position_rad": -0.0003599411845207214,
+          "max_position_rad": -0.0003593473732471466,
+          "device_timestamps_unique": 20
+        },
+        "chassis_joint3": {
+          "mean_position_rad": -0.00046480608135461804,
+          "min_position_rad": -0.0004649941325187683,
+          "max_position_rad": -0.00046459826827049256,
+          "device_timestamps_unique": 20
+        },
+        "chassis_joint4": {
+          "mean_position_rad": 0.00017503215447068214,
+          "min_position_rad": 0.0001738346517086029,
+          "max_position_rad": 0.00017645728588104248,
+          "device_timestamps_unique": 20
+        },
+        "head_joint1": {
+          "mean_position_rad": -3.8948731526033956e-05,
+          "min_position_rad": -7.190534961409867e-05,
+          "max_position_rad": -2.3968450477696024e-05,
+          "device_timestamps_unique": 20
+        },
+        "head_joint2": {
+          "mean_position_rad": -4.3742422167269976e-05,
+          "min_position_rad": -8.388957940042019e-05,
+          "max_position_rad": -1.1984225238848012e-05,
+          "device_timestamps_unique": 20
+        },
+        "left_arm_joint1": {
+          "mean_position_rad": 2.129890465736389,
+          "min_position_rad": 2.129835605621338,
+          "max_position_rad": 2.1299073696136475,
+          "device_timestamps_unique": 20
+        },
+        "left_arm_joint2": {
+          "mean_position_rad": -1.555891066789627,
+          "min_position_rad": -1.5559347867965698,
+          "max_position_rad": -1.5558388233184814,
+          "device_timestamps_unique": 20
+        },
+        "left_arm_joint3": {
+          "mean_position_rad": -0.5678126513957977,
+          "min_position_rad": -0.5678358674049377,
+          "max_position_rad": -0.5677869915962219,
+          "device_timestamps_unique": 20
+        },
+        "left_arm_joint4": {
+          "mean_position_rad": -1.9483991742134095,
+          "min_position_rad": -1.9484175443649292,
+          "max_position_rad": -1.9483686685562134,
+          "device_timestamps_unique": 20
+        },
+        "left_arm_joint5": {
+          "mean_position_rad": 0.07408215887844563,
+          "min_position_rad": 0.07403860986232758,
+          "max_position_rad": 0.07411017268896103,
+          "device_timestamps_unique": 20
+        },
+        "left_arm_joint6": {
+          "mean_position_rad": -0.6215584635734558,
+          "min_position_rad": -0.6215972304344177,
+          "max_position_rad": -0.6215256452560425,
+          "device_timestamps_unique": 20
+        },
+        "left_arm_joint7": {
+          "mean_position_rad": -0.01403218493796885,
+          "min_position_rad": -0.01406909804791212,
+          "max_position_rad": -0.01399753987789154,
+          "device_timestamps_unique": 20
+        },
+        "right_arm_joint1": {
+          "mean_position_rad": 0.5692458719015121,
+          "min_position_rad": 0.5692007541656494,
+          "max_position_rad": 0.569296658039093,
+          "device_timestamps_unique": 20
+        },
+        "right_arm_joint2": {
+          "mean_position_rad": 0.2688601896166801,
+          "min_position_rad": 0.2688313126564026,
+          "max_position_rad": 0.26887843012809753,
+          "device_timestamps_unique": 20
+        },
+        "right_arm_joint3": {
+          "mean_position_rad": -1.6604868650436402,
+          "min_position_rad": -1.660509705543518,
+          "max_position_rad": -1.6604381799697876,
+          "device_timestamps_unique": 20
+        },
+        "right_arm_joint4": {
+          "mean_position_rad": 0.8402372419834137,
+          "min_position_rad": 0.8401874899864197,
+          "max_position_rad": 0.8402835130691528,
+          "device_timestamps_unique": 20
+        },
+        "right_arm_joint5": {
+          "mean_position_rad": 0.7454434931278229,
+          "min_position_rad": 0.7454178333282471,
+          "max_position_rad": 0.7454667091369629,
+          "device_timestamps_unique": 20
+        },
+        "right_arm_joint6": {
+          "mean_position_rad": -0.47032336592674256,
+          "min_position_rad": -0.4703574776649475,
+          "max_position_rad": -0.47028595209121704,
+          "device_timestamps_unique": 20
+        },
+        "right_arm_joint7": {
+          "mean_position_rad": 0.17274159640073777,
+          "min_position_rad": 0.17271603643894196,
+          "max_position_rad": 0.1727875918149948,
+          "device_timestamps_unique": 20
+        },
+        "leg_joint1": {
+          "mean_position_rad": 0.4999339282512665,
+          "min_position_rad": 0.4999339282512665,
+          "max_position_rad": 0.4999339282512665,
+          "device_timestamps_unique": 20
+        },
+        "leg_joint2": {
+          "mean_position_rad": 1.4977046251296997,
+          "min_position_rad": 1.4977046251296997,
+          "max_position_rad": 1.4977046251296997,
+          "device_timestamps_unique": 20
+        },
+        "leg_joint3": {
+          "mean_position_rad": 1.0017014741897583,
+          "min_position_rad": 1.0017014741897583,
+          "max_position_rad": 1.0017014741897583,
+          "device_timestamps_unique": 20
+        },
+        "leg_joint4": {
+          "mean_position_rad": 0.00023968450841493905,
+          "min_position_rad": 0.00023968450841493905,
+          "max_position_rad": 0.00023968450841493905,
+          "device_timestamps_unique": 20
+        },
+        "leg_joint5": {
+          "mean_position_rad": 4.793690095539205e-05,
+          "min_position_rad": 4.793690095539205e-05,
+          "max_position_rad": 4.793690095539205e-05,
+          "device_timestamps_unique": 20
+        }
+      },
+      "last_grippers": {
+        "left": {
+          "width": 0.05001082229614258,
+          "velocity": -5.247104167938232e-05,
+          "effort": 4.142857074737549,
+          "is_moving": false,
+          "timestamp_ns": 1794053505885972992
+        },
+        "right": {
+          "width": 0.050003677368164065,
+          "velocity": -5.247104167938232e-05,
+          "effort": 2.914285659790039,
+          "is_moving": false,
+          "timestamp_ns": 1794053505885972992
+        }
+      }
+    },
+    {
+      "point": "P2",
+      "sample_count": 20,
+      "source": "teaching/pregrasp_to_initial_20261107_200135_P2/states.ndjson",
+      "first_received_ns": 1794053774375886236,
+      "last_received_ns": 1794053776288457404,
+      "joints": {
+        "chassis_joint1": {
+          "mean_position_rad": -0.0004369074165821075,
+          "min_position_rad": -0.00043713504076004026,
+          "max_position_rad": -0.00043654125928878785,
+          "device_timestamps_unique": 20
+        },
+        "chassis_joint2": {
+          "mean_position_rad": -0.0003528626039624214,
+          "min_position_rad": -0.0003531619608402252,
+          "max_position_rad": -0.0003527166247367859,
+          "device_timestamps_unique": 20
+        },
+        "chassis_joint3": {
+          "mean_position_rad": -0.0004691952496767044,
+          "min_position_rad": -0.0004693981409072876,
+          "max_position_rad": -0.00046895280480384826,
+          "device_timestamps_unique": 20
+        },
+        "chassis_joint4": {
+          "mean_position_rad": 0.0001766675814986229,
+          "min_position_rad": 0.00017616038024425508,
+          "max_position_rad": 0.00017715005576610565,
+          "device_timestamps_unique": 20
+        },
+        "head_joint1": {
+          "mean_position_rad": -3.415504183976736e-05,
+          "min_position_rad": -5.992112710373476e-05,
+          "max_position_rad": 0.0,
+          "device_timestamps_unique": 20
+        },
+        "head_joint2": {
+          "mean_position_rad": -5.332980217644945e-05,
+          "min_position_rad": -8.388957940042019e-05,
+          "max_position_rad": -2.3968450477696024e-05,
+          "device_timestamps_unique": 20
+        },
+        "left_arm_joint1": {
+          "mean_position_rad": 2.1298738598823546,
+          "min_position_rad": 2.1298112869262695,
+          "max_position_rad": 2.1299073696136475,
+          "device_timestamps_unique": 20
+        },
+        "left_arm_joint2": {
+          "mean_position_rad": -1.5558896660804749,
+          "min_position_rad": -1.5559347867965698,
+          "max_position_rad": -1.5558632612228394,
+          "device_timestamps_unique": 20
+        },
+        "left_arm_joint3": {
+          "mean_position_rad": -0.567807850241661,
+          "min_position_rad": -0.5678358674049377,
+          "max_position_rad": -0.5677642822265625,
+          "device_timestamps_unique": 20
+        },
+        "left_arm_joint4": {
+          "mean_position_rad": -1.9483919978141784,
+          "min_position_rad": -1.9484418630599976,
+          "max_position_rad": -1.9483458995819092,
+          "device_timestamps_unique": 20
+        },
+        "left_arm_joint5": {
+          "mean_position_rad": 0.07406784631311894,
+          "min_position_rad": 0.07403860986232758,
+          "max_position_rad": 0.07411017268896103,
+          "device_timestamps_unique": 20
+        },
+        "left_arm_joint6": {
+          "mean_position_rad": -0.6215378642082214,
+          "min_position_rad": -0.6215745210647583,
+          "max_position_rad": -0.6215012073516846,
+          "device_timestamps_unique": 20
+        },
+        "left_arm_joint7": {
+          "mean_position_rad": -0.01401569163426757,
+          "min_position_rad": -0.014044663868844509,
+          "max_position_rad": -0.013973105698823929,
+          "device_timestamps_unique": 20
+        },
+        "right_arm_joint1": {
+          "mean_position_rad": -1.5934019207954406,
+          "min_position_rad": -1.5934698581695557,
+          "max_position_rad": -1.593351125717163,
+          "device_timestamps_unique": 20
+        },
+        "right_arm_joint2": {
+          "mean_position_rad": 0.7328809648752213,
+          "min_position_rad": 0.732860267162323,
+          "max_position_rad": 0.7329074144363403,
+          "device_timestamps_unique": 20
+        },
+        "right_arm_joint3": {
+          "mean_position_rad": 1.3060817837715148,
+          "min_position_rad": 1.3060402870178223,
+          "max_position_rad": 1.3061362504959106,
+          "device_timestamps_unique": 20
+        },
+        "right_arm_joint4": {
+          "mean_position_rad": 1.5170730233192444,
+          "min_position_rad": 1.5170332193374634,
+          "max_position_rad": 1.5171290636062622,
+          "device_timestamps_unique": 20
+        },
+        "right_arm_joint5": {
+          "mean_position_rad": -1.155238962173462,
+          "min_position_rad": -1.1552561521530151,
+          "max_position_rad": -1.1552315950393677,
+          "device_timestamps_unique": 20
+        },
+        "right_arm_joint6": {
+          "mean_position_rad": 0.389880895614624,
+          "min_position_rad": 0.38984546065330505,
+          "max_position_rad": 0.3899187743663788,
+          "device_timestamps_unique": 20
+        },
+        "right_arm_joint7": {
+          "mean_position_rad": 0.08773725964128971,
+          "min_position_rad": 0.08770104497671127,
+          "max_position_rad": 0.08777260035276413,
+          "device_timestamps_unique": 20
+        },
+        "leg_joint1": {
+          "mean_position_rad": 0.4999339282512665,
+          "min_position_rad": 0.4999339282512665,
+          "max_position_rad": 0.4999339282512665,
+          "device_timestamps_unique": 20
+        },
+        "leg_joint2": {
+          "mean_position_rad": 1.4977046251296997,
+          "min_position_rad": 1.4977046251296997,
+          "max_position_rad": 1.4977046251296997,
+          "device_timestamps_unique": 20
+        },
+        "leg_joint3": {
+          "mean_position_rad": 1.0017014741897583,
+          "min_position_rad": 1.0017014741897583,
+          "max_position_rad": 1.0017014741897583,
+          "device_timestamps_unique": 20
+        },
+        "leg_joint4": {
+          "mean_position_rad": 0.00023968450841493905,
+          "min_position_rad": 0.00023968450841493905,
+          "max_position_rad": 0.00023968450841493905,
+          "device_timestamps_unique": 20
+        },
+        "leg_joint5": {
+          "mean_position_rad": 4.793690095539205e-05,
+          "min_position_rad": 4.793690095539205e-05,
+          "max_position_rad": 4.793690095539205e-05,
+          "device_timestamps_unique": 20
+        }
+      },
+      "last_grippers": {
+        "left": {
+          "width": 0.050003677368164065,
+          "velocity": -5.247104167938232e-05,
+          "effort": 4.142857074737549,
+          "is_moving": false,
+          "timestamp_ns": 1794053776285949184
+        },
+        "right": {
+          "width": 0.050003677368164065,
+          "velocity": -0.00015741312503814698,
+          "effort": 2.914285659790039,
+          "is_moving": false,
+          "timestamp_ns": 1794053776285949184
+        }
+      }
+    }
+  ]
+}
