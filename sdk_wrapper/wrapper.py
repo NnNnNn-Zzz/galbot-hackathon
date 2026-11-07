@@ -387,9 +387,12 @@ def move_line_to(pose, chain: str = "") -> dict:
     params.set_direct_execute(True)
     params.set_blocking(True)
     params.set_timeout(10.0)
+    params.set_tool_pose(True)      # 控制挂接的夹爪 TCP，不是臂法兰（对齐 example6）
     params.set_check_collision(True)
     params.set_reference_frame("base_link")
-    params.set_actuate(True)
+    # set_actuate 要字符串：with_chain_only / with_torso / with_leg。
+    # 真机 2026-11-07 踩坑：传 True 报 incompatible function arguments。
+    params.set_actuate("with_chain_only")
     status, _traj = _get_motion().move_line([[target]], params)
     name = _status_name(status)
     ok = name == "SUCCESS"
