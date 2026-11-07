@@ -106,6 +106,14 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 - **修复**：`HeadLookTool` 改用 `head_end_effector_mount_link` 计算头部 roll/pitch/yaw 并验证低头方向；关节位置反馈和控制目标不变。
 - **验证结果与边界**：修正后 PC 端 6 个头部单元测试通过；截至记录时尚未重新发送真机头部动作，需用下一次单步键盘输入验证实际低头方向。
 
+### 头部键盘脚本动作成功后因日志格式化崩溃（2026-11-07）
+
+- **现象**：键盘脚本收到 `j` 后，头部工具返回成功，机器人也实际移动；随后脚本在打印 `OK ...` 时抛出 `ValueError: Unknown format code 'f' for object of type 'str'` 并退出。
+- **确认原因**：日志字符串混用了 `%s` 和 `str.format()`。未替换的 `%s` 留在字符串中，而第一个 `{:.4f}` 实际收到的是字符串 `head_joint2`，因此按浮点格式输出时报错。动作本身和 SDK 状态正常。
+- **诊断**：出现该 traceback 后先只读 `get_joint_states([], ["head_joint1", "head_joint2"])` 并读取 `head_end_effector_mount_link` 姿态，确认动作是否完成，不能因为脚本退出就立即重复动作。
+- **修复**：把成功日志封装为 `format_step_success()`，只用 `str.format()` 并固定参数顺序；新增格式化回归测试。脚本异常时仍会把未完成动作视为停止条件。
+- **验证**：2026-11-07 该次 `head_joint2` 已从约 0.0499 rad 到 0.059885 rad，头部末端 pitch 约 2.976°，按 `j` 后并未回退。修复后 PC 与 HPU 的 7 个头部测试全部通过；部署修正版后未重复发送动作。
+
 ### 部署架构：全机器人端（HPU），不在 PC 上跑
 
 - Agent + SDK 都跑在机器人 HPU 上（hostname `galbot-echo`，aarch64，Ubuntu 20.04，Python 3.8）
