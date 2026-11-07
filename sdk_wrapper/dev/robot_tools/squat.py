@@ -59,12 +59,12 @@ class SquatTool:
             return self._robot_instance, self._sdk
         if not self.real_authorized:
             raise PermissionError("real robot control is not explicitly authorized")
-        from sdk_wrapper.wrapper import _mock_mode, _sdk_bootstrap, get_robot
+        from sdk_wrapper.dev import toolhub
+        from sdk_wrapper.wrapper import get_robot
 
-        if _mock_mode:
+        if toolhub._is_mock():
             raise RuntimeError("GALBOT_MOCK=1; refusing to label the mock robot as real")
 
-        _sdk_bootstrap()
         if self._sdk is None:
             import galbot_sdk.g1 as gm
 
