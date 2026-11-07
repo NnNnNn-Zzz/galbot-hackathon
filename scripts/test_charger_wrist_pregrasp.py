@@ -38,6 +38,9 @@ def _print_result(label: str, result: dict[str, typing.Any]) -> None:
                 {
                     "camera_id": observation.get("camera_id"),
                     "confidence": observation.get("confidence"),
+                    "detection_stage": observation.get("detection_stage"),
+                    "proposal_confidence": observation.get("proposal_confidence"),
+                    "cascade": observation.get("cascade"),
                     "eligible_for_precision": observation.get("eligible_for_precision"),
                     "rejection_reasons": observation.get("rejection_reasons"),
                     "surface_center_m": surface.get("surface_center_m"),
@@ -59,6 +62,9 @@ def _print_result(label: str, result: dict[str, typing.Any]) -> None:
             json.dumps(
                 {
                     "eligible_for_precision": result.get("eligible_for_precision"),
+                    "detection_stage": result.get("detection_stage"),
+                    "proposal_confidence": result.get("proposal_confidence"),
+                    "cascade": result.get("cascade"),
                     "rejection_reasons": result.get("rejection_reasons"),
                     "surface_center_m": surface.get("surface_center_m"),
                     "surface_normal_base": surface.get("surface_normal_base"),

@@ -7,6 +7,9 @@ from pathlib import Path
 import numpy as np
 
 from sdk_wrapper.dev.adapters import MockAdapter
+from sdk_wrapper.dev.algorithms.charger_cascade import (
+    CascadeChargerSegmentationBackend,
+)
 from sdk_wrapper.dev.algorithms.charger_yolo import YoloInstance, analyze_charger_top
 from sdk_wrapper.dev.contracts import ErrorCode, TaskStatus, ok
 from sdk_wrapper.dev.robot_tools.charger_yolo import ChargerYoloTool
@@ -194,6 +197,15 @@ class ChargerYoloGeometryTest(unittest.TestCase):
 
 
 class ChargerYoloToolTest(unittest.TestCase):
+    def test_default_config_uses_cascade_backend(self):
+        tool = ChargerYoloTool(PerceptionTool(MockAdapter()))
+
+        self.assertIsInstance(tool.backend, CascadeChargerSegmentationBackend)
+        self.assertEqual(
+            tool.config["cascade"]["proposal_weights"],
+            "~/yoloseg/runs/yolo11n_seg_charger_v2/weights/best.pt",
+        )
+
     def test_wrist_tool_returns_structured_observation_and_artifacts(self):
         adapter = MockAdapter()
         perception = PerceptionTool(adapter)

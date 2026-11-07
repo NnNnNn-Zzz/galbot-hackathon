@@ -46,6 +46,8 @@ class YoloInstance:
     bbox_xyxy: tuple[float, float, float, float]
     mask: np.ndarray | None = None
     track_id: int | None = None
+    stage: str = "refined"
+    proposal_confidence: float | None = None
 
 
 def _canonical_axis(vector: np.ndarray) -> np.ndarray:
@@ -439,9 +441,11 @@ def annotation_overlay(
     p1 = tuple(np.round(np.asarray(center) + long_axis * length).astype(int).tolist())
     cv2.arrowedLine(out, p0, p1, (255, 80, 40), 2, tipLength=0.18)
     cv2.circle(out, tuple(np.round(center).astype(int).tolist()), 3, (255, 255, 255), -1)
-    label = "charger %.3f %s" % (
+    stage_label = " PROPOSAL ONLY" if instance.stage == "proposal_only" else ""
+    label = "charger %.3f %s%s" % (
         float(instance.confidence),
         "READY" if analysis.get("eligible_for_precision") else "REJECT",
+        stage_label,
     )
     cv2.putText(
         out,

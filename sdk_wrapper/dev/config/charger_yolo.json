@@ -11,6 +11,18 @@
   "weights": "~/yoloseg/runs/charger_seg_clean_v2/weights/best.pt",
   "target_class": "charger",
   "required_task": "segment",
+  "cascade": {
+    "enabled": true,
+    "proposal_weights": "~/yoloseg/runs/yolo11n_seg_charger_v2/weights/best.pt",
+    "refine_confidence": 0.01,
+    "full_accept_confidence": 0.2,
+    "proposal_confidence": 0.02,
+    "iou": 0.45,
+    "roi_margin": 0.25,
+    "proposal_limit": 3,
+    "refine_limit": 1,
+    "min_bbox_iou": 0.15
+  },
   "imgsz": 640,
   "confidence": 0.3,
   "iou": 0.7,

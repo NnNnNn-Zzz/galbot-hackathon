@@ -23,5 +23,6 @@ __all__ = [
     "observation_pose",
     "charger_search",
     "charger_yolo",
+    "charger_cascade",
     "power_strip_yolo",
 ]

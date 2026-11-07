@@ -83,6 +83,8 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 - **修复**：使用 `StereoDepthTool.capture_stereo_depth()` 直接调该 SDK 模块，保存原始 `.npy` 与伪彩色预览。2026-11-08 用头部外参和地面平面完成尺度验证后，应用层换算固定为 `depth_m = raw_value * 0.001`。
 - **验证**：2026-11-07 在 HPU 真机完成封装调用，返回 `succeeded/real`，图像为 1280×960、`uint16`，有效像素比例 1.0，原始值范围 384–7798；预览能区分桌面、物体和背景。2026-11-08 复测得到头左内参 `K` 为 `fx=486.2493, fy=486.2607, cx=652.1300, cy=480.4339`、`distortion_model=kannala_brandt`，并通过 `get_sensor_extrinsic(HEAD_LEFT_CAMERA, "base_link")` 反投影。按毫米假设变换到 `base_link` 后，地面 RANSAC 平面 `z=-0.0021 m`、法向 `(0.0868, -0.0323, 0.9957)`，42,809/86,016 个采样点落在 3 cm 平面内；其他候选尺度会得到数十米到数千米的地面高度，因此确认 FOUNDATION_STEREO 原始深度单位是毫米。RGB 高 992、双目图高 960，反投影时 `fy/cy` 必须乘 `960/992`，并对 Kannala-Brandt 鱼眼畸变先去畸变。
 
+  2026-11-08 正式 charger 链路复测时，`StereoDepthTool` 报 `ImportError: cannot import name '_sdk_bootstrap' from 'sdk_wrapper.wrapper'`。确认原因是 wrapper 重构后 bootstrap 已移动到 `sdk_wrapper.dev.adapters.galbot_adapter`，工具仍从旧位置导入。将导入改为 adapter 的 `_sdk_bootstrap()` 后，真机头部检测得到有效的 `target_3d` 和 `target_safety`；当前低置信提案因距离、平面法向等安全门槛被正确拒绝，没有进入底盘或腕部运动。
+
 ### G1 躯干轴向：`leg_joint4/5` 不当前倾，`leg_joint3` 可产生俯仰（2026-11-07）
 
 - **现象**：监督脚本最初期望用 `torso` 链的 `leg_joint4`、`leg_joint5` 实现前倾，但真机中 `leg_joint4` 产生偏航，`leg_joint5` 也没有产生俯仰；现场观察到侧向运动，`leg_joint5` 微步时头部滚转约变化 1.14°，俯仰和偏航基本不变。

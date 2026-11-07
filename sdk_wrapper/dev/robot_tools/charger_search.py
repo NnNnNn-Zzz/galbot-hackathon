@@ -239,6 +239,7 @@ class ChargerSearchTool:
                 for key in (
                     "confidence", "bbox_xyxy", "bbox_center_uv",
                     "image_space", "head_handoff", "observation_ref",
+                    "detection_stage", "proposal_confidence", "cascade",
                 )
             },
             "plan": plan,
@@ -698,6 +699,7 @@ class ChargerSearchTool:
                 for key in (
                     "confidence", "bbox_xyxy", "image_space",
                     "head_handoff", "observation_ref",
+                    "detection_stage", "proposal_confidence", "cascade",
                 )
             }
         )

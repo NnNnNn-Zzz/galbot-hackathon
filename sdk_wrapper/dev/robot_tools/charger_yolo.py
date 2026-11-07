@@ -25,6 +25,9 @@ from sdk_wrapper.dev.algorithms.charger_yolo import (
     analyze_charger_top,
     annotation_overlay,
 )
+from sdk_wrapper.dev.algorithms.charger_cascade import (
+    CascadeChargerSegmentationBackend,
+)
 from sdk_wrapper.dev.algorithms.calibration import compare_rgbd_calibration
 from sdk_wrapper.dev.algorithms.power_strip_yolo import (
     analyze_power_strip_stereo,
@@ -74,16 +77,41 @@ class ChargerYoloTool:
         self.perception = perception
         with open(config_path, encoding="utf-8") as fh:
             self.config = json.load(fh)
-        self.backend = backend or UltralyticsYoloBackend(
-            roots=self.config["model_search_roots"],
-            weights=self.config.get("weights"),
-            target_class=self.config.get("target_class", "charger"),
-            required_task=self.config.get("required_task", "segment"),
-            imgsz=int(self.config.get("imgsz", 640)),
-            confidence=float(self.config.get("confidence", 0.30)),
-            iou=float(self.config.get("iou", 0.70)),
-            device=str(self.config.get("device", "cpu")),
-        )
+        cascade = dict(self.config.get("cascade") or {})
+        if backend is not None:
+            self.backend = backend
+        elif cascade.get("enabled", False):
+            self.backend = CascadeChargerSegmentationBackend(
+                roots=self.config["model_search_roots"],
+                weights=self.config["weights"],
+                proposal_weights=cascade["proposal_weights"],
+                target_class=self.config.get("target_class", "charger"),
+                imgsz=int(self.config.get("imgsz", 640)),
+                refine_confidence=float(cascade.get("refine_confidence", 0.01)),
+                full_accept_confidence=float(
+                    cascade.get("full_accept_confidence", 0.20)
+                ),
+                proposal_confidence=float(
+                    cascade.get("proposal_confidence", 0.02)
+                ),
+                iou=float(cascade.get("iou", 0.45)),
+                device=str(self.config.get("device", "cpu")),
+                roi_margin=float(cascade.get("roi_margin", 0.25)),
+                proposal_limit=int(cascade.get("proposal_limit", 3)),
+                refine_limit=int(cascade.get("refine_limit", 1)),
+                min_bbox_iou=float(cascade.get("min_bbox_iou", 0.15)),
+            )
+        else:
+            self.backend = UltralyticsYoloBackend(
+                roots=self.config["model_search_roots"],
+                weights=self.config.get("weights"),
+                target_class=self.config.get("target_class", "charger"),
+                required_task=self.config.get("required_task", "segment"),
+                imgsz=int(self.config.get("imgsz", 640)),
+                confidence=float(self.config.get("confidence", 0.30)),
+                iou=float(self.config.get("iou", 0.70)),
+                device=str(self.config.get("device", "cpu")),
+            )
         if stereo_tool is None and self.mode is RunMode.REAL:
             from sdk_wrapper.dev.robot_tools.stereo_depth import StereoDepthTool
 
@@ -167,18 +195,42 @@ class ChargerYoloTool:
                 f"{camera_id} did not provide RGB data",
             )
 
-        instances = self.backend.predict(snap.bgr)
-        if require_mask:
+        cascade_predict = getattr(self.backend, "predict_cascade", None)
+        if callable(cascade_predict):
+            instances = cascade_predict(snap.bgr, purpose=purpose)
+        else:
+            instances = self.backend.predict(snap.bgr)
+        cascade_report = dict(getattr(self.backend, "last_report", {}) or {})
+        if purpose == "head_handoff":
+            for instance in instances:
+                if instance.stage == "proposal_only" and instance.mask is None:
+                    x1, y1, x2, y2 = [
+                        max(0, int(round(float(value))))
+                        for value in instance.bbox_xyxy
+                    ]
+                    x2 = min(snap.bgr.shape[1], x2)
+                    y2 = min(snap.bgr.shape[0], y2)
+                    mask = np.zeros(snap.bgr.shape[:2], dtype=bool)
+                    mask[y1:y2, x1:x2] = True
+                    instance.mask = mask
+        if purpose == "precision":
+            instances = [
+                item
+                for item in instances
+                if item.stage == "refined" and item.mask is not None
+            ]
+        elif require_mask:
             instances = [item for item in instances if item.mask is not None]
         if not instances:
             return failed(
                 ErrorCode.NOT_READY,
-                f"{camera_id} 中未检测到 charger 上表面",
+                f"{camera_id} 中没有通过对应阶段的 charger 候选",
                 self.mode,
                 data={
                     "camera_id": camera_id,
                     "capture_id": snap.data.get("capture_id"),
                     "model": model_info,
+                    "cascade": cascade_report,
                 },
             )
 
@@ -258,6 +310,7 @@ class ChargerYoloTool:
         # the ranking key because a clipped target can have a huge mask.
         analyzed.sort(
             key=lambda item: (
+                item[1].stage == "refined",
                 bool(item[0].get("eligible_for_precision")),
                 float(item[1].confidence),
                 float(item[0]["image_space"]["short_edge_px"]),
@@ -281,6 +334,9 @@ class ChargerYoloTool:
             raise OSError(f"failed to save {overlay_path}")
 
         selected = dict(selected)
+        selected["detection_stage"] = instance.stage
+        selected["proposal_confidence"] = instance.proposal_confidence
+        selected["cascade"] = cascade_report
         head_stereo: dict[str, typing.Any] | None = None
         if purpose == "head_handoff":
             if self.stereo_tool is None:
@@ -431,6 +487,9 @@ class ChargerYoloTool:
                 "horizontal_angle_deg": round(horizontal_angle_deg, 4),
                 "purpose": "select wrist observation; not a precision grasp point",
                 "grasp_coordinate": None,
+                "detection_stage": instance.stage,
+                "proposal_confidence": instance.proposal_confidence,
+                "cascade": cascade_report,
             }
             for key in (
                 "target_3d",
