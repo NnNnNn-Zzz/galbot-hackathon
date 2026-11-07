@@ -156,7 +156,8 @@ def run_pipeline(ctx: Context, io: Any, cfg: Dict[str, Any]) -> Dict[str, Any]:
             continue
         if failure is None:
             failure = (spec, res)
-        logger.error("步骤 %s 失败：%s —— 停止后续普通步骤，仍执行归位", spec.id, res.message)
+        logger.error("步骤 %s 失败：%s —— 停止后续普通步骤；若配置含 must_run 步骤则继续执行",
+                     spec.id, res.message)
 
     overall = "ok"
     if failure is not None:

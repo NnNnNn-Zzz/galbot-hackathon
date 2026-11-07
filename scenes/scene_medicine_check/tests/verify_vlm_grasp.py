@@ -31,10 +31,10 @@ RESULTS = []
 
 
 def _run_once(verdict_or_backend, max_rounds: int = 3):
-    """跑 grasp_vlm（只取 preflight+grasp 两步），返回 (stage_result, ctx, io)。"""
+    """跑 grasp_vlm（只取 preflight+init_pose+grasp 三步），返回 (stage_result, ctx, io)。"""
     cfg = R.load_config("medicine.vlm")
-    cfg["steps"] = cfg["steps"][:2]
-    cfg["steps"][1]["params"]["max_rounds"] = max_rounds
+    cfg["steps"] = cfg["steps"][:3]
+    cfg["steps"][2]["params"]["max_rounds"] = max_rounds
     # 用 mock IO + 指定 backend
     io = build_io("mock")
     backend = (verdict_or_backend if hasattr(verdict_or_backend, "judge")

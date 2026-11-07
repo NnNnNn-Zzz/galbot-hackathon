@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""实验 1：空桌盲抓 —— 只跑 preflight + grasp，桌面**不放任何盒子**。
+"""实验 1：空桌盲抓 —— 只跑 preflight + init_pose + grasp，桌面**不放任何盒子**。
 
 目的
 ----
-验证抓取轨迹本身是安全的：手臂从抱持位伸出去、下到 z=0.75、夹爪开合、
+验证抓取轨迹本身是安全的：手臂从抱持位伸出去、下到 z=0.77、夹爪开合、
 抬起到 z=0.90、再收回来，全程不碰桌子、不碰底座、不触发急停。
 桌上没盒，所以夹到空气是**预期结果**，不是失败。
 
@@ -14,7 +14,7 @@
 
 通过判据（详见 experiments/criteria.py）
 ---------------------------------------
-1. preflight 与 grasp 两步都必须是 ok（不能是 unknown、不能被 skipped）
+1. preflight、init_pose 与 grasp 三步都必须是 ok（不能是 unknown、不能被 skipped）
 2. 允许 picked 为 False 或 None（无夹爪反馈是本后端正常表现）
 3. 若 picked=True -> 视为异常（桌上还有东西 / 假阳性），需重查
 

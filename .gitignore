@@ -16,3 +16,7 @@ sdk_wrapper/dev/runs/
 # 合并前的本地备份目录（不提交）
 .bak_merge_dev_*/
 .bak_*/
+
+# 运行产物：交接位姿快照、实验日志
+logs/
+*.log

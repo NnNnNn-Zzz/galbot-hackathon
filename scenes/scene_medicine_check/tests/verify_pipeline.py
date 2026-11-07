@@ -5,7 +5,7 @@
 不需要任何第三方依赖，不需要 pytest。
 
 覆盖的场景：
-  1. 正常流程（7 步全 ok，抓到药盒，归位成功）
+  1. 正常流程（8 步全 ok，抓到药盒，归位成功）
   2. 抓取失败（夹爪动不了）→ failed，仍执行归位
   3. 左移超时 → failed + TIMEOUT，仍执行归位
   4. 起始里程计读不到 → 非致命，流程照常走完
@@ -14,6 +14,8 @@
   7. 升级版（过期判定）→ 选中并抓起真正过期的那盒
   8. 升级版但桌面上没有过期药 → failed + NO_TARGET
   9. 升级版但日期全读不出 → unknown（不瞎猜成"没过期"）
+ 10. 腿部初始归位失败 → 禁止抓取，仍执行归位
+ 11. 头部和双臂初始归位失败 → 禁止抓取，仍执行归位
 """
 
 from __future__ import annotations
@@ -56,9 +58,9 @@ def main() -> int:
     # ---------------------------------------------------------------- 1 正常
     r = run({})
     d = r.get("details") or {}
-    check(1, "正常流程 7 步全 ok，抓到并投出，归位成功",
+    check(1, "正常流程 8 步全 ok，抓到并投出，归位成功",
           r.get("success") is True
-          and d.get("steps_ok") == 7
+          and d.get("steps_ok") == 8
           and d.get("picked") is True
           and d.get("home_arm_ok") is True and d.get("home_base_ok") is True,
           f"success={r.get('success')} steps_ok={d.get('steps_ok')} picked={d.get('picked')} "
@@ -141,6 +143,44 @@ def main() -> int:
           r.get("success") is False and step_of(r, "grasp").get("status") == "unknown"
           and d.get("stopped_without_safety") is True,
           f"msg={step_of(r, 'grasp').get('message')}")
+
+    # -------------------------------------------------- 10/11 初始位失败硬阻断
+    from scenes.scene_medicine_check.pipeline import runner as pipeline_runner
+    from scenes.scene_medicine_check.pipeline import tuning
+    from scenes.scene_medicine_check.pipeline.contracts import Context
+    from scenes.scene_medicine_check.pipeline.io import build_io
+
+    def run_init_failure(fail_joint_names):
+        io = build_io("mock")
+        original_set_joints = io.set_joints
+
+        def controlled_set_joints(positions, names, speed_rad_s=0.2):
+            if names == fail_joint_names:
+                return {"success": False, "status": "failed", "code": "HW_ERROR",
+                        "message": "注入初始归位失败"}
+            return original_set_joints(positions, names, speed_rad_s)
+
+        io.set_joints = controlled_set_joints
+        cfg = pipeline_runner.load_config("medicine.baseline")
+        return pipeline_runner.run_pipeline(Context(params={}), io, cfg)
+
+    for no, joint_names, sub_step, name in [
+        (10, tuning.LEG_JOINT_NAMES, "init_legs", "腿部初始归位失败"),
+        (11, tuning.UPPER_JOINT_NAMES, "init_upper_body", "头部和双臂初始归位失败"),
+    ]:
+        res = run_init_failure(joint_names)
+        trace = res.get("trace") or []
+        init = next((t for t in trace if t.get("step") == "init_pose"), {})
+        grasp = next((t for t in trace if t.get("step") == "grasp"), {})
+        home = next((t for t in trace if t.get("step") == "home"), {})
+        check(no, f"{name} → 禁止抓取，仍执行归位",
+              res.get("status") == "failed"
+              and init.get("status") == "failed"
+              and (init.get("data") or {}).get("sub_step") == sub_step
+              and grasp.get("status") == "skipped"
+              and home.get("status") != "skipped",
+              f"init={init.get('status')} sub_step={(init.get('data') or {}).get('sub_step')} "
+              f"grasp={grasp.get('status')} home={home.get('status')}")
 
     # ---------------------------------------------------------------- 汇总
     bad = [x for x in RESULTS if not x[2]]

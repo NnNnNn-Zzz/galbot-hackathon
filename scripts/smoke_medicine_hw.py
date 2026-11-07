@@ -36,7 +36,7 @@ CHAIN = "right_arm"
 TOOL = "galbot_gripper"
 SIDE = "right"
 GRIPPER_OPEN_M = 0.08
-GRIPPER_CLOSE_M = 0.02  # 与 tuning 一致；0.0 物理不可达（两指碰头>0），空爪会 TIMEOUT
+GRIPPER_CLOSE_M = 0.075  # 与 tuning 一致；按 7.5 cm 药盒宽度闭合，避免挤扁盒体
 SPEAK_TEXT = "夹爪测试完成"
 
 

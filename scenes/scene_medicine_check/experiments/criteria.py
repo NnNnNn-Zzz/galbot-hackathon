@@ -10,10 +10,10 @@
 
 判据表（与 docs/real_validation_plan.md 对齐）
 ---------------------------------------------
-实验 1（空桌）：preflight + grasp 两步都 ok；grasp 的 picked 为 False/None 属预期。
+实验 1（空桌）：preflight + init_pose + grasp 三步都 ok；grasp 的 picked 为 False/None 属预期。
                 任何 unknown 都算不通过（说明结构或接口有问题）。
-实验 2（单盒）：preflight + grasp 都 ok；picked 不作硬要求。
-实验 3（全流程）：7 步全 ok；且必须亲眼看到 must_run 归位被执行。
+实验 2（单盒）：preflight + init_pose + grasp 都 ok；picked 不作硬要求。
+实验 3（全流程）：8 步全 ok；且必须亲眼看到 must_run 归位被执行。
 """
 
 from __future__ import annotations
@@ -25,11 +25,11 @@ EXPERIMENT_TITLES: Dict[int, str] = {
     0: "实验 0 冒烟：接口连通性（无盒，5 分钟）",
     1: "实验 1 空桌盲抓：验证抓取轨迹安全（桌面不放盒）",
     2: "实验 2 单盒盲抓：验证能对准并夹住真实药盒",
-    3: "实验 3 全流程低速：7 步完整链路 + 归位兜底",
+    3: "实验 3 全流程低速：8 步完整链路 + 归位兜底",
 }
 
-# 实验 1/2 只跑这两步
-GRASP_ONLY_STEPS: List[str] = ["preflight", "grasp"]
+# 实验 1/2 只跑预检、固定初始位和抓取；初始位失败必须阻止 grasp。
+GRASP_ONLY_STEPS: List[str] = ["preflight", "init_pose", "grasp"]
 
 
 def _trace_by_step(result: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
@@ -49,7 +49,7 @@ def _status_of(trace: Dict[str, Dict[str, Any]], step: str) -> Optional[str]:
 
 def judge_grasp_only(result: Dict[str, Any], experiment: int,
                      expect_pick: Optional[bool] = None) -> Dict[str, Any]:
-    """实验 1 / 实验 2 的判据：只跑 preflight + grasp。
+    """实验 1 / 实验 2 的判据：只跑 preflight + init_pose + grasp。
 
     参数
     ----
@@ -72,7 +72,15 @@ def judge_grasp_only(result: Dict[str, Any], experiment: int,
     reasons: List[str] = []
 
     s0 = _status_of(trace, "preflight")
+    s_init = _status_of(trace, "init_pose")
     s1 = _status_of(trace, "grasp")
+
+    # --- 固定初始位：这是笛卡尔抓取的前置条件，缺失/失败都不能算链路通过 ---
+    if s_init is None:
+        reasons.append("init_pose 没有出现在 trace 里 —— 配置缺少固定初始位步骤")
+    elif s_init != "ok":
+        reasons.append(f"init_pose={s_init}（{trace['init_pose'].get('message')}）—— "
+                       "初始关节位未建立，不能从任意遗留姿态开始抓取")
 
     # --- preflight：非致命步，失败也能继续，但必须如实记下 ---
     if s0 is None:
@@ -81,11 +89,11 @@ def judge_grasp_only(result: Dict[str, Any], experiment: int,
         reasons.append("preflight 返回 unknown —— 连里程计都读不到，先查 SDK 连接")
 
     # --- grasp：核心判据 ---
-    link_ok = s1 == "ok"
+    link_ok = s_init == "ok" and s1 == "ok"
     if s1 is None:
         reasons.append("grasp 没有出现在 trace 里 —— 是否被前序步骤跳过了？")
     elif s1 == "skipped":
-        reasons.append("grasp 被跳过（前序步骤失败）—— 看 preflight 的 message")
+        reasons.append("grasp 被跳过（前序步骤失败）—— 看 init_pose/preflight 的 message")
     elif s1 == "unknown":
         reasons.append("grasp 返回 unknown —— 机器人不知道自己在哪，"
                        "按团队规则立即全停、不要重试、不要归位")
@@ -125,7 +133,7 @@ def judge_grasp_only(result: Dict[str, Any], experiment: int,
 
 
 def judge_full_pipeline(result: Dict[str, Any]) -> Dict[str, Any]:
-    """实验 3 的判据：7 步全流程。
+    """实验 3 的判据：8 步全流程。
 
     额外要求：如果中途 failed，必须观察到 must_run 的 home 步骤**真的被执行**，
     而不是被 skipped —— 这是「失败也要归位」这条安全约定的现场验证点。
@@ -136,7 +144,7 @@ def judge_full_pipeline(result: Dict[str, Any]) -> Dict[str, Any]:
 
     # 注意：这里用的是配置里的 step id，不是 stage 名。
     # turn_bin 的 stage 是 "turn"，id 却是 "turn_bin" —— 别混。
-    expected = ["preflight", "grasp", "announce", "shift_left", "turn_bin",
+    expected = ["preflight", "init_pose", "grasp", "announce", "shift_left", "turn_bin",
                 "drop", "home"]
     missing = [s for s in expected if s not in trace]
     if missing:
@@ -189,6 +197,10 @@ def _next_action(experiment: int, reasons: List[str], picked: Optional[bool]) ->
     if "unknown" in joined:
         return ("停止操作。unknown 表示机器人无法确定自身状态，按团队规则："
                 "不重试、不归位、不发任何动作，人工把臂摆回安全位后再排查。")
+
+    if "init_pose" in joined:
+        return ("固定初始位未建立：不要调整药盒或抓取坐标，也不要自动重试。"
+                "先查 init_pose 的腿部/上半身关节返回状态，确认初始归位成功后再评估抓取。")
 
     if "碰撞" in joined or "急停" in joined:
         return "立即拍急停，不要再重试同一位姿。抬高 GRASP_POSE 的 z 0.01 后重新示教。"
