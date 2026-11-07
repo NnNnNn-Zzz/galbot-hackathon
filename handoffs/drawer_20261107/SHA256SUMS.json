@@ -202,6 +202,11 @@
       "sha256": "7a19acc5282e849cfa1a2c1daf9f1b9e275ced3a4b97ad7fb8c8346769408015"
     },
     {
+      "path": "HANDOFF_BRIEF.md",
+      "bytes": 2130,
+      "sha256": "a724cfa322142a5992a1d1000bf70fc650bed06f9ff4964d6fc231d0e8f822cc"
+    },
+    {
       "path": "medicine_frontend/__init__.py",
       "bytes": 83,
       "sha256": "ddfefeccb411bcac7838383a5fc29eed2a4855bedac7d579687c308adb57dd24"
@@ -1078,8 +1083,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 6188,
-      "sha256": "da7ee94357c4bd32c26488b54c4f3ffe224b5513d27ae44ef9d06643017777ae"
+      "bytes": 6267,
+      "sha256": "32619e48f2dc9edfc1f121f08af98d1b98f44224033301d51eabab57359a747b"
     },
     {
       "path": "reference/front_view.jpg",
