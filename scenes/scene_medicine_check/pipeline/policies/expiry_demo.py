@@ -84,7 +84,7 @@ class GraspExpiredBox(Stage):
 
     # ------------------------------------------------------------------ 抓取
     def _grasp_at(self, ctx: Context, io, target: Dict[str, Any]) -> StageResult:
-        chain = self.params.get("chain", "left_arm")
+        chain = self.params.get("chain", "right_arm")
         tool = self.params.get("tool", "galbot_gripper")
         pose = target.get("ee_pose") or target.get("pose")
         if not pose or len(pose) < 3:

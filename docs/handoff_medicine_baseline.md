@@ -87,7 +87,7 @@ print(bf.run({'io':'mock','pipeline':'medicine.expiry_demo','pause_s':0})['feedb
 
 ```python
 # 夹爪：width_m 单位米（G1 量程 0~0.11m；收放用 0.10 ↔ 0.02）
-ret = io.set_gripper(0.02, side="left", velocity_mps=0.05, effort=10.0)
+ret = io.set_gripper(0.02, side="right", velocity_mps=0.05, effort=10.0)
 # → {"success": True, "width_m": 0.02, "holding": "box_left", "completion": "completed"}
 #   holding 是 mock 的物理推演；真机没有夹爪反馈通道：
 io.is_holding()   # → True / False / None。真机恒 None = 无确证手段
