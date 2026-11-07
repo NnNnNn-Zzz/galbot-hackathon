@@ -70,6 +70,17 @@ _CAMERA_ALIASES: dict[str, str] = {
     "左腕相机": "LEFT_ARM_CAMERA",
     "right_arm_depth": "RIGHT_ARM_DEPTH_CAMERA",
     "left_arm_depth": "LEFT_ARM_DEPTH_CAMERA",
+    "head_left": "HEAD_LEFT_CAMERA",
+    "head": "HEAD_LEFT_CAMERA",
+    "head_camera": "HEAD_LEFT_CAMERA",
+    "头部": "HEAD_LEFT_CAMERA",
+    "头": "HEAD_LEFT_CAMERA",
+    "头部相机": "HEAD_LEFT_CAMERA",
+    "head_right": "HEAD_RIGHT_CAMERA",
+    "front_left": "LEFT_FRONT_SURROUND_CAMERA",
+    "front_right": "RIGHT_FRONT_SURROUND_CAMERA",
+    "rear_left": "LEFT_REAR_SURROUND_CAMERA",
+    "rear_right": "RIGHT_REAR_SURROUND_CAMERA",
     "right_arm_camera": "RIGHT_ARM_CAMERA",
     "left_arm_camera": "LEFT_ARM_CAMERA",
     "right_arm_depth_camera": "RIGHT_ARM_DEPTH_CAMERA",
@@ -314,6 +325,18 @@ def stop_base() -> dict:
 # ══════════════════════════════════════════════════════════════════════════ #
 # 相机 / 感知
 # ══════════════════════════════════════════════════════════════════════════ #
+def _decode_depth(payload: dict) -> tuple:
+    """把深度 payload 解成**米**。优先用 dev 层解码器（16UC1 / compressedDepth PNG 都吃）。
+
+    真机实测（galbot-echo，D405）：{"format": "16UC1", "depth_scale": 10000}，
+    米 = raw / depth_scale。⚠️ 是**除法**，写成乘法会放出 4.4e7 m 的荒唐值（2026-11-07 踩过）。
+    """
+    from sdk_wrapper.dev.robot_tools.perception import decode_depth_payload
+
+    arr, meta = decode_depth_payload(payload)
+    return arr.astype("float64"), int(meta["width"]), int(meta["height"])
+
+
 def _resolve_camera(camera_id: typing.Any) -> str:
     raw = str(camera_id or "").strip()
     key = raw.lower()
@@ -321,7 +344,10 @@ def _resolve_camera(camera_id: typing.Any) -> str:
         return _CAMERA_ALIASES[key]
     upper = raw.upper()
     if upper in ("RIGHT_ARM_CAMERA", "LEFT_ARM_CAMERA",
-                 "RIGHT_ARM_DEPTH_CAMERA", "LEFT_ARM_DEPTH_CAMERA"):
+                 "RIGHT_ARM_DEPTH_CAMERA", "LEFT_ARM_DEPTH_CAMERA",
+                 "HEAD_LEFT_CAMERA", "HEAD_RIGHT_CAMERA",
+                 "LEFT_FRONT_SURROUND_CAMERA", "RIGHT_FRONT_SURROUND_CAMERA",
+                 "LEFT_REAR_SURROUND_CAMERA", "RIGHT_REAR_SURROUND_CAMERA"):
         return upper
     raise ValueError(
         f"未知相机 {camera_id!r}；可用：right_arm / left_arm "
@@ -387,10 +413,7 @@ def capture_frame(camera_id: typing.Any = "right_arm",
         try:
             depth = adapter.get_depth_data(depth_name)
             if isinstance(depth, dict) and depth.get("data"):
-                scale = float(depth.get("depth_scale") or 0.001)
-                dw, dh = int(depth["width"]), int(depth["height"])
-                darr = (np.frombuffer(depth["data"], dtype=np.uint16)
-                        .reshape(dh, dw).astype(np.float64) * scale)
+                darr, dw, dh = _decode_depth(depth)
                 out["depth_m"] = darr
                 out["depth_width"], out["depth_height"] = dw, dh
                 same = (out["width"] == dw and out["height"] == dh)
