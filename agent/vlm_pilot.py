@@ -84,6 +84,7 @@ def build_system_prompt(task: str, arm: str) -> str:
 - 每步只输出一个 JSON，不要输出任何其他文字。
 - 看画面自己判断下一步；夹取前先张爪，对准后再闭爪。
 - 看不清目标时可以先移动手臂/底盘换个视角。
+- 硬件限制：手臂不能跨过身体中线（y≈0），目标在中线另一侧时先用 turn 转底盘让目标对正你这条手臂。
 - 确认杯子已被夹起离开桌面后输出 finish。"""
 
 
@@ -227,6 +228,7 @@ def main():
         logger.warning("无 LLM_API_KEY，用内置剧本假模型验证管线")
     system_prompt = build_system_prompt(args.task, args.arm)
     action_history: list[dict] = []
+    consecutive_faults = 0
 
     logger.info("任务: %s | 手臂: %s | 相机: %s", args.task, args.arm,
                 ", ".join(CAMERAS))
@@ -264,6 +266,18 @@ def main():
                 print(f"          （取图失败已跳过: {'; '.join(failed)}）")
             result = execute(decision, args.arm)
             print(f"          执行: {result.get('success')} - {result.get('message', '')}")
+
+            # 安全熔断：运动连续 FAULT 说明在够不可达区域/碰撞边缘，
+            # 模型收不到失败反馈会一直重复同一动作（00:12 真机实测连撞 17 次）。
+            # 安全红线「出 FAULT 立刻停，不要连续重试」由这里兜底。
+            if result.get("status") == "failed" or result.get("error_code"):
+                consecutive_faults += 1
+                if consecutive_faults >= 3:
+                    logger.error("连续 %d 次 FAULT，熔断停机（模型在无反馈空转）",
+                                 consecutive_faults)
+                    break
+            else:
+                consecutive_faults = 0
             with open(log_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps({
                     "step": step, "decision": decision, "result": {
