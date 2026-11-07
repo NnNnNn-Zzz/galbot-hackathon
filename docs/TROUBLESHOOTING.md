@@ -98,6 +98,14 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 - **诊断**：动作后立即读取 `get_transform("base_link", "head_base_link")`，比较 Z 与目标，并连续读取一次确认时间戳更新和位置稳定；不要因为 FAULT 就盲目重发同一个大位移命令。
 - **处理与验证**：本次没有重发命令，位置读数与目标误差小于 0.1 mm，随后正常执行 SDK shutdown。后续封装应把“SDK 状态”和“实际目标位姿”分开报告；只有位置复读也异常时才进入故障处理。
 
+### 头部关节已动但姿态校验不变：测错 frame（2026-11-07）
+
+- **现象**：`HeadLookTool` 命令 `head_joint2` 增加 0.01 rad，SDK 返回 `SUCCESS`，实际关节变化约 0.00713 rad；但工具读取 `head_base_link` 的姿态几乎不变，因此错误返回“实际俯仰方向与预期不符”。
+- **确认原因**：`head_base_link` 位于头部关节之前，是头部安装基座，不随 `head_joint1/2` 转动；用它做头部动作验收会得到假阴性。真正随头部运动的是 `head_end_effector_mount_link`。
+- **诊断**：同时读取 `head_joint2` 与 `head_base_link`、`head_link1`、`head_link2`、`head_end_effector_mount_link` 的 `get_transform("base_link", frame)`。若关节位置已更新而候选 frame 的姿态时间戳/数值不更新，逐层检查 frame 是否位于关节之后。
+- **修复**：`HeadLookTool` 改用 `head_end_effector_mount_link` 计算头部 roll/pitch/yaw 并验证低头方向；关节位置反馈和控制目标不变。
+- **验证结果与边界**：修正后 PC 端 6 个头部单元测试通过；截至记录时尚未重新发送真机头部动作，需用下一次单步键盘输入验证实际低头方向。
+
 ### 部署架构：全机器人端（HPU），不在 PC 上跑
 
 - Agent + SDK 都跑在机器人 HPU 上（hostname `galbot-echo`，aarch64，Ubuntu 20.04，Python 3.8）
