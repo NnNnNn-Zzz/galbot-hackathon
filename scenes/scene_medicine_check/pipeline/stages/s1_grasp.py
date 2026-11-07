@@ -1,4 +1,4 @@
-"""步骤 1（基线）：左手抓取桌面左起第一个药盒。
+"""步骤 1（基线）：右手抓取桌面左起第一个药盒（右臂作业区 y<0，见 tuning.py）。
 
 官方参考 tutorials/example6_pick_and_place.py：
     张开夹爪 → 预抓取位姿 → 直线逼近抓取位姿 → 闭合夹爪 → 抬起 → 收臂抱持
@@ -29,7 +29,7 @@ class GraspFirstBox(Stage):
         return "抓取桌面左起第一个药盒（固定位姿，不识别）"
 
     def run(self, ctx: Context, io) -> StageResult:
-        chain = self.params.get("chain", "left_arm")
+        chain = self.params.get("chain", "right_arm")
         tool = self.params.get("tool", "galbot_gripper")
         pre = self.params.get("pre_grasp_pose", tuning.PRE_GRASP_POSE)
         grasp = self.params.get("grasp_pose", tuning.GRASP_POSE)
@@ -66,5 +66,5 @@ class GraspFirstBox(Stage):
         if ctx.picked is None:
             logger.warning("本后端无夹爪反馈，夹取成功与否无确证手段（picked=unknown）")
 
-        return ok("已抓起左侧第一盒药品并收臂",
+        return ok("已抓起左起第一盒药品并收臂",
                   picked=ctx.picked, verified=ctx.picked is not None)

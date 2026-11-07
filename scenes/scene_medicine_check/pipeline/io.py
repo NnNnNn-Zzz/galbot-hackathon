@@ -471,6 +471,9 @@ class MockIO(RobotIO):
 def default_table() -> List[Dict[str, Any]]:
     """默认桌面：三盒药，按 base 系 y 从大到小 = 从左到右。
 
+    右臂作业区（2026-11-07 起全程右臂）：y 均为负值——base_link 的 y 轴
+    指向机器人左侧。左起第一盒 box_left 位于 y=-0.10，与 tuning.GRASP_POSE 对齐。
+
     expiry_date 是给队友的过期判定用的**离线固定数据**，
     真机上日期要靠 OCR/VLM 自己读，不是 io 提供的。
 
@@ -483,16 +486,16 @@ def default_table() -> List[Dict[str, Any]]:
       expiry_date —— 仅 mock 固定数据；真机无此字段，读不到就是 None
     """
     return [
-        {"id": "box_left", "label": "white", "ee_pose": [0.40, 0.30, 0.65],
-         "position_m": [0.40, 0.30, 0.65], "frame": "base_link", "unit": "m",
+        {"id": "box_left", "label": "white", "ee_pose": [0.40, -0.10, 0.65],
+         "position_m": [0.40, -0.10, 0.65], "frame": "base_link", "unit": "m",
          "image_ref": "mock_frame_0",
          "bbox": [0, 0, 60, 40], "score": 0.9, "expiry_date": "2026-08-01"},
-        {"id": "box_mid", "label": "white", "ee_pose": [0.40, 0.10, 0.65],
-         "position_m": [0.40, 0.10, 0.65], "frame": "base_link", "unit": "m",
+        {"id": "box_mid", "label": "white", "ee_pose": [0.40, -0.20, 0.65],
+         "position_m": [0.40, -0.20, 0.65], "frame": "base_link", "unit": "m",
          "image_ref": "mock_frame_0",
          "bbox": [80, 0, 60, 40], "score": 0.9, "expiry_date": "2027-12-01"},
-        {"id": "box_right", "label": "white", "ee_pose": [0.40, -0.10, 0.65],
-         "position_m": [0.40, -0.10, 0.65], "frame": "base_link", "unit": "m",
+        {"id": "box_right", "label": "white", "ee_pose": [0.40, -0.30, 0.65],
+         "position_m": [0.40, -0.30, 0.65], "frame": "base_link", "unit": "m",
          "image_ref": "mock_frame_0",
          "bbox": [160, 0, 60, 40], "score": 0.9, "expiry_date": "2028-05-01"},
     ]

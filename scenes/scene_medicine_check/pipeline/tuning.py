@@ -33,17 +33,19 @@ UPPER_JOINT_POSITIONS: List[float] = [
     -1.90, 1.46, 0.54, 1.96, 0.0, 0.4, 0.0,
 ]
 
-# 左臂「抱持位」：抓着药盒行走时的关节角，避免伸着胳膊转身扫到桌面
-CARRY_JOINT_NAMES: List[str] = UPPER_JOINT_NAMES[2:9]
-CARRY_JOINT_POSITIONS: List[float] = UPPER_JOINT_POSITIONS[2:9]
+# 右臂「抱持位」：抓着药盒行走时的关节角，避免伸着胳膊转身扫到桌面
+CARRY_JOINT_NAMES: List[str] = UPPER_JOINT_NAMES[9:16]
+CARRY_JOINT_POSITIONS: List[float] = UPPER_JOINT_POSITIONS[9:16]
 
 # ===========================================================================
 # 2. 抓取位姿（base_link 系，[x, y, z, qx, qy, qz, qw]，单位 m）
 # TODO(标定): 官方 example6 的占位值，仅保证格式正确，**不能直接上真机**
+# 注意：base_link 的 y 轴指向机器人**左侧**，右臂作业区在 y<0 一侧，
+# 故抓取侧位姿的 y 均为负值（2026-11-07 起全程右臂，原为左臂 y>0）。
 # ===========================================================================
-PRE_GRASP_POSE: List[float] = [0.35, 0.30, 0.70, 0.0, 0.0, 0.0, 1.0]
-GRASP_POSE: List[float] = [0.40, 0.30, 0.65, 0.0, 0.0, 0.0, 1.0]
-LIFT_POSE: List[float] = [0.40, 0.30, 0.70, 0.0, 0.0, 0.0, 1.0]
+PRE_GRASP_POSE: List[float] = [0.35, -0.10, 0.70, 0.0, 0.0, 0.0, 1.0]
+GRASP_POSE: List[float] = [0.40, -0.10, 0.65, 0.0, 0.0, 0.0, 1.0]
+LIFT_POSE: List[float] = [0.40, -0.10, 0.70, 0.0, 0.0, 0.0, 1.0]
 
 # ===========================================================================
 # 3. 垃圾桶投放位姿（base_link 系）
@@ -55,7 +57,7 @@ DROP_POSE: List[float] = [0.45, -0.35, 0.50, 0.0, 0.0, 0.0, 1.0]
 # ===========================================================================
 # 4. 夹爪
 # ===========================================================================
-GRIPPER_SIDE = "left"          # left | right
+GRIPPER_SIDE = "right"         # left | right（2026-11-07 起全程右臂）
 GRIPPER_OPEN_M = 0.10          # G1 夹爪量程 0~0.12 m
 GRIPPER_CLOSE_M = 0.02
 GRIPPER_VELOCITY_MPS = 0.05
