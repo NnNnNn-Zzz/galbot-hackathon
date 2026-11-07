@@ -38,7 +38,7 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 | `TIMEOUT` | `is_blocking=True` 在部分固件上不报告到达 | wrapper 已改为 `set_base_pose(is_blocking=True)` 直接控制 |
 | `set_base_pose` 返回 `TIMEOUT` 且底盘零位移 | 整机进入 `ABNORMAL` 模式，运动被整机保护拒绝（2026-11-07 真机排查） | 在 XCU 运行 `/data/bin/sys_tool`，输入 `q` 检查 `mode_type`；再查 `/userdata/log/mission_manager/mission_manager.INFO` 中的 `abnormal_service`。恢复异常服务或重启机器人，确认回到 `WORKING_MODE` 后重试 |
 | `ImportError: libgalbot_sdk.so` | 没设 LD_LIBRARY_PATH | `source scripts/env_hpu.sh` |
-| `OpenSSL version mismatch` (WSL ssh) | `.bashrc` 自动加载 SDK setup.sh 污染了 LD_LIBRARY_PATH | 已注释掉 ~/.bashrc 第 121-123 行 |
+| `OpenSSL version mismatch. Built against 30000020, you have 30300000`（WSL `ssh`） | 当前 shell 的 `LD_LIBRARY_PATH` 先加载了 SDK 自带的 `libcrypto.so.3`，与系统 `ssh` 的 OpenSSL ABI 不匹配；不是机器人 SSH 服务或密码错误 | 只给 SSH 命令使用系统库：`export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu && ssh galbot@<HPU_IP>`；也可用 `env LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu ssh galbot@<HPU_IP>` 避免影响同一终端里的 SDK 命令。确认诊断：`LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu ldd "$(command -v ssh)" \| grep libcrypto` 应指向 `/usr/lib/x86_64-linux-gnu/libcrypto.so.3`。若不再需要 SDK，清除或修正 `.bashrc` 中自动加载 SDK 环境变量的行。2026-11-07 在 WSL 实测该修复后可登录 `galbot@192.168.166.7`。 |
 | Python 3.8 `TypeError: X | None` | HPU 是 Python 3.8，不支持 3.10 联合类型注解 | 所有 .py 已加 `from __future__ import annotations` |
 | `ModuleNotFoundError: galbot_sdk` (HPU) | HPU 没装 Python SDK 包 | `deploy_hpu.sh` 会自动推送；手动：从 WSL rsync `~/GalbotSDK/galbot_sdk/linux-aarch64-gcc940/lib/python/galbot_sdk`（只留 cp38）到 HPU `~/g1_runtime/` |
 | Web Console 网页和三维模型能打开，但机器人状态不更新 | 网页静态资源可独立运行；`--live` 只表示尝试初始化 SDK，不能证明 PC 后端已连到机器人 | 按下文“四层验收”检查 SDK 初始化、`connected`、设备时间戳持续推进和机器人 SN；先核对 PC—HPU—XCU 有线网络及同一 Python 环境中的 SDK 导入 |
