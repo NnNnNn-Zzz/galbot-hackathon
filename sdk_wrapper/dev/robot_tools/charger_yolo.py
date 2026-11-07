@@ -26,6 +26,10 @@ from sdk_wrapper.dev.algorithms.charger_yolo import (
     annotation_overlay,
 )
 from sdk_wrapper.dev.algorithms.calibration import compare_rgbd_calibration
+from sdk_wrapper.dev.algorithms.power_strip_yolo import (
+    analyze_power_strip_stereo,
+    validate_head_target_3d,
+)
 from sdk_wrapper.dev.contracts import ErrorCode, RunMode, ToolError, ToolResult, failed, ok
 from sdk_wrapper.dev.robot_tools.perception import PerceptionTool
 
@@ -63,6 +67,7 @@ class ChargerYoloTool:
         perception: PerceptionTool,
         *,
         backend: typing.Any = None,
+        stereo_tool: typing.Any = None,
         config_path: str | os.PathLike[str] = _CONFIG_PATH,
         output_dir: str | os.PathLike[str] = _DEFAULT_OUTPUT,
     ) -> None:
@@ -79,6 +84,11 @@ class ChargerYoloTool:
             iou=float(self.config.get("iou", 0.70)),
             device=str(self.config.get("device", "cpu")),
         )
+        if stereo_tool is None and self.mode is RunMode.REAL:
+            from sdk_wrapper.dev.robot_tools.stereo_depth import StereoDepthTool
+
+            stereo_tool = StereoDepthTool(warmup_s=10.0)
+        self.stereo_tool = stereo_tool
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -262,6 +272,103 @@ class ChargerYoloTool:
             raise OSError(f"failed to save {overlay_path}")
 
         selected = dict(selected)
+        head_stereo: dict[str, typing.Any] | None = None
+        if purpose == "head_handoff":
+            if self.stereo_tool is None:
+                head_stereo = {
+                    "available": False,
+                    "measurement_stable": False,
+                    "target_3d": {"available": False},
+                    "target_safety": {
+                        "safe": False,
+                        "reasons": ["head_stereo_not_initialized"],
+                    },
+                }
+            else:
+                stereo_result = self.stereo_tool.capture_stereo_depth(
+                    timeout_s=float(self.config.get("stereo_timeout_s", 8.0))
+                )
+                if stereo_result.succeeded and stereo_result.data.get("depth_ref"):
+                    depth_raw = np.load(
+                        stereo_result.data["depth_ref"], allow_pickle=False
+                    )
+                    stereo_config = self.config.get("stereo") or {}
+                    head_extrinsic = self.perception.extrinsic(camera_id)
+                    head_stereo = analyze_power_strip_stereo(
+                        depth_raw,
+                        selected["bbox_xyxy"],
+                        snap.bgr.shape[:2],
+                        rgb_timestamp_ns=int(snap.data.get("rgb_timestamp_ns") or 0),
+                        depth_timestamp_ns=int(stereo_result.data.get("timestamp_ns") or 0),
+                        raw_to_m=stereo_config.get("raw_to_m"),
+                        rgb_intrinsics=snap.intr,
+                        base_from_camera=(
+                            None if head_extrinsic is None
+                            else head_extrinsic.get("transform")
+                        ),
+                        min_valid_ratio=float(stereo_config.get("min_valid_ratio", 0.60)),
+                        max_relative_spread=float(
+                            stereo_config.get("max_relative_spread", 0.35)
+                        ),
+                        max_timestamp_skew_ms=float(
+                            stereo_config.get("max_timestamp_skew_ms", 300.0)
+                        ),
+                    )
+                    safety_config = self.config.get("target_safety") or {}
+                    head_stereo["target_safety"] = validate_head_target_3d(
+                        head_stereo.get("target_3d"),
+                        min_range_m=float(safety_config.get("min_range_m", 0.45)),
+                        max_range_m=float(safety_config.get("max_range_m", 4.0)),
+                        min_z_m=float(safety_config.get("min_z_m", -0.05)),
+                        max_z_m=float(safety_config.get("max_z_m", 1.6)),
+                        max_plane_rms_m=float(
+                            safety_config.get("max_plane_rms_m", 0.04)
+                        ),
+                        max_normal_tilt_deg=float(
+                            safety_config.get("max_normal_tilt_deg", 35.0)
+                        ),
+                    )
+                    head_stereo["capture_id"] = stereo_result.data.get("capture_id")
+                    head_stereo["depth_ref"] = stereo_result.data.get("depth_ref")
+                    head_stereo["sensor_name"] = stereo_result.data.get("sensor_name")
+                else:
+                    head_stereo = {
+                        "available": False,
+                        "measurement_stable": False,
+                        "target_3d": {"available": False},
+                        "target_safety": {
+                            "safe": False,
+                            "reasons": ["head_stereo_capture_failed"],
+                        },
+                        "reason": stereo_result.message,
+                    }
+            handoff = dict(selected.get("head_handoff") or {})
+            metric_required = bool(
+                (self.config.get("head_quality") or {}).get(
+                    "require_metric_stereo", True
+                )
+            )
+            if metric_required and not (head_stereo.get("target_safety") or {}).get("safe"):
+                handoff["usable_for_wrist_handoff"] = False
+                reasons = list(handoff.get("reasons") or [])
+                reasons.extend(
+                    (head_stereo.get("target_safety") or {}).get("reasons")
+                    or ["head_metric_target_unavailable"]
+                )
+                handoff["reasons"] = sorted(set(reasons))
+            handoff["target_3d"] = head_stereo.get("target_3d")
+            handoff["target_safety"] = head_stereo.get("target_safety")
+            handoff["stereo_measurement"] = {
+                key: head_stereo.get(key)
+                for key in (
+                    "available", "measurement_stable", "reasons",
+                    "metric_distance_available", "metric_distance_m",
+                    "unit", "relative_spread", "valid_ratio",
+                    "timestamp_skew_ms", "capture_id", "depth_ref", "sensor_name",
+                )
+            }
+            selected["head_handoff"] = handoff
+            selected["head_stereo"] = head_stereo
         rgb_timestamp_ns = int(snap.data.get("rgb_timestamp_ns") or 0)
         depth_timestamp_ns = int(snap.data.get("depth_timestamp_ns") or 0)
         skew_ms: float | None = None
@@ -281,6 +388,7 @@ class ChargerYoloTool:
         selected["eligible_for_precision"] = not selected["rejection_reasons"]
         head_handoff: dict[str, typing.Any] | None = None
         if purpose == "head_handoff":
+            stereo_handoff = dict(selected.get("head_handoff") or {})
             head_quality = self.config.get("head_quality") or {}
             head_reasons = list(selected["rejection_reasons"])
             head_reasons = [
@@ -315,6 +423,24 @@ class ChargerYoloTool:
                 "purpose": "select wrist observation; not a precision grasp point",
                 "grasp_coordinate": None,
             }
+            for key in (
+                "target_3d",
+                "target_safety",
+                "stereo_measurement",
+            ):
+                if key in stereo_handoff:
+                    head_handoff[key] = stereo_handoff[key]
+            if bool(head_quality.get("require_metric_stereo", True)) and not (
+                head_handoff.get("target_safety") or {}
+            ).get("safe"):
+                head_handoff["usable_for_wrist_handoff"] = False
+                head_handoff["reasons"] = sorted(set(
+                    list(head_handoff.get("reasons") or [])
+                    + list(
+                        (head_handoff.get("target_safety") or {}).get("reasons")
+                        or ["head_metric_target_unavailable"]
+                    )
+                ))
             selected["head_handoff"] = head_handoff
             # Head observations can hand off to wrist planning, but absence of
             # D405 depth and calibration always prevents direct precision use.

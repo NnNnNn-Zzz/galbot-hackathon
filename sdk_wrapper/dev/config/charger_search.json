@@ -1,22 +1,24 @@
 {
   "note": [
-    "Head-camera visual state machine: power_strip -> observation band -> charger -> wrist handoff.",
-    "Motion is relative and segmented because FOUNDATION_STEREO units are not documented.",
-    "Each executed segment requires operator confirmation and a fresh detection afterwards."
+    "Head-camera state machine: metric strip target -> safe SLAM observation pose -> charger -> wrist alignment.",
+    "Forward visual-servo navigation is intentionally disabled; no metric stereo means hold, not creep forward.",
+    "Navigation and wrist motion require explicit operator confirmation."
   ],
   "initial_phase": "find_power_strip",
   "center_tolerance_deg": 4.0,
   "search_turn_deg": 12.0,
   "max_turn_command_deg": 15.0,
-  "far_step_m": 0.15,
-  "fine_step_m": 0.05,
   "backoff_m": 0.05,
-  "max_segment_m": 0.2,
-  "max_total_travel_m": 2.0,
   "max_steps": 24,
   "charger_handoff_streak": 3,
+  "max_tracking_misses": 3,
+  "navigation_speed_ratio": 0.5,
   "observation_distance_m": 0.8,
-  "observation_distance_tolerance_m": 0.1,
-  "strip_handoff_min_width_ratio": 0.05,
-  "strip_too_close_width_ratio": 0.35
+  "min_observation_distance_m": 0.55,
+  "max_observation_distance_m": 1.5,
+  "wrist_camera_standoff_m": 0.3,
+  "min_wrist_camera_standoff_m": 0.2,
+  "max_wrist_camera_standoff_m": 0.55,
+  "wrist_pose_position_tolerance_m": 0.01,
+  "wrist_pose_rotation_tolerance_deg": 3.0
 }

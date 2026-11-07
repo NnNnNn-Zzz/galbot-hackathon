@@ -1,7 +1,7 @@
 {
   "note": [
-    "Head-camera power_strip detector for coarse approach.",
-    "Detection is direction-only; metric distance and grasp coordinates are not emitted."
+    "Head-camera power_strip detector with optional tracked stereo localization.",
+    "Without raw_to_m, the tool emits direction/stability only and must not drive forward."
   ],
   "model_search_roots": [
     "/home/mr/yoloseg/runs"
@@ -22,9 +22,17 @@
     "edge_margin_px": 3
   },
   "stereo": {
-    "raw_to_m": null,
+    "raw_to_m": 0.001,
     "min_valid_ratio": 0.6,
     "max_relative_spread": 0.35,
     "max_timestamp_skew_ms": 300.0
+  },
+  "target_safety": {
+    "min_range_m": 0.45,
+    "max_range_m": 4.0,
+    "min_z_m": -0.05,
+    "max_z_m": 1.6,
+    "max_plane_rms_m": 0.04,
+    "max_normal_tilt_deg": 35.0
   }
 }

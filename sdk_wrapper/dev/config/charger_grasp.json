@@ -1,0 +1,15 @@
+{
+  "note": [
+    "Wrist YOLO-seg observation -> charger-top coordinates -> absolute pre-grasp EndEffector pose.",
+    "This stage stops above the surface. It does not descend, close the gripper, or claim a grasp.",
+    "The EndEffector axis mapping is the initial project convention and must be rechecked with a short supervised motion test."
+  ],
+  "chain": "right_arm",
+  "end_effector": "right_gripper",
+  "straight_line": false,
+  "require_robot_idle": true,
+  "position_tolerance_m": 0.01,
+  "rotation_tolerance_deg": 3.0,
+  "min_plan_standoff_m": 0.02,
+  "max_plan_standoff_m": 0.30
+}

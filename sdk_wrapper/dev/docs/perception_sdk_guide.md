@@ -404,7 +404,7 @@ python -m agent.app --adapter real --once "你看到了什么"
 | 深度与彩色的像素对齐 | **官方无保证** | 代码里不猜：尺寸不一致就拒融合并告警 |
 | 各机位在本机的实际装配情况 | **无法查询** | 未装配 → `not_ready`，不伪造 |
 | `get_sensor_extrinsic` 的可用性 | **未验证** | 拿不到就 `base_link_pose_m=null` + warning |
-| 头部双目深度图 | **已实现独立 SDK 工具** | `StereoDepthTool.capture_stereo_depth` 调用 `FOUNDATION_STEREO`；返回原始数值，单位未确认，不经本页 `PerceptionTool` 的米制深度解码 |
+| 头部双目深度图 | **已实现独立 SDK 工具** | `StereoDepthTool.capture_stereo_depth` 调用 `FOUNDATION_STEREO`；返回原始 uint 数值并标记 `unit="mm", raw_to_m=0.001`。2026-11-08 已用头左外参和地面平面验证尺度；反投影前需按 `kannala_brandt` 鱼眼模型去畸变 |
 | 语义检测（非颜色） | **未实现** | `algorithms/color_detection.py` 是替换点；接 YOLO/GroundingDINO 只改 `detect()` |
 | 与 A 的 `adapters/` 联调 | **未联调** | 契约已冻结（§3），A 按契约实现即可插上 |
 | G3 / S1 机型 | **未覆盖** | G3 无臂上深度相机，本仓库按 G1 设计 |

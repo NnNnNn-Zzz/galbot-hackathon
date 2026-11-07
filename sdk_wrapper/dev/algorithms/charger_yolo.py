@@ -45,6 +45,7 @@ class YoloInstance:
     confidence: float
     bbox_xyxy: tuple[float, float, float, float]
     mask: np.ndarray | None = None
+    track_id: int | None = None
 
 
 def _canonical_axis(vector: np.ndarray) -> np.ndarray:
@@ -553,13 +554,47 @@ class UltralyticsYoloBackend:
         )
         if not results:
             return []
-        result = results[0]
+        return self._normalize_result(results[0], image, model)
+
+    def track(self, bgr: np.ndarray, *, persist: bool = True) -> list[YoloInstance]:
+        """Track the configured class across sequential frames.
+
+        Ultralytics ByteTrack owns the track IDs. Callers must pass frames in
+        order and keep one backend instance for the whole navigation segment.
+        """
+        model = self._load()
+        image = np.asarray(bgr)
+        if image.ndim != 3 or image.dtype != np.uint8:
+            raise ValueError("bgr must be HxWx3 uint8")
+        results = model.track(
+            source=image,
+            imgsz=self.imgsz,
+            conf=self.confidence,
+            iou=self.iou,
+            device=self.device,
+            persist=bool(persist),
+            tracker="bytetrack.yaml",
+            verbose=False,
+        )
+        if not results:
+            return []
+        return self._normalize_result(results[0], image, model)
+
+    def _normalize_result(
+        self,
+        result: typing.Any,
+        image: np.ndarray,
+        model: typing.Any,
+    ) -> list[YoloInstance]:
         if result.boxes is None or len(result.boxes) == 0:
             return []
 
         boxes = result.boxes.xyxy.detach().cpu().numpy()
         confidences = result.boxes.conf.detach().cpu().numpy()
         class_ids = result.boxes.cls.detach().cpu().numpy().astype(int)
+        track_ids = None
+        if getattr(result.boxes, "id", None) is not None:
+            track_ids = result.boxes.id.detach().cpu().numpy().astype(int)
         masks = None
         if result.masks is not None and result.masks.data is not None:
             masks = result.masks.data.detach().cpu().numpy()
@@ -586,6 +621,11 @@ class UltralyticsYoloBackend:
                     confidence=float(score),
                     bbox_xyxy=tuple(float(v) for v in box.tolist()),
                     mask=mask,
+                    track_id=(
+                        None
+                        if track_ids is None or index >= len(track_ids)
+                        else int(track_ids[index])
+                    ),
                 )
             )
         return instances

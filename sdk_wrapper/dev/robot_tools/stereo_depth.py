@@ -1,8 +1,8 @@
 """Read-only G1 foundation-stereo depth tool.
 
-The SDK stores the depth image in DetectionResult.instance_mask. Its numeric
-unit is undocumented, so this tool preserves the original array and never
-reports distances in metres.
+The SDK stores the depth image in DetectionResult.instance_mask. On the G1
+head stereo model, the raw unit was verified as millimetres on 2026-11-08.
+This tool preserves the original array and reports ``raw_to_m=0.001``.
 """
 
 from __future__ import annotations
@@ -126,7 +126,7 @@ class StereoDepthTool:
             if not cv2.imwrite(str(preview_path), preview):
                 raise OSError(f"Unable to save {preview_path}")
 
-            return ok("双目深度抓取成功；数值单位未经 SDK 文档确认", self.mode, {
+            return ok("双目深度抓取成功；原始值单位为毫米", self.mode, {
                 "capture_id": capture_id,
                 "depth_ref": str(raw_path),
                 "preview_ref": str(preview_path),
@@ -135,7 +135,8 @@ class StereoDepthTool:
                 "width": int(depth.shape[1]),
                 "height": int(depth.shape[0]),
                 "dtype": str(depth.dtype),
-                "unit": "sdk_raw_unverified",
+                "unit": "mm",
+                "raw_to_m": 0.001,
                 "valid_ratio": float(np.mean(valid)),
                 "raw_min": float(np.min(values)),
                 "raw_median": float(p50),

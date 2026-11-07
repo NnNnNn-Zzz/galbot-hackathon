@@ -49,6 +49,26 @@ class RobotToolTests(unittest.TestCase):
         self.assertEqual(result.status, TaskStatus.REJECTED)
         self.assertEqual(result.error_code, ErrorCode.INVALID_ARGUMENT)
 
+    def test_navigation_tool_can_submit_dynamic_map_pose(self):
+        adapter = MockAdapter(task_polls_until_succeeded=1)
+        navigation = NavigationTool(adapter)
+
+        pose = navigation.get_map_pose()
+        reachable = navigation.check_path_reachability(
+            [0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+            pose.data["pose"],
+        )
+        started = navigation.navigate_to_pose(
+            [0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+        )
+        navigation.get_task_status(started.task_id)
+        completed = navigation.get_task_status(started.task_id)
+
+        self.assertEqual(pose.status, TaskStatus.SUCCEEDED)
+        self.assertEqual(reachable.status, TaskStatus.SUCCEEDED)
+        self.assertEqual(started.status, TaskStatus.RUNNING)
+        self.assertEqual(completed.status, TaskStatus.SUCCEEDED)
+
     def test_real_robot_is_rejected_without_authorization(self):
         adapter = GalbotAdapter()
 

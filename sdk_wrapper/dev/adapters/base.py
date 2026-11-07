@@ -70,6 +70,29 @@ class RobotAdapter(ABC):
         """Start navigation to a registered place."""
 
     @abstractmethod
+    def get_map_pose(self) -> ToolResult:
+        """Read the localized chassis pose in the map frame."""
+
+    @abstractmethod
+    def check_path_reachability(
+        self,
+        goal_pose: typing.Sequence[float],
+        start_pose: typing.Sequence[float] | None = None,
+    ) -> ToolResult:
+        """Ask SLAM navigation whether a collision-free map path exists."""
+
+    @abstractmethod
+    def navigate_to_pose(
+        self,
+        pose: typing.Sequence[float],
+        *,
+        frame: str = "map",
+        speed_ratio: float = 0.5,
+        enable_collision_check: bool = True,
+    ) -> ToolResult:
+        """Start one absolute SLAM navigation task."""
+
+    @abstractmethod
     def get_task_status(self, task_id: str) -> ToolResult:
         """Query a previously started task."""
 

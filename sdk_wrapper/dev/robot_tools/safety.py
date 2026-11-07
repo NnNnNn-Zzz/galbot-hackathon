@@ -6,6 +6,7 @@ import logging
 import math
 import threading
 import time
+import typing
 from dataclasses import dataclass
 
 from sdk_wrapper.dev.adapters.base import RobotAdapter, SUPPORTED_GESTURES, SUPPORTED_PLACES
@@ -83,6 +84,47 @@ class RobotSafety:
 
     def start_navigation(self, place_id: str) -> ToolResult:
         return self._start_task(place_id, "navigation", SUPPORTED_PLACES)
+
+    def start_navigation_pose(
+        self,
+        pose: typing.Sequence[float],
+        *,
+        frame: str,
+        speed_ratio: float,
+        enable_collision_check: bool,
+    ) -> ToolResult:
+        """Start one absolute map navigation task through the shared preflight."""
+        with self._lock:
+            preflight = self._preflight_start()
+            if preflight is not None:
+                return preflight
+            try:
+                result = self.adapter.navigate_to_pose(
+                    pose,
+                    frame=frame,
+                    speed_ratio=speed_ratio,
+                    enable_collision_check=enable_collision_check,
+                )
+            except Exception as exc:  # noqa: BLE001
+                LOG.exception("Absolute navigation raised before task state was returned")
+                self._global_state_unknown = True
+                return unknown(
+                    ErrorCode.STATE_UNCERTAIN,
+                    f"navigation raised {type(exc).__name__}; actual robot state is unknown.",
+                    mode=self.mode,
+                )
+            result = self._validate_adapter_result(result, "absolute navigation start")
+            if result.status is TaskStatus.RUNNING and result.task_id is not None:
+                self._tasks[result.task_id] = _TrackedTask(
+                    started_at=self._clock(), status=TaskStatus.RUNNING
+                )
+            elif result.status is TaskStatus.UNKNOWN:
+                self._global_state_unknown = True
+                if result.task_id:
+                    self._tasks[result.task_id] = _TrackedTask(
+                        started_at=self._clock(), status=TaskStatus.UNKNOWN
+                    )
+            return result
 
     def get_task_status(self, task_id: str) -> ToolResult:
         invalid = self._validate_task_id(task_id)

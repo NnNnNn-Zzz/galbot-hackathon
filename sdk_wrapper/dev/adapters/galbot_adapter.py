@@ -1048,6 +1048,159 @@ class GalbotAdapter(RobotAdapter):
             data={"place_id": place_id, "frame": place.get("frame") or "map"},
         )
 
+    def get_map_pose(self) -> ToolResult:
+        rejection = self._authorization_rejection()
+        if rejection is not None:
+            return rejection
+        try:
+            _robot, _motion, navigation = self._ensure_interfaces()
+            if not bool(navigation.is_localized()):
+                return rejected(
+                    ErrorCode.NOT_READY,
+                    "机器人尚未在 SLAM 地图中定位",
+                    mode=self.mode,
+                )
+            pose = [float(v) for v in navigation.get_current_pose()]
+        except Exception as exc:  # noqa: BLE001
+            return unknown(
+                ErrorCode.STATE_UNCERTAIN,
+                f"读取地图位姿失败：{exc}",
+                mode=self.mode,
+            )
+        if len(pose) != 7:
+            return failed(
+                ErrorCode.SDK_ERROR,
+                f"地图位姿长度 {len(pose)}，应为 7",
+                mode=self.mode,
+            )
+        return ok(
+            "地图位姿已读取",
+            self.mode,
+            data={"pose": pose, "frame": "map", "unit": "m"},
+        )
+
+    def check_path_reachability(
+        self,
+        goal_pose: typing.Sequence[float],
+        start_pose: typing.Sequence[float] | None = None,
+    ) -> ToolResult:
+        rejection = self._authorization_rejection()
+        if rejection is not None:
+            return rejection
+        goal = [float(v) for v in list(goal_pose)]
+        if len(goal) != 7:
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                "goal_pose 必须是 7 个数值",
+                mode=self.mode,
+            )
+        try:
+            _robot, _motion, navigation = self._ensure_interfaces()
+            if not bool(navigation.is_localized()):
+                return rejected(
+                    ErrorCode.NOT_READY,
+                    "机器人尚未在 SLAM 地图中定位",
+                    mode=self.mode,
+                )
+            start = (
+                [float(v) for v in list(start_pose)]
+                if start_pose is not None
+                else [float(v) for v in navigation.get_current_pose()]
+            )
+            reachable = bool(navigation.check_path_reachability(goal, start))
+        except Exception as exc:  # noqa: BLE001
+            return unknown(
+                ErrorCode.STATE_UNCERTAIN,
+                f"路径可达性检查失败：{exc}",
+                mode=self.mode,
+            )
+        if reachable:
+            return ok(
+                "SLAM 路径可达",
+                self.mode,
+                data={"reachable": True, "goal_pose": goal, "start_pose": start},
+            )
+        return rejected(
+            ErrorCode.SAFETY_LIMIT,
+            "SLAM 路径不可达或会碰撞",
+            mode=self.mode,
+            data={"reachable": False, "goal_pose": goal, "start_pose": start},
+        )
+
+    def navigate_to_pose(
+        self,
+        pose: typing.Sequence[float],
+        *,
+        frame: str = "map",
+        speed_ratio: float = 0.5,
+        enable_collision_check: bool = True,
+    ) -> ToolResult:
+        rejection = self._authorization_rejection()
+        if rejection is not None:
+            return rejection
+        target = [float(v) for v in list(pose)]
+        if len(target) != 7 or not all(math.isfinite(v) for v in target):
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                "pose 必须是 7 个有限数值",
+                mode=self.mode,
+            )
+        if frame not in {"map", "base_link", "base"}:
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                f"不支持的导航 frame {frame!r}",
+                mode=self.mode,
+            )
+        if not 0.05 <= float(speed_ratio) <= 1.0:
+            return rejected(
+                ErrorCode.SAFETY_LIMIT,
+                f"speed_ratio 必须在 [0.05, 1.0]，收到 {speed_ratio}",
+                mode=self.mode,
+            )
+        try:
+            _robot, _motion, navigation = self._ensure_interfaces()
+            if not bool(navigation.is_localized()):
+                return rejected(
+                    ErrorCode.NOT_READY,
+                    "机器人尚未在 SLAM 地图中定位",
+                    mode=self.mode,
+                )
+            gm = self._import_sdk()
+            handle = navigation.set_navigation_target(
+                gm.Pose(target),
+                frame=frame,
+                speed_ratio=float(speed_ratio),
+                enable_collision_check=bool(enable_collision_check),
+            )
+        except Exception as exc:  # noqa: BLE001
+            return unknown(
+                ErrorCode.STATE_UNCERTAIN,
+                f"下发 SLAM 导航时抛错：{exc}；机器人是否开始移动未知",
+                mode=self.mode,
+                data={"target_pose": target, "frame": frame},
+            )
+        if not bool(getattr(handle, "request_sent", False)):
+            return failed(
+                ErrorCode.SDK_ERROR,
+                f"SLAM 导航请求未发出：{getattr(handle, 'msg', '') or '无返回信息'}",
+                mode=self.mode,
+            )
+        task_id = str(handle.task_id)
+        with self._lock:
+            self._nav_tasks[task_id] = {
+                "target": "dynamic_map_pose",
+                "target_pose": target,
+                "frame": frame,
+                "status": TaskStatus.RUNNING,
+                "started": time.monotonic(),
+            }
+        return running(
+            "SLAM 导航已下发（尚未到达）",
+            self.mode,
+            task_id=task_id,
+            data={"target_pose": target, "frame": frame},
+        )
+
     def get_task_status(self, task_id: str) -> ToolResult:
         rejection = self._authorization_rejection()
         if rejection is not None:

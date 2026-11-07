@@ -10,9 +10,11 @@ __all__ = ["PHASES", "plan_head_search_action"]
 PHASES = (
     "find_power_strip",
     "approach_power_strip",
+    "navigating_to_observation",
     "find_charger",
     "approach_charger",
     "ready_for_wrist",
+    "wrist_view_aligned",
 )
 
 
@@ -70,6 +72,20 @@ def plan_head_search_action(
             action="none",
             reason="base_locked_waiting_for_wrist_handoff",
         )
+    if phase == "wrist_view_aligned":
+        return _action(
+            phase=phase,
+            next_phase=phase,
+            action="none",
+            reason="wrist_camera_aligned_waiting_for_depth_handoff",
+        )
+    if phase == "navigating_to_observation":
+        return _action(
+            phase=phase,
+            next_phase=phase,
+            action="track_navigation_task",
+            reason="slam_navigation_in_progress",
+        )
 
     max_steps = int(config.get("max_steps", 24))
     if int(step_count) >= max_steps:
@@ -83,11 +99,7 @@ def plan_head_search_action(
     center_tolerance = _number(config, "center_tolerance_deg", 4.0)
     scan_turn = _number(config, "search_turn_deg", 12.0)
     max_turn = _number(config, "max_turn_command_deg", 15.0)
-    far_step = _number(config, "far_step_m", 0.15)
-    fine_step = _number(config, "fine_step_m", 0.05)
     backoff = _number(config, "backoff_m", 0.05)
-    min_width_ratio = _number(config, "strip_handoff_min_width_ratio", 0.05)
-    max_width_ratio = _number(config, "strip_too_close_width_ratio", 0.35)
 
     if phase in ("find_power_strip", "approach_power_strip"):
         if not strip or not strip.get("usable_for_direction"):
@@ -99,9 +111,6 @@ def plan_head_search_action(
                 reason="power_strip_not_visible_or_unstable",
             )
         angle = _number(strip, "horizontal_angle_deg", 0.0)
-        width_ratio = float(strip.get("bbox_width_px", 0.0)) / max(
-            1.0, float(strip.get("image_width", 1.0) or 1.0)
-        )
         if strip.get("touches_image_edge"):
             return _action(
                 phase=phase,
@@ -121,53 +130,32 @@ def plan_head_search_action(
                 reason="recenter_power_strip_before_forward_step",
             )
         stereo = strip.get("stereo") or {}
-        if stereo.get("measurement_stable") and stereo.get("metric_distance_available"):
-            distance = _number(
-                stereo,
-                "metric_distance_m",
-                _number(config, "observation_distance_m", 0.8),
+        observation = strip.get("observation_plan") or {}
+        if (
+            observation.get("safe_to_submit")
+            and observation.get("path_reachable")
+            and observation.get("observation_pose_map")
+        ):
+            return _action(
+                phase=phase,
+                next_phase="navigating_to_observation",
+                action="navigate_to_mapped_observation",
+                reason="metric_target_and_reachable_slam_observation_pose",
+                metric_distance_used=True,
             )
-            target_distance = _number(config, "observation_distance_m", 0.8)
-            tolerance = _number(config, "observation_distance_tolerance_m", 0.10)
-            if distance > target_distance + tolerance:
-                step = min(far_step, distance - target_distance)
-                return _action(
-                    phase=phase,
-                    next_phase="approach_power_strip",
-                    action="approach_power_strip_metric",
-                    forward_m=step,
-                    reason="stable_stereo_range_above_observation_distance",
-                    metric_distance_used=True,
-                )
-            if distance < target_distance - tolerance:
-                return _action(
-                    phase=phase,
-                    next_phase="approach_power_strip",
-                    action="backoff",
-                    forward_m=-min(backoff, target_distance - distance),
-                    reason="stable_stereo_range_below_observation_distance",
-                    metric_distance_used=True,
-                )
+        if stereo.get("measurement_stable") and stereo.get("metric_distance_available"):
             return _action(
                 phase=phase,
                 next_phase="find_charger",
-                action="stop_and_scan_charger",
-                reason="stable_stereo_range_reached_observation_band",
+                action="hold_for_mapped_observation_pose",
+                reason="stereo_metric_ready_but_slam_observation_pose_unavailable",
                 metric_distance_used=True,
-            )
-        if width_ratio < min_width_ratio:
-            return _action(
-                phase=phase,
-                next_phase="approach_power_strip",
-                action="approach_power_strip",
-                forward_m=far_step,
-                reason="power_strip_observed_size_below_observation_band",
             )
         return _action(
             phase=phase,
-            next_phase="find_charger",
-            action="stop_and_scan_charger",
-            reason="power_strip_observation_band_reached",
+            next_phase="find_power_strip",
+            action="hold_for_stable_metric_stereo",
+            reason="target_direction_known_but_metric_stereo_or_slam_pose_unavailable",
         )
 
     # Once the strip is in the observation band, stop using it as a navigation
@@ -200,28 +188,9 @@ def plan_head_search_action(
                 reason="recenter_charger_before_forward_step",
             )
 
-    if strip and strip.get("usable_for_direction"):
-        width_ratio = float(strip.get("bbox_width_px", 0.0)) / max(
-            1.0, float(strip.get("image_width", 1.0) or 1.0)
-        )
-        if width_ratio >= max_width_ratio:
-            return _action(
-                phase=phase,
-                next_phase="find_charger",
-                action="stop_and_adjust_view",
-                reason="strip_appears_too_close_for_fine_forward_step",
-            )
-        return _action(
-            phase=phase,
-            next_phase="approach_charger",
-            action="approach_charger",
-            forward_m=fine_step,
-            reason="charger_not_yet_ready_for_wrist_handoff",
-        )
-
     return _action(
         phase=phase,
         next_phase="find_charger",
         action="adjust_head_to_search_charger",
-        reason="strip_not_visible_for_further_forward_motion",
+        reason="charger_not_ready_base_locked_use_head_or_arm_view_adjustment",
     )

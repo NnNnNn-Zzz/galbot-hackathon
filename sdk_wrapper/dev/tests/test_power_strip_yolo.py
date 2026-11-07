@@ -28,6 +28,7 @@ def strip_instance(x1, y1, x2, y2, confidence=0.85):
 class FakeStripBackend:
     def __init__(self, instances):
         self.instances = list(instances)
+        self.track_calls = 0
 
     def describe(self):
         return {
@@ -39,6 +40,14 @@ class FakeStripBackend:
 
     def predict(self, bgr):
         return list(self.instances)
+
+    def track(self, bgr, persist=True):
+        self.track_calls += 1
+        tracked = []
+        for instance in self.instances:
+            instance.track_id = 7
+            tracked.append(instance)
+        return tracked
 
 
 class PowerStripGeometryTest(unittest.TestCase):
@@ -110,6 +119,23 @@ class PowerStripToolTest(unittest.TestCase):
             self.assertIsNone(result.data["grasp_coordinate"])
             self.assertTrue(Path(result.data["overlay_ref"]).is_file())
             self.assertTrue(Path(result.data["observation_ref"]).is_file())
+
+    def test_tracker_preserves_strip_track_id(self):
+        perception = PerceptionTool(MockAdapter())
+        backend = FakeStripBackend([strip_instance(300, 180, 430, 230)])
+
+        with tempfile.TemporaryDirectory() as directory:
+            tool = PowerStripYoloTool(
+                perception,
+                backend=backend,
+                output_dir=Path(directory),
+            )
+            result = tool.track_power_strip_head()
+
+        self.assertEqual(result.status, TaskStatus.SUCCEEDED)
+        self.assertEqual(result.data["target_track_id"], 7)
+        self.assertEqual(result.data["tracking_mode"], "yolo_track")
+        self.assertEqual(backend.track_calls, 1)
 
     def test_missing_detection_returns_not_ready(self):
         perception = PerceptionTool(MockAdapter())

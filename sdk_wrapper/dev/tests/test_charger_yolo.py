@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -6,7 +7,7 @@ import numpy as np
 
 from sdk_wrapper.dev.adapters import MockAdapter
 from sdk_wrapper.dev.algorithms.charger_yolo import YoloInstance, analyze_charger_top
-from sdk_wrapper.dev.contracts import ErrorCode, TaskStatus
+from sdk_wrapper.dev.contracts import ErrorCode, TaskStatus, ok
 from sdk_wrapper.dev.robot_tools.charger_yolo import ChargerYoloTool
 from sdk_wrapper.dev.robot_tools.perception import PerceptionTool
 
@@ -47,6 +48,26 @@ class ConstantBackend:
     def predict(self, bgr):
         self.calls += 1
         return list(self.instances)
+
+
+class FakeStereoTool:
+    def __init__(self, depth, directory):
+        self.depth = depth
+        self.directory = Path(directory)
+
+    def capture_stereo_depth(self, timeout_s=8.0):
+        path = self.directory / "fake_stereo_depth.npy"
+        np.save(path, self.depth, allow_pickle=False)
+        return ok(
+            "stereo",
+            "mock",
+            data={
+                "capture_id": "fake_stereo",
+                "depth_ref": str(path),
+                "timestamp_ns": 0,
+                "sensor_name": "head_left_camera_color_optical_frame",
+            },
+        )
 
 
 class ChargerYoloGeometryTest(unittest.TestCase):
@@ -155,15 +176,33 @@ class ChargerYoloToolTest(unittest.TestCase):
         backend = ConstantBackend([rectangle_instance(180, 180, 420, 270)])
 
         with tempfile.TemporaryDirectory() as directory:
+            config = json.loads(
+                (Path(__file__).resolve().parents[1] / "config" / "charger_yolo.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            config["stereo"]["raw_to_m"] = 0.001
+            config["target_safety"]["min_range_m"] = 0.30
+            config_path = Path(directory) / "config.json"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
             tool = ChargerYoloTool(
                 perception,
                 backend=backend,
+                stereo_tool=FakeStereoTool(
+                    np.full((512, 640), 900, dtype=np.uint16),
+                    directory,
+                ),
+                config_path=config_path,
                 output_dir=Path(directory),
             )
             result = tool.detect_charger_head()
 
         self.assertEqual(result.status, TaskStatus.SUCCEEDED)
         self.assertTrue(result.data["head_handoff"]["usable_for_wrist_handoff"])
+        self.assertTrue(result.data["head_handoff"]["target_safety"]["safe"])
+        self.assertTrue(
+            result.data["head_handoff"]["target_3d"]["available"]
+        )
         self.assertIsNone(result.data["head_handoff"]["grasp_coordinate"])
         self.assertFalse(result.data["eligible_for_precision"])
 

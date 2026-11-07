@@ -67,8 +67,7 @@ print(result.to_dict())
 工具名为 `capture_stereo_depth`，返回通用六字段 `ToolResult`。`depth_ref` 是保存在
 `sdk_wrapper/dev/runs/stereo_depth/` 下的原始 `.npy`，`preview_ref` 是伪彩色预览；
 结果还包含尺寸、传感器名、时间戳、有效像素比例和原始值范围。SDK 将图放在
-`DetectionResult.instance_mask`，但未说明该值的物理单位，因此 `unit` 固定为
-`sdk_raw_unverified`，不可直接当米使用，也不与臂部深度相机的米制数据混用。
+`DetectionResult.instance_mask`。2026-11-08 真机用头左外参与地面平面验证其原始单位为毫米，因此工具返回 `unit="mm"` 和 `raw_to_m=0.001`；反投影前仍需处理头部相机的 `kannala_brandt` 鱼眼畸变。
 首次调用会初始化模型并等待约 10 秒，后续调用仅运行单次推理。
 
 G1 直立下蹲（使用官方 `GalbotRobot.set_leg_height()`，逐步且需要现场确认）：

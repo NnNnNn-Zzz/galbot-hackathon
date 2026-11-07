@@ -40,14 +40,46 @@ def charger_data(ready=False, touches=False, angle=0.0):
     }
 
 
+def metric_strip_data():
+    data = strip_data(width=40)
+    data["target_track_id"] = 7
+    data["stereo"] = {
+        "measurement_stable": True,
+        "metric_distance_available": True,
+        "metric_distance_m": 1.0,
+        "target_3d": {
+            "available": True,
+            "center_m": [1.0, 0.0, 0.3],
+            "plane_rms_m": 0.005,
+            "surface_normal_base": [0.0, 0.0, 1.0],
+        },
+        "target_safety": {
+            "safe": True,
+            "reasons": [],
+        },
+    }
+    return data
+
+
 class FakeStripTool:
     def __init__(self, data):
         self.data = data
         self.calls = 0
+        self.track_ok = True
 
     def detect_power_strip_head(self):
         self.calls += 1
         return ok("strip", "mock", data=self.data)
+
+    def track_power_strip_head(self):
+        self.calls += 1
+        if not self.track_ok:
+            return failed(
+                ErrorCode.NOT_READY,
+                "power_strip visual track lost; base motion must stop",
+                "mock",
+            )
+        return ok("tracked strip", "mock", data=self.data)
 
 
 class FakeChargerTool:
@@ -81,23 +113,16 @@ class ChargerSearchPlannerTest(unittest.TestCase):
         self.assertEqual(plan["action"], "turn_toward_power_strip")
         self.assertLess(plan["yaw_deg"], 0)
 
-    def test_small_strip_approaches_and_large_strip_stops_for_charger_scan(self):
-        small = plan_head_search_action(
+    def test_direction_without_metric_stereo_holds_instead_of_forward_servo(self):
+        plan = plan_head_search_action(
             "find_power_strip",
             strip=strip_data(width=20),
             charger=None,
-            config={"strip_handoff_min_width_ratio": 0.05},
+            config={},
             step_count=0,
         )
-        large = plan_head_search_action(
-            "find_power_strip",
-            strip=strip_data(width=100),
-            charger=None,
-            config={"strip_handoff_min_width_ratio": 0.05},
-            step_count=0,
-        )
-        self.assertEqual(small["action"], "approach_power_strip")
-        self.assertEqual(large["action"], "stop_and_scan_charger")
+        self.assertEqual(plan["action"], "hold_for_stable_metric_stereo")
+        self.assertEqual(plan["forward_m"], 0.0)
 
     def test_ready_charger_locks_base_without_grasp_coordinate(self):
         plan = plan_head_search_action(
@@ -111,7 +136,7 @@ class ChargerSearchPlannerTest(unittest.TestCase):
         self.assertIsNone(plan["grasp_coordinate"])
         self.assertFalse(plan["metric_distance_used"])
 
-    def test_stable_stereo_range_stops_at_observation_distance(self):
+    def test_stable_stereo_without_slam_pose_holds(self):
         strip = strip_data(width=20)
         strip["stereo"] = {
             "measurement_stable": True,
@@ -128,7 +153,7 @@ class ChargerSearchPlannerTest(unittest.TestCase):
             },
             step_count=1,
         )
-        self.assertEqual(plan["action"], "stop_and_scan_charger")
+        self.assertEqual(plan["action"], "hold_for_mapped_observation_pose")
         self.assertTrue(plan["metric_distance_used"])
 
 
@@ -145,34 +170,63 @@ class ChargerSearchToolTest(unittest.TestCase):
 
     def test_requires_confirmation_before_visual_servo_step(self):
         with tempfile.TemporaryDirectory() as directory:
-            tool, adapter = self.make_tool(directory, strip_data(width=20), charger_data())
+            tool, adapter = self.make_tool(directory, metric_strip_data(), charger_data())
             result = tool.advance_charger_search(operator_confirmed=False)
 
         self.assertEqual(result.status, TaskStatus.REJECTED)
         self.assertEqual(result.error_code, ErrorCode.PERMISSION_DENIED)
         self.assertEqual(adapter.base_moves, [])
 
-    def test_executes_one_segment_and_redetects(self):
+    def test_starts_one_shot_slam_navigation(self):
         with tempfile.TemporaryDirectory() as directory:
-            tool, adapter = self.make_tool(directory, strip_data(width=20), charger_data())
+            tool, adapter = self.make_tool(directory, metric_strip_data(), charger_data())
             result = tool.advance_charger_search(operator_confirmed=True)
 
-        self.assertEqual(result.status, TaskStatus.SUCCEEDED)
-        self.assertTrue(result.data["executed"])
-        self.assertEqual(len(adapter.base_moves), 1)
-        self.assertAlmostEqual(adapter.base_moves[0]["distance_m"], 0.15)
-        self.assertEqual(tool.step_count, 1)
-        self.assertEqual(result.data["phase"], "approach_power_strip")
+        self.assertEqual(result.status, TaskStatus.RUNNING)
+        self.assertIsNotNone(result.task_id)
+        self.assertEqual(tool.phase, "navigating_to_observation")
+        self.assertEqual(adapter.base_moves, [])
 
-    def test_strip_observation_band_stops_and_scans_charger(self):
+    def test_monitor_tracks_target_until_slam_arrival(self):
         with tempfile.TemporaryDirectory() as directory:
-            tool, adapter = self.make_tool(directory, strip_data(width=100), charger_data())
-            result = tool.advance_charger_search(operator_confirmed=True)
+            adapter = MockAdapter(task_polls_until_succeeded=1)
+            perception = PerceptionTool(adapter)
+            tool = ChargerSearchTool(
+                perception,
+                strip_tool=FakeStripTool(metric_strip_data()),
+                charger_tool=FakeChargerTool(charger_data()),
+            )
+            started = tool.advance_charger_search(operator_confirmed=True)
+            first = tool.monitor_observation_navigation(started.task_id)
+            result = tool.monitor_observation_navigation(started.task_id)
 
+        self.assertEqual(first.status, TaskStatus.RUNNING)
         self.assertEqual(result.status, TaskStatus.SUCCEEDED)
         self.assertEqual(result.data["phase"], "find_charger")
-        self.assertTrue(result.data["observation_point_reached"])
+        self.assertTrue(result.data["navigation_arrived"])
         self.assertEqual(adapter.base_moves, [])
+        self.assertGreaterEqual(adapter.base_stops, 1)
+
+    def test_repeated_tracking_loss_cancels_slam_navigation(self):
+        adapter = MockAdapter(task_polls_until_succeeded=10)
+        perception = PerceptionTool(adapter)
+        strip_tool = FakeStripTool(metric_strip_data())
+        tool = ChargerSearchTool(
+            perception,
+            strip_tool=strip_tool,
+            charger_tool=FakeChargerTool(charger_data()),
+        )
+        started = tool.advance_charger_search(operator_confirmed=True)
+        strip_tool.track_ok = False
+        first = tool.monitor_observation_navigation(started.task_id)
+        second = tool.monitor_observation_navigation(started.task_id)
+        result = tool.monitor_observation_navigation(started.task_id)
+
+        self.assertEqual(first.status, TaskStatus.RUNNING)
+        self.assertEqual(second.status, TaskStatus.RUNNING)
+        self.assertEqual(result.status, TaskStatus.FAILED)
+        self.assertEqual(result.error_code, ErrorCode.NOT_READY)
+        self.assertEqual(tool.track_miss_count, 3)
         self.assertGreaterEqual(adapter.base_stops, 1)
 
     def test_head_charger_ready_locks_base_for_wrist_handoff(self):
@@ -191,6 +245,40 @@ class ChargerSearchToolTest(unittest.TestCase):
         self.assertTrue(result.data["wrist_handoff_requested"])
         self.assertEqual(adapter.base_moves, [])
         self.assertGreaterEqual(adapter.base_stops, 1)
+
+    def test_head_metric_target_moves_wrist_camera_above_surface(self):
+        with tempfile.TemporaryDirectory() as directory:
+            tool, adapter = self.make_tool(
+                directory,
+                strip_data(width=100),
+                charger_data(ready=True),
+            )
+            handoff = {
+                "usable_for_wrist_handoff": True,
+                "target_3d": {
+                    "available": True,
+                    "center_m": [1.0, 0.0, 0.3],
+                    "surface_normal_base": [0.0, 0.0, 1.0],
+                    "long_axis_base": [1.0, 0.0, 0.0],
+                    "short_axis_base": [0.0, 1.0, 0.0],
+                },
+                "target_safety": {"safe": True, "reasons": []},
+            }
+            tool.last_head_charger = {
+                "head_handoff": handoff,
+            }
+            tool.phase = "ready_for_wrist"
+            result = tool.align_wrist_from_head(operator_confirmed=True)
+
+        self.assertEqual(result.status, TaskStatus.SUCCEEDED)
+        self.assertTrue(result.data["pose_matched"])
+        self.assertEqual(tool.phase, "wrist_view_aligned")
+        self.assertEqual(len(adapter.ee_moves), 1)
+        self.assertAlmostEqual(
+            result.data["measured_camera_pose"][2],
+            0.6,
+            places=4,
+        )
 
     def test_charger_backend_failure_does_not_keep_driving_forward(self):
         adapter = MockAdapter()
