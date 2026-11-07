@@ -4,7 +4,8 @@
     "Without raw_to_m, the tool emits direction/stability only and must not drive forward."
   ],
   "model_search_roots": [
-    "/home/mr/yoloseg/runs"
+    "/home/mr/yoloseg/runs",
+    "~/yoloseg/runs"
   ],
   "weights": null,
   "target_class": "power_strip",

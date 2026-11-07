@@ -448,6 +448,73 @@ def discover_latest_charger_seg_weights(
     return sorted(found.values(), key=lambda p: p.stat().st_mtime, reverse=True)
 
 
+def _install_torchvision_nms_fallback() -> str | None:
+    """Use a Python NMS when a custom PyTorch build cannot load torchvision ops.
+
+    NVIDIA Jetson PyTorch builds can be ABI-compatible with their matching
+    custom torchvision only. A generic torchvision wheel may import but fail
+    when Ultralytics calls ``torchvision.ops.nms``. Ultralytics also ships a
+    data-dependent NMS fast path, but that path is not selected when the
+    torchvision module is already imported. Patch only the broken callable.
+    """
+    try:
+        import torch
+        import torchvision
+    except Exception:  # noqa: BLE001 - YOLO may still work without this module
+        return None
+    try:
+        probe = torchvision.ops.nms(
+            torch.tensor([[0.0, 0.0, 1.0, 1.0]], dtype=torch.float32),
+            torch.tensor([1.0], dtype=torch.float32),
+            0.5,
+        )
+        if probe.numel() == 1:
+            return None
+    except Exception:
+        pass
+
+    def _nms(
+        boxes: typing.Any,
+        scores: typing.Any,
+        iou_threshold: float,
+    ) -> typing.Any:
+        if boxes.numel() == 0:
+            return torch.empty((0,), dtype=torch.long, device=boxes.device)
+        order = scores.argsort(descending=True)
+        keep: list[typing.Any] = []
+        while order.numel():
+            index = order[0]
+            keep.append(index)
+            if order.numel() == 1:
+                break
+            rest = order[1:]
+            selected = boxes[index]
+            candidates = boxes[rest]
+            inter_x1 = torch.maximum(selected[0], candidates[:, 0])
+            inter_y1 = torch.maximum(selected[1], candidates[:, 1])
+            inter_x2 = torch.minimum(selected[2], candidates[:, 2])
+            inter_y2 = torch.minimum(selected[3], candidates[:, 3])
+            inter = (
+                (inter_x2 - inter_x1).clamp(min=0)
+                * (inter_y2 - inter_y1).clamp(min=0)
+            )
+            area_selected = (
+                (selected[2] - selected[0]).clamp(min=0)
+                * (selected[3] - selected[1]).clamp(min=0)
+            )
+            area_candidates = (
+                (candidates[:, 2] - candidates[:, 0]).clamp(min=0)
+                * (candidates[:, 3] - candidates[:, 1]).clamp(min=0)
+            )
+            union = area_selected + area_candidates - inter
+            iou = inter / union.clamp(min=torch.finfo(inter.dtype).eps)
+            order = rest[iou <= float(iou_threshold)]
+        return torch.stack(keep)
+
+    torchvision.ops.nms = _nms
+    return "torchvision_nms_python_fallback"
+
+
 class UltralyticsYoloBackend:
     """Lazy Ultralytics YOLO backend with task/class validation.
 
@@ -492,6 +559,7 @@ class UltralyticsYoloBackend:
                 "ultralytics is not installed in this Python environment; "
                 "use the repository perception runtime or install it via dependency owner"
             ) from exc
+        nms_fallback = _install_torchvision_nms_fallback()
 
         candidates = (
             [Path(self.weights).expanduser()]
@@ -527,6 +595,8 @@ class UltralyticsYoloBackend:
                     "confidence": self.confidence,
                     "iou": self.iou,
                 }
+                if nms_fallback:
+                    self.model_info["runtime_workaround"] = nms_fallback
                 return model
             except Exception as exc:  # noqa: BLE001
                 errors.append(f"{path}: {type(exc).__name__}: {exc}")

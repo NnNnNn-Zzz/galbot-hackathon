@@ -5,7 +5,8 @@
     "These quality thresholds are initial safety gates, not calibrated grasp tolerances."
   ],
   "model_search_roots": [
-    "/home/mr/yoloseg/runs"
+    "/home/mr/yoloseg/runs",
+    "~/yoloseg/runs"
   ],
   "weights": null,
   "target_class": "charger",
