@@ -129,6 +129,32 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 - SDK 原生库用机器人自带的 `/data/galbot/lib`（版本与固件配套，勿动）
 - SDK Python 包从 WSL 推送到 HPU `~/g1_runtime/`（aarch64 cp38 版）
 
+### HPU 上的 YOLO11 依赖出现 TLS、C3k2 或 torchvision NMS 错误（2026-11-08）
+
+- **现象**：Python 3.8 下先报 `import torch` 缺少 `libopenblas.so.0`；改用系统 NumPy 自带 BLAS 后又出现 `zgemm_`/`cblas_caxpy64_` 未定义。旧版 Ultralytics 加载 YOLO11 权重时报 `Can't get attribute 'C3k2'`。换成新 Ultralytics 后，NVIDIA 定制 PyTorch 与通用 torchvision 在推理时分别报 `Couldn't load custom C++ ops`、`cannot allocate memory in static TLS block` 或直接 segfault。
+- **确认原因**：HPU 的 `torch 2.1.0a0+...nv23.06` 是 NVIDIA aarch64 定制构建，不能直接搭配 PyPI 通用 torchvision 的 C++ 扩展；YOLO11 权重需要包含 `C3k2` 的新版 Ultralytics。仅“torch 能 import”或“YOLO 权重能 load”不代表推理链路可用，必须在实际 `predict()` 完成 NMS 和掩码解码后才算通过。
+- **诊断**：
+
+  ```bash
+  cd ~/galbot_charger_yolo
+  export PYTHONPATH="$HOME/galbot_charger_yolo:$HOME/charger-yolo-runtime:${PYTHONPATH:-}"
+  export LD_LIBRARY_PATH="$HOME/charger-yolo-libs:${LD_LIBRARY_PATH:-}"
+  python3 - <<'PY'
+  import os
+  import cv2, torch
+  from ultralytics import YOLO
+  print(cv2.__version__, torch.__version__)
+  weights = os.path.expanduser("~/yoloseg/runs/yolo11n_seg_charger_v2/weights/best.pt")
+  model = YOLO(weights)
+  print(model.task, model.names)
+  PY
+  ```
+
+  再对一张已知 charger 验证图执行一次完整 `predict()`，检查能返回 bbox 和与输入同尺寸的 mask。
+- **修复**：使用独立目录 `~/charger-yolo-runtime` 安装 `ultralytics==8.4.203`、`opencv-python-headless==4.10.0.84` 和通用 torchvision Python 包；保留机器人 NVIDIA PyTorch，不覆盖其 CUDA 构建。`sdk_wrapper/dev/algorithms/charger_yolo.py` 在启动时探测 `torchvision.ops.nms`，只有该 C++ 算子不可用时才替换为纯 PyTorch NMS；正常环境不会启用后备。
+- **验证**：2026-11-08 在 `galbot-echo` 用真实 `yolo11n_seg_charger_v2/weights/best.pt` 对 1920×1098 验证图完成端到端推理，检出 1 个 charger（confidence 0.7708），返回 `1098×1920` 布尔掩码，`runtime_workaround=torchvision_nms_python_fallback`。随后真机右腕 `detect` 阶段可完成相机取图与推理，并在当前画面无 charger 时明确返回 `not_ready`，未下发运动。
+- **边界**：该后备只覆盖 Ultralytics 当前使用的 NMS；若未来模型加入依赖其他 torchvision C++ 算子的后处理，需要重新验证，不能把“导入成功”当作兼容。
+
 ### 为什么不在 PC 上跑 SDK
 
 - WSL 是 mirrored 网络模式 + Clash TUN，HTTPS 出口基本不通
