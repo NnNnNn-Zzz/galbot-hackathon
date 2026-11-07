@@ -6,7 +6,7 @@
 
 ```bash
 # 1. SSH 到机器人（场地 WiFi 同网段，IP 可能变，看路由器 DHCP 分配）
-ssh galbot@<机器人IP>      # 密码 gb@2023
+ssh galbot@<机器人IP>      # 密码由现场管理员提供
 
 # 2. 环境
 cd ~/galbot_hackathon && source scripts/env_hpu.sh
@@ -112,6 +112,99 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 4. 若 API 返回 `401`，先确认登录的是本次控制台启动生成的访问码；相机截图服务与控制台的访问码不是同一个。若 `connected=true` 但画面冻结，检查 WebSocket 断线、`service_error` 和设备时间戳。
 
 **处理路径与验证边界**：采用 PC 官方 SDK 部署时，先完成三端网络和 SDK 环境配置，再在维护时段运行官方 `configure_embosa_ip.sh`；该脚本会修改 PC、HPU、XCU 配置并重启服务，应先保存原配置。随后启动控制台 `--live`，只有上述四层验收全通过才能称为状态已同步。若无法建立三端有线网络，另行实现兼容 HPU Python 3.8 的只读状态桥；现有相机截图服务不是状态桥。两条路径在来源文档中都未完成实机同步验收。
+
+### 机器人地图管理平台 `:8000` 消失（2026-11-08 已恢复）
+
+**先区分两个地图页面**：
+
+| 地址 | 提供者 | 排查方向 |
+|---|---|---|
+| `http://<HPU_IP>:8000/` | 机器人 HPU 的 `galbot_map`，标题为“机器人地图管理平台” | 机器人在线状态、`launcher.service`、`hpu_launcher` 子进程 |
+| `http://127.0.0.1:8080/#robot` | 开发电脑上的 Galbot SDK Web Console | 本机控制台进程和本地静态 PCD |
+
+两者互相独立。机器人 `:8000` 打不开不代表本机 `:8080` 的静态地图损坏；本机没有地图也不会影响机器人自带平台。
+
+**本次已确认原因与时间线**：地图目录和文件仍存在，`/var/maps/cur` 仍指向当前“新建地图”，并非地图被删除或 `galbot_map` 单独崩溃。2026-11-07 23:57:01，父进程 `hpu_launcher` 记录 `The proc is over!!!` 后整组服务退出，网页、SSH、地图平台和相机页面同时断开；机器人约 23:58 重启，23:58:44 新 launcher 拉起服务树。新 `galbot_map` 在 23:58:47–23:59:07 因 `gateway_service:9902` 尚未就绪持续重连，随后页面恢复。结论：**平台随 `hpu_launcher` 管理的整组服务重启而暂时消失；重启完成后由 launcher 恢复正常。**
+
+**服务依赖**：
+
+```text
+launcher.service
+└── hpu_launcher
+    ├── gateway_service          # 内部网关，9902
+    ├── localization_server      # 定位
+    ├── galbot_map               # 地图管理平台，8000
+    ├── map_manager_node
+    ├── aphropm_map_server
+    └── service_navigation_plan
+```
+
+机器人关机、重启、维护升级或 `launcher.service` 重启都会让 `:8000` 一起消失。不要给 `galbot_map` 另建绕过官方服务树的常驻 unit，也不要在 launcher 已运行时手动重复启动同名进程。
+
+**开发电脑快速判断**：
+
+```bash
+ping -c 3 192.168.166.7
+for port in 22 8000 18765 9902; do
+  timeout 2 bash -c "</dev/tcp/192.168.166.7/$port" >/dev/null 2>&1 \
+    && echo "$port open" || echo "$port closed"
+done
+```
+
+正常状态为 22、8000、18765、9902 均打开。若机器人能 ping 通但业务端口全关，优先怀疑机器人正在重启，不要先删除地图或修改网络配置。
+
+**HPU 诊断**：
+
+```bash
+hostname
+uptime
+systemctl status launcher.service --no-pager
+ps -eo pid,ppid,lstart,stat,comm,args | grep -E \
+  'hpu_launcher|gateway_service|localization_server|galbot_map|map_manager_node|aphropm_map_server'
+readlink -f /var/maps/cur
+ls -lh /var/maps/cur/global_cloud_cleaned.pcd
+```
+
+`uptime` 很短表示仍在启动；`launcher.service` 非 `active` 时平台不会正常；`hpu_launcher` 存在但 `galbot_map` 长时间缺失时查 launcher 日志，不要手工重复拉起。地图目录、PCD 和地图配置都可读时，不要为了恢复网页而删图或重新建图。
+
+**日志定位**：
+
+```bash
+tail -n 120 /userdata/log/galbot_map/galbot_map.log
+find /userdata/log/hpu_launcher -maxdepth 1 -type f -printf '%TY-%Tm-%Td %TH:%TM %p\n' \
+  | sort -r | head -10
+```
+
+| 日志 | 含义 | 处理 |
+|---|---|---|
+| `dial tcp 127.0.0.1:9902: connection refused` | 内部网关尚未就绪 | 启动顺序问题，等待并刷新；持续超过 1 分钟再查 gateway |
+| `write: broken pipe` / WebSocket `close 1006` | 浏览器或 Wi-Fi 断开 | 刷新页面，不能据此判定服务崩溃 |
+| `process nbr exceeds max nbr` | 重复启动受 launcher 管理的进程 | 停止手动启动并回到 launcher 检查 |
+| `The proc is over!!!` | `hpu_launcher` 生命周期结束 | 机器人可能正在重启或关机 |
+
+**恢复顺序**：
+
+1. 确认机器人是否正在重启；开机未完成时不做服务操作。
+2. 等待 `launcher.service` 完整启动，通常需要数十秒。
+3. 重新打开 `http://<HPU_IP>:8000/` 并强制刷新。
+4. 检查 8000 和 9902 均已监听；页面能开但数据为空时优先等待 9902。
+5. IP 变化时从路由器租约或机器人屏幕获取新地址。
+6. 只有维护人员明确授权时才重启机器人或 `launcher.service`。不要单独杀 `galbot_map`、gateway 或 localization 再手工拼回服务树。
+
+**验收标准**：以下条件必须同时满足。
+
+```bash
+systemctl is-active launcher.service
+ps -eo comm,args | grep -E 'hpu_launcher|gateway_service|galbot_map' | grep -v grep
+ss -ltnp | grep -E ':(8000|18765|9902)\b'
+curl -sS http://127.0.0.1:8000/ | grep -o '<title>[^<]*'
+```
+
+预期为 launcher `active`，三个核心进程存在，8000/18765/9902 均有监听，页面标题为“机器人地图管理平台”；开发电脑访问机器人 `:8000` 返回 HTTP 200。
+
+**开发机 `:8080` 静态地图**：控制台依次尝试 `GALBOT_STATIC_MAP`、HPU 的 `/var/maps/cur/global_cloud_cleaned.pcd`、项目内 `assets/maps/current/global_cloud_cleaned.pcd`。本次已在开发机保留当前 PCD 副本；机器人地图更新后应重新同步并计算新哈希，不能把旧文件大小或 SHA-256 当作永久固定值。
+
+**避免复发**：固定机器人 DHCP 租约；保持 `launcher.service` enabled；不绕过官方服务树；重启后等待 8000、18765、9902 全部就绪；修改地图/定位/网络前记录 `/var/maps/cur` 和进程列表；WebSocket 断开先刷新，不把 `broken pipe` 当成平台崩溃证据；开发机保留当前 PCD，便于机器人重启期间仍能展示场景。
 
 ## HPU 环境详情
 
