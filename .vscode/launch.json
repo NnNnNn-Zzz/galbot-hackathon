@@ -1,0 +1,32 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "冒烟（mock 干跑）",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/smoke_medicine_hw.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": { "MED_IO": "mock", "GALBOT_MOCK": "1" }
+    },
+    {
+      "name": "冒烟（真机 wrapper）",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/smoke_medicine_hw.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": { "MED_IO": "wrapper" }
+    },
+    {
+      "name": "药品场景全流程（mock）",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/scenes/scene_medicine_check/tests/verify_pipeline.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": { "MED_IO": "mock" }
+    }
+  ]
+}
