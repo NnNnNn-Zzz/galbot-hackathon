@@ -29,6 +29,13 @@ class GraspFirstBox(Stage):
         return "抓取桌面左起第一个药盒（固定位姿，不识别）"
 
     def run(self, ctx: Context, io) -> StageResult:
+        # 抓取前先拍一帧留证（非致命）：盲抓版本用于事后复盘「盒子到底在不在点上」，
+        # 后续 VLM 版本在同一个取图点换成「识别校验通过才下爪」。
+        shot = io.capture_image(tag="pre_grasp")
+        ctx.flags["grasp.pre_image"] = shot.get("frame_id")
+        if not shot.get("success"):
+            logger.warning("抓取前拍照失败（%s），盲抓流程不受影响", shot.get("message"))
+
         chain = self.params.get("chain", "right_arm")
         tool = self.params.get("tool", "galbot_gripper")
         pre = self.params.get("pre_grasp_pose", tuning.PRE_GRASP_POSE)

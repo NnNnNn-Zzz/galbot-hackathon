@@ -53,6 +53,10 @@ def emit(step: str, ret: dict) -> bool:
 def main() -> int:
     backend = os.environ.get("MED_IO", "wrapper")
     print(json.dumps({"step": "boot", "backend": backend}, ensure_ascii=False), flush=True)
+    if backend == "mock":
+        # 场景 IO 走 MockIO，但 S4 直接调 wrapper 层，两边 mock 开关要同步
+        from sdk_wrapper import wrapper
+        wrapper.set_mock_mode(True)
     io = build_io(backend)
     failures = 0
 
