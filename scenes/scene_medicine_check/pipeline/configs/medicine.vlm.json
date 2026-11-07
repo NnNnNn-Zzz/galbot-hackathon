@@ -1,12 +1,16 @@
 {
   "name": "medicine.vlm",
   "description": "VLM 校验版：预抓取后拍照交多模态大模型确认，通过才下爪",
-  "version": 3,
+  "version": 4,
   "steps": [
     {
       "id": "preflight",
       "stage": "preflight",
       "non_fatal": true
+    },
+    {
+      "id": "init_pose",
+      "stage": "initialize_pose"
     },
     {
       "id": "grasp",

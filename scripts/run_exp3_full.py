@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""实验 3：全流程低速 —— 7 步完整链路，一人手持急停。
+"""实验 3：全流程低速 —— 8 步完整链路，一人手持急停。
 
 目的
 ----
@@ -21,7 +21,7 @@ tuning.py 里 PRE_DROP_POSE / DROP_POSE 目前是照旧流程抄来的占位值
 ----
     0. 占位值闸门检查（不过则退出，什么都不动）
     1. 打印逐步计划，等你按回车确认（真机模式下）
-    2. 跑完整 7 步
+    2. 跑完整 8 步
     3. 按 criteria.judge_full_pipeline 判定
 
 用法
@@ -103,7 +103,7 @@ def main() -> int:
     # ------------------------------------------------------ 真机交互确认
     is_mock = backend.strip().lower() == "mock"
     if not is_mock and not args.yes:
-        print("\n即将执行完整 7 步。请确认：", flush=True)
+        print("\n即将执行完整 8 步。请确认：", flush=True)
         print("  [ ] 急停按钮在手边，且知道怎么拍", flush=True)
         print("  [ ] 桌面只放一盒，位置已按实验 2 的胶带摆好", flush=True)
         print("  [ ] 桶已放在示教时那个位置（不要挪动）", flush=True)

@@ -12,3 +12,7 @@ task_log.jsonl
 
 # sdk_wrapper/dev 感知层抓帧落盘（mock/真机运行产物）
 sdk_wrapper/dev/runs/
+
+# 运行产物：交接位姿快照、实验日志
+logs/
+*.log

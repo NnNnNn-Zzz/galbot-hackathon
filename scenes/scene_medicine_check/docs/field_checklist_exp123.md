@@ -13,7 +13,7 @@
 | 实验 | 需要的药盒信息 | 不需要的 |
 |---|---|---|
 | 实验 1 空桌 | 无（桌上什么都不放） | 全部 |
-| 实验 2 单盒 | 中心 x=0.40 m、y=-0.10 m、盒腰 z=0.75 m、**盒宽 ≤8 cm** | 药名、批号、生产/过期日期、重量、材质 |
+| 实验 2 单盒 | 中心 x=0.40 m、y=-0.10 m、夹爪目标 z=0.77 m、**盒宽 7.5 cm** | 药名、批号、生产/过期日期、重量、材质 |
 | 实验 3 全流程 | 同实验 2，**另加垃圾桶位置**（要现场示教） | 同上 |
 
 **为什么不需要日期？**
@@ -55,11 +55,12 @@ MED_IO=wrapper python3 scripts/smoke_medicine_hw.py
 MED_IO=wrapper python3 scripts/run_exp1_grasp_only.py
 ```
 
-**看着手臂，确认这四个动作：**
+**看着手臂，确认这五个动作（顺序固定，少了第 0 步就会重演上次的 FAULT）：**
+0. **先到固定初始位** —— 先动腿，再动头部和双臂；右臂关节角换成调宽后的抱持角
 1. 夹爪张开到约 10 cm
 2. 移到 (0.35, -0.10, 0.85) —— 盒子**上方**
-3. 直线下降到 (0.40, -0.10, 0.75) —— 桌面**上方 3 cm**
-4. 夹爪闭合 → 抬到 0.90 → 收臂回抱持位
+3. 直线下降到 (0.40, -0.10, 0.77) —— 桌面**上方 5 cm**
+4. 夹爪闭合到 7.5 cm → 抬到 0.90 → 收臂回抱持位，目视肘部与身体间隙约 5 cm
 
 **通过判据**（脚本会自己判）：
 - `"passed": true`
@@ -71,7 +72,9 @@ MED_IO=wrapper python3 scripts/run_exp1_grasp_only.py
 | 现象 | 处理 |
 |---|---|
 | `passed=false` 且 `grabbed=true` | 桌上有东西没清干净，清空重跑 |
-| `grasp=failed`，报 `move_line_to` 失败 | `GRASP_POSE` z 每次 +0.01（上限 0.80），重跑 |
+| `init_pose=failed`（`init_legs`） | **停下查腿**。腿部归位失败会让后续所有笛卡尔目标从错误基准出发，别去调抓取坐标 |
+| `init_pose=failed`（`init_upper_body`） | **停下查上半身**。头部/双臂初始位没建立，抓取已被自动跳过，确认关节没卡住再重跑 |
+| `grasp=failed`，报 `move_line_to` 失败 | 先确认上一条是 `init_pose=ok`；再按 `GRASP_POSE` z 每次 +0.01（上限 0.80），重跑 |
 | `grasp=unknown` | **停手**。不发任何动作，人工把臂摆回安全位，报给我排查 |
 | 明显撞桌 | 拍急停，抬 z 0.02 再试 |
 
@@ -137,12 +140,12 @@ python3 scripts/teach_drop_pose.py --tag drop   # 读 DROP
 MED_IO=wrapper python3 scripts/run_exp3_full.py
 ```
 
-脚本会先打印 7 步计划，然后**停下来等你按回车**，并列出确认清单：
+脚本会先打印 8 步计划，然后**停下来等你按回车**，并列出确认清单：
 急停在手边 / 桌面一盒 / 桶没动 / 周围无人。
 
 **通过判据：**
 - `"passed": true`
-- 7 步全 `ok`
+- 8 步全 `ok`（`preflight → init_pose → grasp → announce → shift_left → turn_bin → drop → home`）
 - `"home_executed": true`
 
 **故意测失败路径**（也建议做一次）：
@@ -157,7 +160,7 @@ MED_IO=wrapper python3 scripts/run_exp3_full.py
 | `smoke_medicine_hw.py` | 接口冒烟 | 会（小幅） |
 | `run_exp1_grasp_only.py` | 空桌抓取轨迹 | 会 |
 | `run_exp2_one_box.py` | 单盒盲抓 | 会 |
-| `run_exp3_full.py` | 全流程 7 步 | 会 |
+| `run_exp3_full.py` | 全流程 8 步 | 会 |
 | `teach_drop_pose.py` | 读位姿示教 | **不会**（只读） |
 | `probe_camera.py` | 相机诊断 | **不会**（只读） |
 
