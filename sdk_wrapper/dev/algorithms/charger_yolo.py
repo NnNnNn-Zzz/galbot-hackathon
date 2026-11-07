@@ -193,9 +193,14 @@ def _surface_3d_geometry(
     covariance = centered.T @ centered / max(1, len(base_points) - 1)
     values, vectors = np.linalg.eigh(covariance)
     normal = vectors[:, int(np.argmin(values))]
+    normal_norm = float(np.linalg.norm(normal))
+    if normal_norm < 1e-12:
+        return {"available": False, "reason": "surface_normal_has_zero_norm"}
+    normal = normal / normal_norm
     if normal[2] < 0:
         normal = -normal
-    normal = _canonical_axis(normal)
+    # A generic first-nonzero-axis sign canonicalization can flip an almost
+    # vertical normal upside down when its small x component is negative.
 
     candidate_long = vectors[:, int(np.argmax(values))]
     long_axis = candidate_long - float(candidate_long @ normal) * normal
