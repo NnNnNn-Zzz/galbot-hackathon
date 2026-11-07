@@ -1,0 +1,33 @@
+{
+  "version": "0.1",
+  "synthetic": true,
+  "note": [
+    "⚠️ 这份是**合成场景用的参考标定**，synthetic=true。真机必须重新标定后改 false。",
+    "table_corners_px：桌面四角在图像中的像素坐标，顺序必须是 左上→右上→右下→左下（顺时针）。",
+    "table_size_m：桌面实际尺寸 [宽, 深]（米）。俯视图 (0,0) 是左上角，y 增大方向是“靠近机器人”。",
+    "observe_pose：标定时的末端位姿。臂相机装在手臂上会动，同一个单应只在固定位姿下有效；",
+    "              运行时会读 get_end_effector_pose() 与它比对，超差直接拒绝，不硬算。",
+    "edge_inward_base：每条桌沿对应的“朝桌内”单位向量（base_link）。用于决定往哪个方向推。",
+    "                 这项必须在真机上验证：推 2cm 看杯子是不是真的远离桌沿。",
+    "table_to_base：俯视图(mm) → base_link 的二维刚体变换，用于把杯底位置换成机器人坐标。",
+    "标定步骤见 docs/cup_scenario.md。"
+  ],
+  "camera_id": "left_arm",
+  "image_size": [640, 512],
+  "table_corners_px": [[90, 110], [550, 110], [610, 450], [30, 450]],
+  "table_size_m": [0.80, 0.60],
+  "edge_order": ["back", "front", "left", "right"],
+  "edge_inward_base": {
+    "front": [1.0, 0.0, 0.0],
+    "back": [-1.0, 0.0, 0.0],
+    "left": [0.0, -1.0, 0.0],
+    "right": [0.0, 1.0, 0.0]
+  },
+  "observe_pose": [0.45, 0.2, 0.85, 0.0, 0.0, 0.0, 1.0],
+  "observe_pose_tol_m": 0.03,
+  "table_to_base": {
+    "origin_base_m": [0.95, 0.40, 0.0],
+    "axis_u_base": [0.0, -1.0, 0.0],
+    "axis_v_base": [-1.0, 0.0, 0.0]
+  }
+}
