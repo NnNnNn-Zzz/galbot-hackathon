@@ -16,7 +16,11 @@ import numpy as np
 
 from sdk_wrapper.dev.algorithms.charger_yolo import YoloInstance
 
-__all__ = ["analyze_power_strip_box", "draw_power_strip_overlay"]
+__all__ = [
+    "analyze_power_strip_box",
+    "analyze_power_strip_stereo",
+    "draw_power_strip_overlay",
+]
 
 
 def _intrinsics_values(intrinsics: typing.Any) -> tuple[float, float, float, float] | None:
@@ -109,6 +113,8 @@ def analyze_power_strip_box(
         "class_name": instance.class_name,
         "class_id": int(instance.class_id),
         "confidence": round(float(instance.confidence), 6),
+        "image_width": width,
+        "image_height": height,
         "bbox_xyxy": [round(v, 3) for v in (x1, y1, x2, y2)],
         "bbox_width_px": round(bw, 3),
         "bbox_height_px": round(bh, 3),
@@ -127,6 +133,87 @@ def analyze_power_strip_box(
         "semantics": "coarse direction only; depth/stereo qualification required",
     }
     return result
+
+
+def analyze_power_strip_stereo(
+    depth_raw: np.ndarray,
+    bbox_xyxy: typing.Sequence[float],
+    rgb_shape: typing.Sequence[int],
+    *,
+    rgb_timestamp_ns: int = 0,
+    depth_timestamp_ns: int = 0,
+    raw_to_m: float | None = None,
+    min_valid_ratio: float = 0.60,
+    max_relative_spread: float = 0.35,
+    max_timestamp_skew_ms: float = 300.0,
+) -> dict[str, typing.Any]:
+    """Measure stability and optional metric range inside a detector bbox.
+
+    ``FOUNDATION_STEREO`` units remain undocumented. Without ``raw_to_m`` the
+    result is useful only as a stability signal, never as a navigation range.
+    """
+    depth = np.asarray(depth_raw)
+    if depth.ndim != 2 or depth.size == 0:
+        return {"available": False, "reason": "invalid_stereo_depth_shape"}
+    if len(rgb_shape) < 2:
+        raise ValueError("rgb_shape must contain height and width")
+    rgb_h, rgb_w = int(rgb_shape[0]), int(rgb_shape[1])
+    depth_h, depth_w = depth.shape[:2]
+    x1, y1, x2, y2 = [float(v) for v in bbox_xyxy]
+    sx, sy = depth_w / float(rgb_w), depth_h / float(rgb_h)
+    dx1 = max(0, min(depth_w - 1, int(math.floor(x1 * sx))))
+    dy1 = max(0, min(depth_h - 1, int(math.floor(y1 * sy))))
+    dx2 = max(dx1 + 1, min(depth_w, int(math.ceil(x2 * sx))))
+    dy2 = max(dy1 + 1, min(depth_h, int(math.ceil(y2 * sy))))
+    crop = depth[dy1:dy2, dx1:dx2].astype(np.float64)
+    valid = np.isfinite(crop) & (crop > 0)
+    values = crop[valid]
+    valid_ratio = float(valid.mean()) if valid.size else 0.0
+    skew_ms = None
+    if int(rgb_timestamp_ns) > 0 and int(depth_timestamp_ns) > 0:
+        skew_ms = abs(int(depth_timestamp_ns) - int(rgb_timestamp_ns)) / 1_000_000.0
+    reasons: list[str] = []
+    if values.size < 3:
+        reasons.append("insufficient_valid_stereo_pixels")
+        values = np.asarray([], dtype=np.float64)
+    if valid_ratio < float(min_valid_ratio):
+        reasons.append("stereo_valid_ratio_below_minimum")
+    if values.size:
+        p10, median, p90 = np.percentile(values, [10, 50, 90])
+        relative_spread = float((p90 - p10) / max(median, 1e-12))
+    else:
+        p10 = median = p90 = math.nan
+        relative_spread = math.inf
+    if relative_spread > float(max_relative_spread):
+        reasons.append("stereo_relative_spread_too_large")
+    if skew_ms is not None and skew_ms > float(max_timestamp_skew_ms):
+        reasons.append("rgb_stereo_timestamp_skew_too_large")
+
+    metric_distance = None
+    if raw_to_m is not None and math.isfinite(float(raw_to_m)) and values.size:
+        metric_distance = float(median) * float(raw_to_m)
+    return {
+        "available": values.size > 0,
+        "measurement_stable": not reasons,
+        "reasons": reasons,
+        "unit": "m" if metric_distance is not None else "sdk_raw_unverified",
+        "metric_distance_m": metric_distance,
+        "metric_distance_available": metric_distance is not None,
+        "raw_median": None if not values.size else float(median),
+        "raw_p10": None if not values.size else float(p10),
+        "raw_p90": None if not values.size else float(p90),
+        "relative_spread": (
+            None if not math.isfinite(relative_spread) else round(relative_spread, 6)
+        ),
+        "valid_ratio": round(valid_ratio, 6),
+        "rgb_bbox_xyxy": [round(v, 3) for v in (x1, y1, x2, y2)],
+        "depth_bbox_xyxy": [dx1, dy1, dx2, dy2],
+        "rgb_shape": [rgb_h, rgb_w],
+        "depth_shape": [depth_h, depth_w],
+        "rgb_timestamp_ns": int(rgb_timestamp_ns),
+        "depth_timestamp_ns": int(depth_timestamp_ns),
+        "timestamp_skew_ms": None if skew_ms is None else round(skew_ms, 3),
+    }
 
 
 def draw_power_strip_overlay(

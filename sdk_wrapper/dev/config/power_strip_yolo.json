@@ -14,10 +14,17 @@
   "iou": 0.7,
   "device": "cpu",
   "camera": "head_left",
+  "stereo_timeout_s": 8.0,
   "quality": {
     "min_confidence": 0.3,
     "min_width_px": 12.0,
     "min_height_px": 8.0,
     "edge_margin_px": 3
+  },
+  "stereo": {
+    "raw_to_m": null,
+    "min_valid_ratio": 0.6,
+    "max_relative_spread": 0.35,
+    "max_timestamp_skew_ms": 300.0
   }
 }

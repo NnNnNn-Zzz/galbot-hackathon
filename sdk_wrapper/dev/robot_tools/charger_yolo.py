@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import functools
 import json
+import math
 import os
 import time
 import typing
@@ -55,7 +56,7 @@ def _tool(method: typing.Callable[..., ToolResult]) -> typing.Callable[..., Tool
 class ChargerYoloTool:
     """Recognize a charger top surface and validate whether it is actionable."""
 
-    TOOL_NAMES = ("segment_charger_top_wrist",)
+    TOOL_NAMES = ("detect_charger_head", "segment_charger_top_wrist")
 
     def __init__(
         self,
@@ -92,18 +93,27 @@ class ChargerYoloTool:
         depth: np.ndarray | None,
         intrinsics: typing.Any,
         extrinsic: dict[str, typing.Any] | None,
+        purpose: str,
     ) -> tuple[dict[str, typing.Any], np.ndarray]:
-        quality = self.config.get("quality") or {}
+        quality = (
+            self.config.get("head_quality") or {}
+            if purpose == "head_handoff"
+            else self.config.get("quality") or {}
+        )
+        default_area = 300 if purpose == "head_handoff" else 600
+        default_area_ratio = 0.001 if purpose == "head_handoff" else 0.002
+        default_short_edge = 18.0 if purpose == "head_handoff" else 24.0
+        default_fill_ratio = 0.25 if purpose == "head_handoff" else 0.30
         analysis, mask = analyze_charger_top(
             instance,
             bgr.shape[:2],
             depth_m=depth,
             intrinsics=intrinsics,
             extrinsic=None if extrinsic is None else extrinsic.get("transform"),
-            min_area_px=int(quality.get("min_area_px", 600)),
-            min_area_ratio=float(quality.get("min_area_ratio", 0.002)),
-            min_short_edge_px=float(quality.get("min_short_edge_px", 24.0)),
-            min_mask_fill_ratio=float(quality.get("min_mask_fill_ratio", 0.30)),
+            min_area_px=int(quality.get("min_area_px", default_area)),
+            min_area_ratio=float(quality.get("min_area_ratio", default_area_ratio)),
+            min_short_edge_px=float(quality.get("min_short_edge_px", default_short_edge)),
+            min_mask_fill_ratio=float(quality.get("min_mask_fill_ratio", default_fill_ratio)),
             edge_margin_px=int(quality.get("edge_margin_px", 3)),
             min_depth_valid_ratio=float(quality.get("min_depth_valid_ratio", 0.80)),
             max_depth_m=float(quality.get("max_depth_m", 1.5)),
@@ -120,6 +130,7 @@ class ChargerYoloTool:
         *,
         include_depth: bool,
         require_mask: bool,
+        purpose: str,
         note: str,
     ) -> ToolResult:
         try:
@@ -208,6 +219,7 @@ class ChargerYoloTool:
                 snap.depth,
                 depth_intrinsics,
                 depth_extrinsic,
+                purpose,
             )
             analyzed.append((analysis, instance, mask))
         if not analyzed:
@@ -267,6 +279,46 @@ class ChargerYoloTool:
         ):
             selected["rejection_reasons"].append("rgb_depth_timestamp_skew_too_large")
         selected["eligible_for_precision"] = not selected["rejection_reasons"]
+        head_handoff: dict[str, typing.Any] | None = None
+        if purpose == "head_handoff":
+            head_quality = self.config.get("head_quality") or {}
+            head_reasons = list(selected["rejection_reasons"])
+            head_reasons = [
+                item for item in head_reasons
+                if item not in {
+                    "depth_unavailable",
+                    "surface_3d_intrinsics_or_extrinsics_unavailable",
+                    "surface_3d_unavailable",
+                }
+            ]
+            if selected["image_space"]["mask_area_px"] < int(
+                head_quality.get("min_area_px", 300)
+            ):
+                head_reasons.append("head_mask_area_below_minimum")
+            if selected["image_space"]["short_edge_px"] < float(
+                head_quality.get("min_short_edge_px", 18.0)
+            ):
+                head_reasons.append("head_short_edge_below_minimum")
+            if selected["image_space"]["mask_fill_ratio"] < float(
+                head_quality.get("min_mask_fill_ratio", 0.25)
+            ):
+                head_reasons.append("head_mask_fill_ratio_below_minimum")
+            bbox = selected["bbox_xyxy"]
+            bbox_center_x = (float(bbox[0]) + float(bbox[2])) / 2.0
+            fx = float(snap.intr.fx)
+            cx0 = float(snap.intr.cx)
+            horizontal_angle_deg = math.degrees(math.atan2(bbox_center_x - cx0, fx))
+            head_handoff = {
+                "usable_for_wrist_handoff": not head_reasons,
+                "reasons": head_reasons,
+                "horizontal_angle_deg": round(horizontal_angle_deg, 4),
+                "purpose": "select wrist observation; not a precision grasp point",
+                "grasp_coordinate": None,
+            }
+            selected["head_handoff"] = head_handoff
+            # Head observations can hand off to wrist planning, but absence of
+            # D405 depth and calibration always prevents direct precision use.
+            selected["eligible_for_precision"] = False
         selected.update(
             {
                 "camera_id": camera_id,
@@ -296,7 +348,18 @@ class ChargerYoloTool:
         )
         selected["observation_ref"] = str(report_path)
 
-        if selected["eligible_for_precision"]:
+        if purpose == "head_handoff":
+            if head_handoff and head_handoff["usable_for_wrist_handoff"]:
+                message = (
+                    "头部检测到完整 charger 上表面，可开始腕部观察位规划；"
+                    "该结果不生成抓取坐标"
+                )
+            else:
+                message = (
+                    "头部已识别 charger，但还不能切换腕部："
+                    + ", ".join((head_handoff or {}).get("reasons", []))
+                )
+        elif selected["eligible_for_precision"]:
             message = (
                 f"charger 上表面可精定位：conf={instance.confidence:.3f}, "
                 f"短边={selected['image_space']['short_edge_px']:.1f}px, "
@@ -310,11 +373,23 @@ class ChargerYoloTool:
         return ok(message, self.mode, data=selected)
 
     @_tool
+    def detect_charger_head(self) -> ToolResult:
+        """Head-camera charger-top detection for wrist observation handoff."""
+        return self._recognize(
+            str(self.config.get("head_camera", "head_left")),
+            include_depth=False,
+            require_mask=True,
+            purpose="head_handoff",
+            note="charger YOLO head mid-range wrist handoff",
+        )
+
+    @_tool
     def segment_charger_top_wrist(self) -> ToolResult:
         """Right-wrist charger top segmentation plus D405 depth validation."""
         return self._recognize(
             str(self.config.get("wrist_camera", "right_arm")),
             include_depth=True,
             require_mask=True,
+            purpose="precision",
             note="charger YOLO right-wrist top-surface validation",
         )

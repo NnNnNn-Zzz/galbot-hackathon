@@ -1,6 +1,6 @@
 # 充电器视觉抓取：Tool 层设计
 
-> 状态：头部 strip 检测、腕部 charger 上表面识别和只读相机/手眼标定检查已实现；底盘靠近、双深度交叉验证和抓取动作尚未授权执行。
+> 状态：头部 strip 搜索、观察带分段靠近、头部 charger 检测、腕部交接和只读相机/手眼标定检查已实现；双深度交叉验证和抓取动作尚未授权执行。
 
 ## 1. 目标与安全边界
 
@@ -17,7 +17,10 @@
 
 ```text
 大模型
-  -> PowerStripYoloTool.detect_power_strip_head()
+  -> ChargerSearchTool.observe_charger_search()
+  -> ChargerSearchTool.advance_charger_search(operator_confirmed=True)
+       -> PowerStripYoloTool.detect_power_strip_head()
+       -> ChargerYoloTool.detect_charger_head()
   -> ChargerYoloTool.segment_charger_top_wrist()
   -> 后续 ChargerGraspTool.plan_observation() / align_and_grasp()
        -> PerceptionTool / StereoDepthTool    （视觉与深度）
@@ -30,7 +33,7 @@
 
 ## 3. 阶段 A：头部粗定位与分段靠近
 
-1. 读取头左 RGB，运行轻量 YOLO 检测 `power_strip` 整体框。它与腕部近距 `charger` 模型是两个独立模型。
+1. 读取头左 RGB，运行轻量 YOLO 检测 `power_strip` 整体框。它与近距 `charger` 模型是两个独立模型。
 2. 同时取得头部双目深度。检测框缩放到深度分辨率，不能假设两者分辨率相同。
 3. 对框内深度检查：
    - 有效像素比例；
@@ -42,11 +45,24 @@
 6. 每次分段移动前后都必须确认底盘停稳；在留有余量的观察位停止，不能把远处检测框中心直接升级为抓取坐标。
 7. RGB 与深度时间戳偏差超过门槛时不能把分割掩码直接套到深度上。
 
-当前头部双目数值的单位尚未由 SDK 文档确认，必须先做现场尺度标定。未标定前，`StereoDepthTool` 的数值不能作为米制距离使用。
+视觉状态机固定为：
+
+```text
+find_power_strip
+  -> approach_power_strip
+  -> stop_and_scan_charger
+  -> find_charger
+  -> approach_charger
+  -> lock_base_for_wrist
+```
+
+每次 `advance_charger_search()` 最多执行一个受监督的小段位移/转向，结束后立即停止底盘并重新检测。头部双目单位未确认时以 `power_strip` 框宽比例作为观察带条件，不使用框中心距离；头部双目尺度标定通过后才加入米制观察距离。
+
+双目框内统计有效比例、10/90 分位相对离散度和 RGB/双目时间戳差。配置 `raw_to_m=null` 时只输出 `sdk_raw_unverified` 稳定性，不能作为米制距离；此时观察带由 strip 框宽比例决定。配置米制尺度且多帧稳定后，才使用 `observation_distance_m` 选择停车点。
 
 ## 4. 阶段 B：腕部观察位与切换门槛
 
-底盘锁定后，腰和右臂把 D405 / 右腕相机转向充电器上表面。至少连续 3 帧满足以下条件才允许切换精定位：
+头部 charger 上表面完整、短边尺寸足够、未触边后，状态机进入 `lock_base_for_wrist`。底盘锁定后，腰和右臂把 D405 / 右腕相机转向充电器上表面。至少连续 3 帧满足以下条件才允许切换精定位：
 
 1. YOLO-seg 检测到上表面掩码，置信度稳定。
 2. 掩码和检测框不接触图像边缘，上表面没有明显裁切。
@@ -85,8 +101,11 @@
 ## 7. 当前已实现（第一阶段）
 
 - 头部 `power_strip` 检测工具 `PowerStripYoloTool.detect_power_strip_head()`：当前选择 `/home/mr/yoloseg/runs/yolo11n_detect/weights/best.pt`，单类 `power_strip`；训练集 35 张 / 验证集 9 张，验证 `mAP50(B)=0.995`、`mAP50-95(B)=0.581`。输出只到方向/靠近候选，`grasp_coordinate` 明确为 null。
+- `ChargerSearchTool` 串联“发现 strip -> 视觉观察带 -> 头部 charger -> 腕部交接”。每段移动都要求 `operator_confirmed=True`、检查机器人 idle、结束强制停底盘并重新检测。
+- `ChargerYoloTool.detect_charger_head()` 使用 charger 分割模型做中距交接；它只输出 `head_handoff` 和方向，不输出抓取坐标，`eligible_for_precision=false`。
+- 头部 charger 交接门槛包含完整掩码、触边状态、掩码面积和短边像素，不只看面积。
 - 自动发现 `/home/mr/yoloseg/runs` 下时间最新的 `best.pt`，验证 `task=segment` 和类别 `charger` 后才加载。
-- 当前选中 `/home/mr/yoloseg/runs/yolo11n_seg_charger/weights/best.pt`：YOLO11n-seg、单类 `charger`、输入 640、98 个训练 epoch。数据仅 21 张训练 / 5 张验证，验证集指标 `mAP50(B)=0.795`、`mAP50(M)=0.795`，只能作为初版权重，不能据此宣称现场泛化可靠。
+- 当前选中更新的 `/home/mr/yoloseg/runs/yolo11n_seg_charger_v2/weights/best.pt`：YOLO11n-seg、单类 `charger`、输入 640、100 个训练 epoch。数据为 39 张训练 / 10 张验证，验证集 `mAP50(B)=0.707`、`mAP50-95(B)=0.555`。v2 验证集与 v1 不同，指标不能直接横向比较，只能作为初版权重。
 - YOLO-seg 输出归一化为完整分辨率布尔掩码。
 - 计算掩码面积、短边像素、填充率、触边状态、长边方向。
 - 计算掩码内深度有效率、深度范围、上表面平面、法向、表面中心、长 / 短边三维尺寸。

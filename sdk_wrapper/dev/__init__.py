@@ -39,6 +39,10 @@ from sdk_wrapper.dev.robot_tools.stereo_depth import StereoDepthTool  # noqa: F4
 from sdk_wrapper.dev.robot_tools.squat import SquatTool  # noqa: F401
 from sdk_wrapper.dev.robot_tools.torso_lean import TorsoLeanTool  # noqa: F401
 from sdk_wrapper.dev.robot_tools.head import HeadLookTool  # noqa: F401
+from sdk_wrapper.dev.robot_tools.calibration import CameraCalibrationTool  # noqa: F401
+from sdk_wrapper.dev.robot_tools.charger_search import ChargerSearchTool  # noqa: F401
+from sdk_wrapper.dev.robot_tools.charger_yolo import ChargerYoloTool  # noqa: F401
+from sdk_wrapper.dev.robot_tools.power_strip_yolo import PowerStripYoloTool  # noqa: F401
 
 __all__ = [
     "ErrorCode",
@@ -57,4 +61,8 @@ __all__ = [
     "SquatTool",
     "TorsoLeanTool",
     "HeadLookTool",
+    "CameraCalibrationTool",
+    "ChargerSearchTool",
+    "ChargerYoloTool",
+    "PowerStripYoloTool",
 ]

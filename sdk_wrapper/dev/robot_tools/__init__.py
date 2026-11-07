@@ -23,4 +23,8 @@ __all__ = [
     "squat",
     "torso_lean",
     "head",
+    "calibration",
+    "charger_search",
+    "charger_yolo",
+    "power_strip_yolo",
 ]

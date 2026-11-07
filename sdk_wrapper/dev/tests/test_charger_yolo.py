@@ -149,6 +149,24 @@ class ChargerYoloToolTest(unittest.TestCase):
             self.assertTrue(result.data["depth_alignment_verified"])
             self.assertEqual(backend.calls, 1)
 
+    def test_head_detection_can_handoff_to_wrist_without_grasp_coordinate(self):
+        adapter = MockAdapter()
+        perception = PerceptionTool(adapter)
+        backend = ConstantBackend([rectangle_instance(180, 180, 420, 270)])
+
+        with tempfile.TemporaryDirectory() as directory:
+            tool = ChargerYoloTool(
+                perception,
+                backend=backend,
+                output_dir=Path(directory),
+            )
+            result = tool.detect_charger_head()
+
+        self.assertEqual(result.status, TaskStatus.SUCCEEDED)
+        self.assertTrue(result.data["head_handoff"]["usable_for_wrist_handoff"])
+        self.assertIsNone(result.data["head_handoff"]["grasp_coordinate"])
+        self.assertFalse(result.data["eligible_for_precision"])
+
     def test_missing_depth_keeps_detection_but_blocks_precision(self):
         adapter = MockAdapter(fail_depth=True)
         perception = PerceptionTool(adapter)

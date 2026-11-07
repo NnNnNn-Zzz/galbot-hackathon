@@ -2,9 +2,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import numpy as np
+
 from sdk_wrapper.dev.adapters import MockAdapter
 from sdk_wrapper.dev.algorithms.charger_yolo import YoloInstance
-from sdk_wrapper.dev.algorithms.power_strip_yolo import analyze_power_strip_box
+from sdk_wrapper.dev.algorithms.power_strip_yolo import (
+    analyze_power_strip_box,
+    analyze_power_strip_stereo,
+)
 from sdk_wrapper.dev.contracts import ErrorCode, TaskStatus
 from sdk_wrapper.dev.robot_tools.perception import PerceptionTool
 from sdk_wrapper.dev.robot_tools.power_strip_yolo import PowerStripYoloTool
@@ -59,6 +64,31 @@ class PowerStripGeometryTest(unittest.TestCase):
         self.assertFalse(result["usable_for_direction"])
         self.assertIn("bbox_touches_image_edge", result["rejection_reasons"])
         self.assertIsNone(result["grasp_coordinate"])
+
+    def test_stereo_measurement_requires_scale_and_stable_values(self):
+        depth_raw = np.full((256, 320), 800, dtype=np.uint16)
+        result = analyze_power_strip_stereo(
+            depth_raw,
+            [80, 60, 240, 160],
+            (256, 320),
+            raw_to_m=0.001,
+            rgb_timestamp_ns=1_000_000_000,
+            depth_timestamp_ns=1_010_000_000,
+        )
+
+        self.assertTrue(result["available"])
+        self.assertTrue(result["measurement_stable"])
+        self.assertTrue(result["metric_distance_available"])
+        self.assertAlmostEqual(result["metric_distance_m"], 0.8)
+
+        unscaled = analyze_power_strip_stereo(
+            depth_raw,
+            [80, 60, 240, 160],
+            (256, 320),
+            raw_to_m=None,
+        )
+        self.assertFalse(unscaled["metric_distance_available"])
+        self.assertEqual(unscaled["unit"], "sdk_raw_unverified")
 
 
 class PowerStripToolTest(unittest.TestCase):

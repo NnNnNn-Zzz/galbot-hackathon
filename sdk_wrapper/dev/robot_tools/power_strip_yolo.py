@@ -11,10 +11,12 @@ import uuid
 from pathlib import Path
 
 import cv2
+import numpy as np
 
 from sdk_wrapper.dev.algorithms.charger_yolo import UltralyticsYoloBackend
 from sdk_wrapper.dev.algorithms.power_strip_yolo import (
     analyze_power_strip_box,
+    analyze_power_strip_stereo,
     draw_power_strip_overlay,
 )
 from sdk_wrapper.dev.contracts import ErrorCode, RunMode, ToolError, ToolResult, failed, ok
@@ -54,6 +56,7 @@ class PowerStripYoloTool:
         perception: PerceptionTool,
         *,
         backend: typing.Any = None,
+        stereo_tool: typing.Any = None,
         config_path: str | os.PathLike[str] = _CONFIG_PATH,
         output_dir: str | os.PathLike[str] = _DEFAULT_OUTPUT,
     ) -> None:
@@ -70,6 +73,11 @@ class PowerStripYoloTool:
             iou=float(self.config.get("iou", 0.70)),
             device=str(self.config.get("device", "cpu")),
         )
+        if stereo_tool is None and self.mode is RunMode.REAL:
+            from sdk_wrapper.dev.robot_tools.stereo_depth import StereoDepthTool
+
+            stereo_tool = StereoDepthTool(warmup_s=10.0)
+        self.stereo_tool = stereo_tool
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -128,6 +136,38 @@ class PowerStripYoloTool:
             reverse=True,
         )
         selected, instance = analyzed[0]
+        stereo = None
+        if self.stereo_tool is not None:
+            stereo_result = self.stereo_tool.capture_stereo_depth(
+                timeout_s=float(self.config.get("stereo_timeout_s", 8.0))
+            )
+            if stereo_result.succeeded and stereo_result.data.get("depth_ref"):
+                depth_raw = np.load(stereo_result.data["depth_ref"], allow_pickle=False)
+                stereo_config = self.config.get("stereo") or {}
+                stereo = analyze_power_strip_stereo(
+                    depth_raw,
+                    selected["bbox_xyxy"],
+                    snap.bgr.shape[:2],
+                    rgb_timestamp_ns=int(snap.data.get("rgb_timestamp_ns") or 0),
+                    depth_timestamp_ns=int(stereo_result.data.get("timestamp_ns") or 0),
+                    raw_to_m=stereo_config.get("raw_to_m"),
+                    min_valid_ratio=float(stereo_config.get("min_valid_ratio", 0.60)),
+                    max_relative_spread=float(
+                        stereo_config.get("max_relative_spread", 0.35)
+                    ),
+                    max_timestamp_skew_ms=float(
+                        stereo_config.get("max_timestamp_skew_ms", 300.0)
+                    ),
+                )
+                stereo["capture_id"] = stereo_result.data.get("capture_id")
+                stereo["depth_ref"] = stereo_result.data.get("depth_ref")
+                stereo["sensor_name"] = stereo_result.data.get("sensor_name")
+            else:
+                stereo = {
+                    "available": False,
+                    "measurement_stable": False,
+                    "reason": stereo_result.message,
+                }
         overlay = draw_power_strip_overlay(snap.bgr, instance, selected)
 
         folder = self.output_dir / (
@@ -149,6 +189,7 @@ class PowerStripYoloTool:
                 "overlay_ref": str(overlay_path),
                 "camera_timestamp_ns": int(snap.data.get("rgb_timestamp_ns") or 0),
                 "warnings": list(snap.warnings),
+                "stereo": stereo,
                 "approach_mode": "bearing_only",
                 "requires_fresh_detection_after_each_segment": True,
                 "model": model_info,

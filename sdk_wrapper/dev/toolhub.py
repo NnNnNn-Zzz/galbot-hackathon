@@ -43,11 +43,16 @@ __all__ = [
     "configure", "get_adapter", "describe", "shutdown", "tool_names",
     # 工具实例
     "motion", "perception", "navigation", "audio", "scenario", "result_to_dict",
+    "power_strip_yolo", "charger_yolo", "calibration", "charger_search",
     # 底盘
     "move_base", "move_forward", "move_backward", "turn", "stop_base",
     # 相机 / 感知
     "capture_frame", "capture_right_wrist", "read_sensor",
     "list_cameras", "find_object", "inspect_table", "capture_scene",
+    "detect_power_strip_head", "detect_charger_head",
+    "segment_charger_top_wrist", "observe_charger_search",
+    "advance_charger_search", "reset_charger_search",
+    "check_right_wrist_rgbd_calibration", "check_right_arm_eye_in_hand",
     # 手臂 / 夹爪
     "get_ee_pose", "move_arm_to", "move_arm_delta",
     "set_gripper", "open_gripper", "close_gripper",
@@ -183,6 +188,7 @@ def tool_names() -> list[str]:
     return [name for name in __all__ if name not in (
         "configure", "get_adapter", "describe", "shutdown", "tool_names",
         "motion", "perception", "navigation", "audio", "scenario", "result_to_dict",
+        "power_strip_yolo", "charger_yolo", "calibration", "charger_search",
     )]
 
 
@@ -236,6 +242,42 @@ def scenario() -> typing.Any:
     if "scenario" not in _tools:
         _tools["scenario"] = CupScenario(perception(), audio(), motion())
     return _tools["scenario"]
+
+
+def power_strip_yolo() -> typing.Any:
+    from sdk_wrapper.dev.robot_tools.power_strip_yolo import PowerStripYoloTool
+
+    if "power_strip_yolo" not in _tools:
+        _tools["power_strip_yolo"] = PowerStripYoloTool(perception())
+    return _tools["power_strip_yolo"]
+
+
+def charger_yolo() -> typing.Any:
+    from sdk_wrapper.dev.robot_tools.charger_yolo import ChargerYoloTool
+
+    if "charger_yolo" not in _tools:
+        _tools["charger_yolo"] = ChargerYoloTool(perception())
+    return _tools["charger_yolo"]
+
+
+def calibration() -> typing.Any:
+    from sdk_wrapper.dev.robot_tools.calibration import CameraCalibrationTool
+
+    if "calibration" not in _tools:
+        _tools["calibration"] = CameraCalibrationTool(perception())
+    return _tools["calibration"]
+
+
+def charger_search() -> typing.Any:
+    from sdk_wrapper.dev.robot_tools.charger_search import ChargerSearchTool
+
+    if "charger_search" not in _tools:
+        _tools["charger_search"] = ChargerSearchTool(
+            perception(),
+            strip_tool=power_strip_yolo(),
+            charger_tool=charger_yolo(),
+        )
+    return _tools["charger_search"]
 
 
 def result_to_dict(res: typing.Any) -> dict:
@@ -445,6 +487,43 @@ def capture_scene(camera_id: typing.Any = None, include_depth: bool = True,
                   note: str = "") -> dict:
     cam = _resolve_camera(camera_id) if camera_id else None
     return result_to_dict(perception().capture_scene(cam, include_depth, note))
+
+
+def detect_power_strip_head() -> dict:
+    return result_to_dict(power_strip_yolo().detect_power_strip_head())
+
+
+def detect_charger_head() -> dict:
+    return result_to_dict(charger_yolo().detect_charger_head())
+
+
+def segment_charger_top_wrist() -> dict:
+    return result_to_dict(charger_yolo().segment_charger_top_wrist())
+
+
+def observe_charger_search() -> dict:
+    return result_to_dict(charger_search().observe_charger_search())
+
+
+def advance_charger_search(operator_confirmed: bool = False) -> dict:
+    """Advance one bounded head-camera search/approach step."""
+    return result_to_dict(
+        charger_search().advance_charger_search(
+            operator_confirmed=operator_confirmed
+        )
+    )
+
+
+def reset_charger_search() -> dict:
+    return result_to_dict(charger_search().reset_charger_search())
+
+
+def check_right_wrist_rgbd_calibration() -> dict:
+    return result_to_dict(calibration().check_right_wrist_rgbd_calibration())
+
+
+def check_right_arm_eye_in_hand() -> dict:
+    return result_to_dict(calibration().check_right_arm_eye_in_hand())
 
 
 # ══════════════════════════════════════════════════════════════════════════ #
