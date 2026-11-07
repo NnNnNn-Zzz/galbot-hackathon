@@ -6,6 +6,8 @@ import math
 import uuid
 from dataclasses import dataclass
 
+import numpy as np
+
 from sdk_wrapper.dev.contracts import (
     ErrorCode,
     RunMode,
@@ -86,6 +88,10 @@ class MockAdapter(SyntheticCameraMixin, RobotAdapter):
         self._base_moves: list[dict[str, object]] = []
         self._base_stops: int = 0
         self._base_pose: list[float] = [0.0, 0.0, 0.0]
+        self._camera_seed = {
+            "right_arm": list(self.get_sensor_extrinsic("RIGHT_ARM_CAMERA")[0]),
+            "left_arm": list(self.get_sensor_extrinsic("LEFT_ARM_CAMERA")[0]),
+        }
 
     @property
     def mode(self) -> RunMode:
@@ -145,6 +151,44 @@ class MockAdapter(SyntheticCameraMixin, RobotAdapter):
         if invalid is not None:
             return invalid
         return self._start_task("navigation", place_id)
+
+    def get_map_pose(self) -> ToolResult:
+        return ok(
+            "Mock map pose retrieved.",
+            self.mode,
+            data={"pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0], "frame": "map"},
+        )
+
+    def check_path_reachability(self, goal_pose, start_pose=None) -> ToolResult:
+        goal = [float(v) for v in list(goal_pose)]
+        if len(goal) != 7:
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                "goal_pose must contain 7 values.",
+                mode=self.mode,
+            )
+        return ok(
+            "Mock path is reachable.",
+            self.mode,
+            data={"reachable": True, "goal_pose": goal},
+        )
+
+    def navigate_to_pose(
+        self,
+        pose,
+        *,
+        frame="map",
+        speed_ratio=0.5,
+        enable_collision_check=True,
+    ) -> ToolResult:
+        target = [float(v) for v in list(pose)]
+        if len(target) != 7:
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                "pose must contain 7 values.",
+                mode=self.mode,
+            )
+        return self._start_task("navigation_pose", str(target))
 
     def get_task_status(self, task_id: str) -> ToolResult:
         invalid = self._validate_task_id(task_id)
@@ -299,8 +343,30 @@ class MockAdapter(SyntheticCameraMixin, RobotAdapter):
                 mode=self.mode,
             )
         if frame_id == "Camera":
-            sensor = "RIGHT_ARM_CAMERA" if chain == "right_arm" else "LEFT_ARM_CAMERA"
-            pose, timestamp_ns = self.get_sensor_extrinsic(sensor, reference_frame)
+            if chain not in self._ee_pose:
+                return rejected(
+                    ErrorCode.INVALID_ARGUMENT,
+                    f"Mock 未记录该链的位姿：{chain!r}",
+                    mode=self.mode,
+                )
+            from sdk_wrapper.dev.algorithms import geometry as geo
+
+            initial_ee = geo.extrinsic_to_matrix(self.DEFAULT_EE_POSE[chain])
+            ee_from_camera = np.linalg.inv(initial_ee) @ geo.extrinsic_to_matrix(
+                self._camera_seed[chain]
+            )
+            current_camera = geo.extrinsic_to_matrix(self._ee_pose[chain]) @ ee_from_camera
+            qx, qy, qz, qw = geo.matrix_to_quaternion(current_camera[:3, :3])
+            pose = [
+                float(current_camera[0, 3]),
+                float(current_camera[1, 3]),
+                float(current_camera[2, 3]),
+                qx,
+                qy,
+                qz,
+                qw,
+            ]
+            timestamp_ns = 0
         else:
             if chain not in self._ee_pose:
                 return rejected(
@@ -320,6 +386,37 @@ class MockAdapter(SyntheticCameraMixin, RobotAdapter):
                 "pose": list(pose),
                 "timestamp_ns": int(timestamp_ns),
                 "unit": "m",
+            },
+        )
+
+    def check_end_effector_reachable(
+        self,
+        chain: str,
+        pose: typing.Sequence[float],
+        *,
+        enable_collision_check: bool = True,
+    ) -> ToolResult:
+        if chain not in self._ee_pose:
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                f"Mock 未记录该链：{chain!r}",
+                mode=self.mode,
+            )
+        target = [float(v) for v in list(pose)]
+        if len(target) != 7:
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                "pose 必须是 7 个数值",
+                mode=self.mode,
+            )
+        return ok(
+            f"Mock {chain} 目标位姿可解",
+            mode=self.mode,
+            data={
+                "chain": chain,
+                "target_pose": target,
+                "reachable": True,
+                "collision_check": bool(enable_collision_check),
             },
         )
 

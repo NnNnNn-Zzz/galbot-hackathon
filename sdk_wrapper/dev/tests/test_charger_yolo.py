@@ -1,3 +1,5 @@
+import json
+import math
 import tempfile
 import unittest
 from pathlib import Path
@@ -6,7 +8,7 @@ import numpy as np
 
 from sdk_wrapper.dev.adapters import MockAdapter
 from sdk_wrapper.dev.algorithms.charger_yolo import YoloInstance, analyze_charger_top
-from sdk_wrapper.dev.contracts import ErrorCode, TaskStatus
+from sdk_wrapper.dev.contracts import ErrorCode, TaskStatus, ok
 from sdk_wrapper.dev.robot_tools.charger_yolo import ChargerYoloTool
 from sdk_wrapper.dev.robot_tools.perception import PerceptionTool
 
@@ -47,6 +49,26 @@ class ConstantBackend:
     def predict(self, bgr):
         self.calls += 1
         return list(self.instances)
+
+
+class FakeStereoTool:
+    def __init__(self, depth, directory):
+        self.depth = depth
+        self.directory = Path(directory)
+
+    def capture_stereo_depth(self, timeout_s=8.0):
+        path = self.directory / "fake_stereo_depth.npy"
+        np.save(path, self.depth, allow_pickle=False)
+        return ok(
+            "stereo",
+            "mock",
+            data={
+                "capture_id": "fake_stereo",
+                "depth_ref": str(path),
+                "timestamp_ns": 0,
+                "sensor_name": "head_left_camera_color_optical_frame",
+            },
+        )
 
 
 class ChargerYoloGeometryTest(unittest.TestCase):
@@ -121,6 +143,55 @@ class ChargerYoloGeometryTest(unittest.TestCase):
         self.assertIn("depth_valid_ratio_below_minimum", result["rejection_reasons"])
         self.assertIn("surface_3d_unavailable", result["rejection_reasons"])
 
+    def test_side_surface_with_small_dimensions_and_large_tilt_is_rejected(self):
+        instance = rectangle_instance(180, 180, 420, 270)
+        depth = np.full((512, 640), 0.45, dtype=np.float32)
+        angle = math.radians(60.0)
+        tilted_extrinsic = [
+            0.35,
+            0.12,
+            0.55,
+            0.0,
+            math.sin(angle / 2.0),
+            0.0,
+            math.cos(angle / 2.0),
+        ]
+
+        result, _ = analyze_charger_top(
+            instance,
+            (512, 640),
+            depth_m=depth,
+            intrinsics={"fx": 520.0, "fy": 520.0, "cx": 320.0, "cy": 256.0},
+            extrinsic=tilted_extrinsic,
+            min_short_dimension_m=0.04,
+            max_surface_tilt_deg=30.0,
+        )
+
+        self.assertFalse(result["eligible_for_precision"])
+        self.assertIn(
+            "surface_normal_tilt_above_maximum",
+            result["rejection_reasons"],
+        )
+
+    def test_compact_charger_top_above_calibrated_minimums_is_accepted(self):
+        instance = rectangle_instance(250, 200, 285, 230)
+        depth = np.full((512, 640), 0.45, dtype=np.float32)
+
+        result, _ = analyze_charger_top(
+            instance,
+            (512, 640),
+            depth_m=depth,
+            intrinsics={"fx": 520.0, "fy": 520.0, "cx": 320.0, "cy": 256.0},
+            extrinsic=[0.35, 0.12, 0.55, 0.0, 0.0, 0.0, 1.0],
+            min_long_dimension_m=0.02,
+            min_short_dimension_m=0.015,
+            max_surface_tilt_deg=30.0,
+        )
+
+        self.assertTrue(result["eligible_for_precision"])
+        self.assertGreaterEqual(result["surface"]["long_dimension_m"], 0.02)
+        self.assertGreaterEqual(result["surface"]["short_dimension_m"], 0.015)
+
 
 class ChargerYoloToolTest(unittest.TestCase):
     def test_wrist_tool_returns_structured_observation_and_artifacts(self):
@@ -148,6 +219,42 @@ class ChargerYoloToolTest(unittest.TestCase):
             self.assertEqual(result.data["depth_rgb_alignment"], "calibration_match")
             self.assertTrue(result.data["depth_alignment_verified"])
             self.assertEqual(backend.calls, 1)
+
+    def test_head_detection_can_handoff_to_wrist_without_grasp_coordinate(self):
+        adapter = MockAdapter()
+        perception = PerceptionTool(adapter)
+        backend = ConstantBackend([rectangle_instance(180, 180, 420, 270)])
+
+        with tempfile.TemporaryDirectory() as directory:
+            config = json.loads(
+                (Path(__file__).resolve().parents[1] / "config" / "charger_yolo.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            config["stereo"]["raw_to_m"] = 0.001
+            config["target_safety"]["min_range_m"] = 0.30
+            config_path = Path(directory) / "config.json"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            tool = ChargerYoloTool(
+                perception,
+                backend=backend,
+                stereo_tool=FakeStereoTool(
+                    np.full((512, 640), 900, dtype=np.uint16),
+                    directory,
+                ),
+                config_path=config_path,
+                output_dir=Path(directory),
+            )
+            result = tool.detect_charger_head()
+
+        self.assertEqual(result.status, TaskStatus.SUCCEEDED)
+        self.assertTrue(result.data["head_handoff"]["usable_for_wrist_handoff"])
+        self.assertTrue(result.data["head_handoff"]["target_safety"]["safe"])
+        self.assertTrue(
+            result.data["head_handoff"]["target_3d"]["available"]
+        )
+        self.assertIsNone(result.data["head_handoff"]["grasp_coordinate"])
+        self.assertFalse(result.data["eligible_for_precision"])
 
     def test_missing_depth_keeps_detection_but_blocks_precision(self):
         adapter = MockAdapter(fail_depth=True)

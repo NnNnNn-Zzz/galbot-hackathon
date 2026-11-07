@@ -19,4 +19,9 @@ __all__ = [
     "color_detection",
     "scene_analyzer",
     "place_resolver",
+    "calibration",
+    "observation_pose",
+    "charger_search",
+    "charger_yolo",
+    "power_strip_yolo",
 ]

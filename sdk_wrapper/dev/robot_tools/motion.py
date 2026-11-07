@@ -77,6 +77,83 @@ class MotionTool:
             return rejection
         return self.adapter.get_end_effector_pose(chain)
 
+    def get_chain_frame_pose(
+        self,
+        chain: str = "right_arm",
+        frame_id: str = "Camera",
+        reference_frame: str = "base_link",
+    ) -> ToolResult:
+        rejection = self.safety.authorize()
+        if rejection is not None:
+            return rejection
+        return self.adapter.get_chain_frame_pose(
+            chain, frame_id, reference_frame
+        )
+
+    def get_robot_state(self) -> ToolResult:
+        rejection = self.safety.authorize()
+        if rejection is not None:
+            return rejection
+        return self.adapter.get_robot_state()
+
+    def check_ee_pose_reachable(
+        self,
+        pose: typing.Sequence[float],
+        *,
+        chain: str = "right_arm",
+        enable_collision_check: bool = True,
+    ) -> ToolResult:
+        """Read-only IK/collision preflight before an absolute arm command."""
+        rejection = self.safety.authorize()
+        if rejection is not None:
+            return rejection
+        return self.adapter.check_end_effector_reachable(
+            chain,
+            pose,
+            enable_collision_check=enable_collision_check,
+        )
+
+    def stop_base(self) -> ToolResult:
+        rejection = self.safety.authorize()
+        if rejection is not None:
+            return rejection
+        result = self.adapter.stop_base()
+        if result.status.value == "unknown":
+            self.safety.trip_global_fuse(f"stop_base returned unknown: {result.message}")
+        return result
+
+    def move_base(
+        self,
+        distance_m: float,
+        yaw_rad: float = 0.0,
+        *,
+        timeout_s: float = 30.0,
+    ) -> ToolResult:
+        """Move base only for supervised visual-servo fallback paths."""
+        rejection = self.safety.authorize()
+        if rejection is not None:
+            return rejection
+        try:
+            distance = float(distance_m)
+            yaw = float(yaw_rad)
+        except (TypeError, ValueError):
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                "distance_m / yaw_rad 必须是数值",
+                mode=self.mode,
+            )
+        if max(abs(distance), abs(yaw)) > 0.25:
+            return rejected(
+                ErrorCode.SAFETY_LIMIT,
+                "视觉/底盘单步超过 MotionTool 上限",
+                mode=self.mode,
+                data={"distance_m": distance, "yaw_rad": yaw},
+            )
+        result = self.adapter.move_base(distance, yaw, timeout_s=timeout_s)
+        if result.status.value == "unknown":
+            self.safety.trip_global_fuse(f"move_base returned unknown: {result.message}")
+        return result
+
     def set_gripper(
         self,
         end_effector: str = "left_gripper",

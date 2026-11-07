@@ -521,6 +521,7 @@ class Intrinsics:
     width: int
     height: int
     distortion: tuple[float, ...] = ()
+    distortion_model: str = "plumb_bob"
     frame_id: str = ""
     timestamp_ns: int = 0
 
@@ -546,6 +547,7 @@ class Intrinsics:
             width=int(p.get("width") or 0),
             height=int(p.get("height") or 0),
             distortion=tuple(float(v) for v in d),
+            distortion_model=str(p.get("distortion_model") or "plumb_bob"),
             frame_id=str(p.get("_frame_id") or fallback_frame),
             timestamp_ns=int(p.get("_timestamp_ns") or 0),
         )
@@ -556,7 +558,7 @@ class Intrinsics:
             "cx": round(self.cx, 4), "cy": round(self.cy, 4),
             "width": self.width, "height": self.height,
             "frame_id": self.frame_id,
-            "distortion_model": "plumb_bob" if self.distortion else "none",
+            "distortion_model": self.distortion_model,
         }
 
 

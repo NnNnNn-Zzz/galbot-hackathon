@@ -80,8 +80,8 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 - **现象**：`HEAD_LEFT_CAMERA` / `HEAD_RIGHT_CAMERA` 的普通 RGB 接口可用，但 `PerceptionTool` 的相机配置没有对应的 `depth_sensor`，无法从该路径取得双目深度。
 - **确认原因**：G1 SDK 的双目推理属于 `GalbotPerception` 的 `FOUNDATION_STEREO` 模块，结果放在 `DetectionResult.instance_mask`；它不通过 `GalbotRobot.get_depth_data` 返回。SDK 中的 `LIGHT_STEREO` 标为当前版本不支持。
 - **诊断**：在 HPU 执行 `source scripts/env_hpu.sh` 后，调用 `GalbotPerception().init({PerceptionModule.FOUNDATION_STEREO})`，等待约 10 秒，再依次检查 `run_once(...)`、`wait_for_new_result(..., timeout_s=8)`、`get_latest_result(...)` 是否成功，以及 `np.asarray(result.instance_mask).shape/dtype`。若在 PC 上 `init` 返回 `False`，先在 HPU 做同样检查，避免将 PC 到机器人服务的连通问题误判为没有双目能力。
-- **修复**：使用 `StereoDepthTool.capture_stereo_depth()` 直接调该 SDK 模块，保存原始 `.npy` 与伪彩色预览。SDK 未明确原始深度数值的物理单位，暂不换算成米。
-- **验证**：2026-11-07 在 HPU 真机完成封装调用，返回 `succeeded/real`，图像为 1280×960、`uint16`，有效像素比例 1.0，原始值范围 384–7798；预览能区分桌面、物体和背景。此结果验证深度图获取，不证明米制距离精度。
+- **修复**：使用 `StereoDepthTool.capture_stereo_depth()` 直接调该 SDK 模块，保存原始 `.npy` 与伪彩色预览。2026-11-08 用头部外参和地面平面完成尺度验证后，应用层换算固定为 `depth_m = raw_value * 0.001`。
+- **验证**：2026-11-07 在 HPU 真机完成封装调用，返回 `succeeded/real`，图像为 1280×960、`uint16`，有效像素比例 1.0，原始值范围 384–7798；预览能区分桌面、物体和背景。2026-11-08 复测得到头左内参 `K` 为 `fx=486.2493, fy=486.2607, cx=652.1300, cy=480.4339`、`distortion_model=kannala_brandt`，并通过 `get_sensor_extrinsic(HEAD_LEFT_CAMERA, "base_link")` 反投影。按毫米假设变换到 `base_link` 后，地面 RANSAC 平面 `z=-0.0021 m`、法向 `(0.0868, -0.0323, 0.9957)`，42,809/86,016 个采样点落在 3 cm 平面内；其他候选尺度会得到数十米到数千米的地面高度，因此确认 FOUNDATION_STEREO 原始深度单位是毫米。RGB 高 992、双目图高 960，反投影时 `fy/cy` 必须乘 `960/992`，并对 Kannala-Brandt 鱼眼畸变先去畸变。
 
 ### G1 躯干轴向：`leg_joint4/5` 不当前倾，`leg_joint3` 可产生俯仰（2026-11-07）
 
@@ -97,6 +97,56 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 - **确认结果与原因边界**：已确认“返回 FAULT 时目标仍可能已经到达”，因此不能仅凭返回枚举判断是否执行成功。本次 FAULT 的具体触发原因尚未定位，可能是阻塞式任务完成状态的上报差异，尚属假设。
 - **诊断**：动作后立即读取 `get_transform("base_link", "head_base_link")`，比较 Z 与目标，并连续读取一次确认时间戳更新和位置稳定；不要因为 FAULT 就盲目重发同一个大位移命令。
 - **处理与验证**：本次没有重发命令，位置读数与目标误差小于 0.1 mm，随后正常执行 SDK shutdown。后续封装应把“SDK 状态”和“实际目标位姿”分开报告；只有位置复读也异常时才进入故障处理。
+
+### `8092` 相机桥进程存活但请求队列堵满、页面超时（2026-11-08）
+
+- **现象**：`http://192.168.166.7:8092/` 的腕部及健康接口请求超时，`galbot-camera-robot.service` 仍显示 `active (running)`；`ss -ltnp` 显示 `8092` 的 `Recv-Q/Send-Q` 都为 `5`，达到 `ThreadingHTTPServer` 默认 backlog。日志同时出现 `BrokenPipeError`。
+- **原因边界**：已确认存在请求队列耗尽，重启服务后恢复；尚不能确认队列为何未及时排空，可能是浏览器持续轮询叠加长时间未结束的请求。该现象发生在接入腕部 YOLO 叠加之前，不能归因于模型推断。
+- **诊断**：在 HPU 执行 `ss -ltnp | grep 8092`，检查监听进程是否存活以及队列是否为 `5/5`；再查 `systemctl --user status galbot-camera-robot.service` 和 `/home/galbot/galbot-camera-shots/systemd.log`。不要仅因进程存活就判断服务正常。
+- **修复**：先备份 `/home/galbot/galbot-camera-shots/robot_server.py` 与对应的 user unit，再执行 `systemctl --user daemon-reload && systemctl --user restart galbot-camera-robot.service`。该操作只重启只读相机桥，不发送机器人运动或夹爪命令。
+- **验证**：2026-11-08 重启后队列恢复为 `0/5`，主页返回 HTTP 200，认证后的 `/health` 以及左右腕 `/frame/*` 均返回 JPEG；腕部实例分割状态为 `ready`。后续若再次出现 `5/5`，应同时检查前端轮询和单个请求是否阻塞，不能无限重启掩盖问题。
+
+### 夹爪碰到物体后继续收窄会返回 `TIMEOUT`（2026-11-08）
+
+- **现象**：右手夹爪夹住约 2 cm 宽的充电器时，先后请求 1.8 cm 和 1.6 cm 开度，`set_gripper` 均返回 `control_status: TIMEOUT`、`success: false`；现场确认 1.6 cm 指令后夹持已足够紧。返回结果只保留请求值，没有实际夹爪开度反馈。
+- **原因边界**：已确认返回 `TIMEOUT` 不代表夹爪没有动作或没有夹住物体；具体触发机制仍是**假设**，可能是两指接触物体后无法到达更小目标宽度，阻塞式控制等待超时。本次没有测量电机堵转状态，不能把 `TIMEOUT` 单独当作硬件故障证据。
+- **诊断**：每次只下发一个小开度变化，立即目视或手动确认两指是否接触且物体稳定；若已稳定就停止，不要继续逐级收窄或在 `TIMEOUT` 后盲目重发。需要量化夹持时，应另加力/位置反馈，不能把请求开度当成实测开口。
+- **处理与验证**：把“物体限位导致的 `TIMEOUT`”作为停止条件，记录请求开度并标记实际开度未知；程序化抓取必须通过抬起后重新检测目标是否随夹爪移动来确认抓取，不能仅凭 `TIMEOUT` 或“闭合指令已下发”报告成功。2026-11-08 本次以 1.6 cm 请求停下并由现场确认夹持足够紧；未做负载、长期夹持或实际开口尺寸验证。
+
+### 腕部 charger pre-grasp 返回 `FAULT`：目标超出右臂 IK 可达域（2026-11-08）
+
+- **现象**：腕部 YOLO-seg 检出 charger 后，`move_to_wrist_charger_pregrasp(operator_confirmed=True)` 返回 `failed/sdk_error`，消息为“末端移动失败（FAULT）”；机器人没有执行该臂目标。
+- **确认原因**：`service_motion_plan` 在 `01:32:33` 对 `right_arm` 目标 `[0.8988262, -0.4200548, 0.9301692]` 连续报 `TRAC-IK solver failed to find a solution`，随后记录 `SERVICE_STATUS_EXECUTE_FAILED`。把同一位置替换成当前末端姿态仍返回 `FAULT`，而把目标姿态放到当前末端位置则返回 `SUCCESS`，确认主因是**目标平移超出右臂可达域**，不是通信、急停或碰撞服务本身。
+- **附带问题**：首次 YOLO 框落在 charger 窄边/侧面，三维尺寸仅约 `3.6×2.4 cm`，表面法向偏离 base_link 竖直方向约 `60.9°`。末端轴映射也曾错误地假设 local `+Z` 是接近轴；只读挂载 `galbot_gripper` 后确认 TCP 沿 local `+X` 偏置约 `0.146 m`，相机光轴也近似 local `+X`，因此接近轴应为 local `+X`。
+- **诊断**：
+
+  ```bash
+  # HPU 上 source scripts/env_hpu.sh 后，对同一目标做只读 IK：
+  python3 - <<'PY'
+  from sdk_wrapper.dev.adapters.galbot_adapter import GalbotAdapter, _enum_name
+  ad = GalbotAdapter(enable_real_control=True, real_authorized=True)
+  _, motion, _ = ad._ensure_interfaces()
+  target = [0.8988262, -0.4200548, 0.9301692,
+            0.7178771, 0.4775492, -0.1712226, -0.4767411]
+  status, joints = motion.inverse_kinematics(
+      target, ["right_arm"], target_frame="EndEffector",
+      reference_frame="base_link", enable_collision_check=False)
+  print(_enum_name(status), joints)
+  PY
+
+  grep -n "TRAC-IK solver failed\|SERVICE_STATUS_EXECUTE_FAILED" \
+    /userdata/log/service_motion_plan/Info_*.log | tail -40
+  ```
+- **修复**：末端姿态改为 local `+X=接近轴`、local `Y=两指闭合轴`、local `Z=夹爪长轴`；`plan` 阶段先调用只读 `inverse_kinematics`，无解时直接返回 `rejected/safety_limit`，不再把命令送进运动服务。腕部精定位同时增加物理长/短边最小值（`0.02/0.015 m`）和表面法向相对竖直最大倾角（`30°`）门槛。
+- **验证**：2026-11-08 HPU 单测通过。修正轴映射后，首个位姿的旋转量从约 `167°` 降到约 `93°`，但只读 IK 仍返回 `FAULT`，工具在运动前明确拒绝。调整机器人位置后再次观测到完整顶面：中心 `[0.60777, -0.052781, 0.735523]`、长/短边 `3.02/2.37 cm`、平面 RMS `1.38 mm`、法向倾角 `3.98°`，证明该充电器本身是小型目标，最初 `4×6 cm` 门槛过严。最终门槛改为 `2×1.5 cm` 并新增小尺寸合法样本回归。更新后的目标 `[0.7025586, -0.034594, 0.8552943]` 仍因距离稍远而无 IK 解；虚拟底盘前移约 `0.12 m` 后即可求解，因此继续测试时应先小幅靠近再重新 `plan`。
+
+### charger 上表面接近水平却被判成法向倒置（2026-11-08）
+
+- **现象**：D405 点云估计的充电器上表面中心为 `[0.571627, -0.27607, 0.737347]`，三维尺寸和平面残差都正常，但 `surface_normal_base.z=-0.9983`，因此被 `surface_normal_tilt_above_maximum` 拒绝。
+- **确认原因**：平面 PCA 求出的法向先按 `z>=0` 翻到上方向，随后又经过通用的“首非零轴取正”规范化；当平面的 x 分量略负时，该步骤把整个法向再次翻转，造成 `z<0`。这是确定性的坐标方向 bug，不是深度或机器人姿态问题。
+- **诊断**：读取 `surface.surface_normal_base`，对接近水平的工作台面应满足 `z≈+1`；若 `x/y` 很小而 `z≈-1`，检查是否在朝上修正之后又执行了首轴符号规范化。用保存的 `charger_mask_bool.npy`、`depth_m.npy`、原内参和当前深度相机外参离线重算即可复现。
+- **修复**：平面法向只做单位化和 `z>=0` 修正，不再调用首非零轴 canonicalization；长边轴仍可独立规范化。新增小负倾角回归测试，确保 `-10°` 的合法表面仍得到向上法向。
+- **验证**：2026-11-08 对同一保存帧重算后，法向变为 `[-0.02009, 0.05441, 0.99832]`，倾角 `3.32°`，观测通过精定位门槛；使用当前 `EndEffector` 对生成的 pre-grasp pose 做只读 IK 返回 `SUCCESS`。后续实时帧重新检测到 charger 后即可继续 `plan`/`move`。
 
 ### 头部关节已动但姿态校验不变：测错 frame（2026-11-07）
 
@@ -121,6 +171,32 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 - PC（WSL）只做代码编辑和部署（`deploy_hpu.sh` 一键 rsync）
 - SDK 原生库用机器人自带的 `/data/galbot/lib`（版本与固件配套，勿动）
 - SDK Python 包从 WSL 推送到 HPU `~/g1_runtime/`（aarch64 cp38 版）
+
+### HPU 上的 YOLO11 依赖出现 TLS、C3k2 或 torchvision NMS 错误（2026-11-08）
+
+- **现象**：Python 3.8 下先报 `import torch` 缺少 `libopenblas.so.0`；改用系统 NumPy 自带 BLAS 后又出现 `zgemm_`/`cblas_caxpy64_` 未定义。旧版 Ultralytics 加载 YOLO11 权重时报 `Can't get attribute 'C3k2'`。换成新 Ultralytics 后，NVIDIA 定制 PyTorch 与通用 torchvision 在推理时分别报 `Couldn't load custom C++ ops`、`cannot allocate memory in static TLS block` 或直接 segfault。
+- **确认原因**：HPU 的 `torch 2.1.0a0+...nv23.06` 是 NVIDIA aarch64 定制构建，不能直接搭配 PyPI 通用 torchvision 的 C++ 扩展；YOLO11 权重需要包含 `C3k2` 的新版 Ultralytics。仅“torch 能 import”或“YOLO 权重能 load”不代表推理链路可用，必须在实际 `predict()` 完成 NMS 和掩码解码后才算通过。
+- **诊断**：
+
+  ```bash
+  cd ~/galbot_charger_yolo
+  export PYTHONPATH="$HOME/galbot_charger_yolo:$HOME/charger-yolo-runtime:${PYTHONPATH:-}"
+  export LD_LIBRARY_PATH="$HOME/charger-yolo-libs:${LD_LIBRARY_PATH:-}"
+  python3 - <<'PY'
+  import os
+  import cv2, torch
+  from ultralytics import YOLO
+  print(cv2.__version__, torch.__version__)
+  weights = os.path.expanduser("~/yoloseg/runs/yolo11n_seg_charger_v2/weights/best.pt")
+  model = YOLO(weights)
+  print(model.task, model.names)
+  PY
+  ```
+
+  再对一张已知 charger 验证图执行一次完整 `predict()`，检查能返回 bbox 和与输入同尺寸的 mask。
+- **修复**：使用独立目录 `~/charger-yolo-runtime` 安装 `ultralytics==8.4.203`、`opencv-python-headless==4.10.0.84` 和通用 torchvision Python 包；保留机器人 NVIDIA PyTorch，不覆盖其 CUDA 构建。`sdk_wrapper/dev/algorithms/charger_yolo.py` 在启动时探测 `torchvision.ops.nms`，只有该 C++ 算子不可用时才替换为纯 PyTorch NMS；正常环境不会启用后备。
+- **验证**：2026-11-08 在 `galbot-echo` 用真实 `yolo11n_seg_charger_v2/weights/best.pt` 对 1920×1098 验证图完成端到端推理，检出 1 个 charger（confidence 0.7708），返回 `1098×1920` 布尔掩码，`runtime_workaround=torchvision_nms_python_fallback`。随后真机右腕 `detect` 阶段可完成相机取图与推理，并在当前画面无 charger 时明确返回 `not_ready`，未下发运动。
+- **边界**：该后备只覆盖 Ultralytics 当前使用的 NMS；若未来模型加入依赖其他 torchvision C++ 算子的后处理，需要重新验证，不能把“导入成功”当作兼容。
 
 ### 为什么不在 PC 上跑 SDK
 

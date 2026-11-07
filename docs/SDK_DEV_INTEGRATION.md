@@ -67,8 +67,7 @@ print(result.to_dict())
 工具名为 `capture_stereo_depth`，返回通用六字段 `ToolResult`。`depth_ref` 是保存在
 `sdk_wrapper/dev/runs/stereo_depth/` 下的原始 `.npy`，`preview_ref` 是伪彩色预览；
 结果还包含尺寸、传感器名、时间戳、有效像素比例和原始值范围。SDK 将图放在
-`DetectionResult.instance_mask`，但未说明该值的物理单位，因此 `unit` 固定为
-`sdk_raw_unverified`，不可直接当米使用，也不与臂部深度相机的米制数据混用。
+`DetectionResult.instance_mask`。2026-11-08 真机用头左外参与地面平面验证其原始单位为毫米，因此工具返回 `unit="mm"` 和 `raw_to_m=0.001`；反投影前仍需处理头部相机的 `kannala_brandt` 鱼眼畸变。
 首次调用会初始化模型并等待约 10 秒，后续调用仅运行单次推理。
 
 G1 直立下蹲（使用官方 `GalbotRobot.set_leg_height()`，逐步且需要现场确认）：
@@ -107,6 +106,22 @@ python3 scripts/keyboard_head_control.py
 `head_end_effector_mount_link` 读取；`head_base_link` 位于头关节之前，不能用
 来判断低头方向。脚本中 `j/k` 以 0.01 rad 低头/抬头，`J/K` 以 0.02 rad
 低头/抬头，`r` 逐步回起始，`q` 退出。正负方向会由实际头部末端姿态验证。
+
+G1 专用前倾工具（只动 `leg_joint3`，增加量=前倾）：
+
+```python
+from sdk_wrapper.dev import ForwardLeanTool
+
+tool = ForwardLeanTool(real_authorized=True)
+result = tool.set_forward_lean(12.0, speed_deg_s=3.0)
+print(result.to_dict())
+```
+
+`set_forward_lean(angle_deg)` 由调用方直接决定本次相对变化角度，正数前倾、
+负数回正；整个角度只下发一个 `leg_joint3` 目标，不拆成隐藏小步，也不设置
+单次角度或累计角度上限。速度默认 3°/s，硬上限 5°/s，防止一步过快。返回值
+同时记录实际关节角度、实际前倾角度、头部 X/姿态变化和未命令腿关节漂移；
+SDK 失败、目标误差超过 0.02 rad 或关节实际反向时返回 `unknown`。
 
 推杯子闭环（判不安全 → 语音 → 小步推 → 回位复测）：
 

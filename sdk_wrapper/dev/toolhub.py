@@ -43,11 +43,22 @@ __all__ = [
     "configure", "get_adapter", "describe", "shutdown", "tool_names",
     # 工具实例
     "motion", "perception", "navigation", "audio", "scenario", "result_to_dict",
+    "power_strip_yolo", "charger_yolo", "charger_grasp", "calibration",
+    "charger_search",
+    "stereo_depth",
     # 底盘
     "move_base", "move_forward", "move_backward", "turn", "stop_base",
+    "get_map_pose", "navigate_to_pose", "check_path_reachability",
     # 相机 / 感知
     "capture_frame", "capture_right_wrist", "read_sensor",
     "list_cameras", "find_object", "inspect_table", "capture_scene",
+    "capture_stereo_depth",
+    "detect_power_strip_head", "track_power_strip_head", "detect_charger_head",
+    "segment_charger_top_wrist", "observe_charger_search",
+    "advance_charger_search", "monitor_observation_navigation",
+    "align_wrist_from_head", "reset_charger_search",
+    "plan_wrist_charger_pregrasp", "move_to_wrist_charger_pregrasp",
+    "check_right_wrist_rgbd_calibration", "check_right_arm_eye_in_hand",
     # 手臂 / 夹爪
     "get_ee_pose", "move_arm_to", "move_arm_delta", "rotate_wrist",
     "set_gripper", "open_gripper", "close_gripper",
@@ -194,6 +205,8 @@ def tool_names() -> list[str]:
     return [name for name in __all__ if name not in (
         "configure", "get_adapter", "describe", "shutdown", "tool_names",
         "motion", "perception", "navigation", "audio", "scenario", "result_to_dict",
+        "power_strip_yolo", "charger_yolo", "charger_grasp", "calibration",
+        "charger_search", "stereo_depth",
     )]
 
 
@@ -247,6 +260,70 @@ def scenario() -> typing.Any:
     if "scenario" not in _tools:
         _tools["scenario"] = CupScenario(perception(), audio(), motion())
     return _tools["scenario"]
+
+
+def power_strip_yolo() -> typing.Any:
+    from sdk_wrapper.dev.robot_tools.power_strip_yolo import PowerStripYoloTool
+
+    if "power_strip_yolo" not in _tools:
+        _tools["power_strip_yolo"] = PowerStripYoloTool(
+            perception(),
+            stereo_tool=stereo_depth() if not _is_mock() else None,
+        )
+    return _tools["power_strip_yolo"]
+
+
+def charger_yolo() -> typing.Any:
+    from sdk_wrapper.dev.robot_tools.charger_yolo import ChargerYoloTool
+
+    if "charger_yolo" not in _tools:
+        _tools["charger_yolo"] = ChargerYoloTool(
+            perception(),
+            stereo_tool=stereo_depth() if not _is_mock() else None,
+        )
+    return _tools["charger_yolo"]
+
+
+def charger_grasp() -> typing.Any:
+    from sdk_wrapper.dev.robot_tools.charger_grasp import ChargerGraspTool
+
+    if "charger_grasp" not in _tools:
+        _tools["charger_grasp"] = ChargerGraspTool(
+            perception(),
+            charger_tool=charger_yolo(),
+            motion_tool=motion(),
+        )
+    return _tools["charger_grasp"]
+
+
+def stereo_depth() -> typing.Any:
+    from sdk_wrapper.dev.robot_tools.stereo_depth import StereoDepthTool
+
+    if "stereo_depth" not in _tools:
+        _tools["stereo_depth"] = StereoDepthTool()
+    return _tools["stereo_depth"]
+
+
+def calibration() -> typing.Any:
+    from sdk_wrapper.dev.robot_tools.calibration import CameraCalibrationTool
+
+    if "calibration" not in _tools:
+        _tools["calibration"] = CameraCalibrationTool(perception())
+    return _tools["calibration"]
+
+
+def charger_search() -> typing.Any:
+    from sdk_wrapper.dev.robot_tools.charger_search import ChargerSearchTool
+
+    if "charger_search" not in _tools:
+        _tools["charger_search"] = ChargerSearchTool(
+            perception(),
+            strip_tool=power_strip_yolo(),
+            charger_tool=charger_yolo(),
+            motion_tool=motion(),
+            navigation_tool=navigation(),
+        )
+    return _tools["charger_search"]
 
 
 def result_to_dict(res: typing.Any) -> dict:
@@ -315,6 +392,26 @@ def turn(angle_deg: float) -> dict:
     r = move_base(0.0, math.radians(angle_deg))
     r["actual_angle_deg"] = round(angle_deg, 2)
     return r
+
+
+def get_map_pose() -> dict:
+    return result_to_dict(navigation().get_map_pose())
+
+
+def check_path_reachability(goal_pose: typing.Sequence[float],
+                            start_pose: typing.Sequence[float] | None = None) -> dict:
+    return result_to_dict(navigation().check_path_reachability(goal_pose, start_pose))
+
+
+def navigate_to_pose(pose: typing.Sequence[float], frame: str = "map",
+                     speed_ratio: float = 0.5,
+                     enable_collision_check: bool = True) -> dict:
+    return result_to_dict(navigation().navigate_to_pose(
+        pose,
+        frame=frame,
+        speed_ratio=speed_ratio,
+        enable_collision_check=enable_collision_check,
+    ))
 
 
 def stop_base() -> dict:
@@ -468,6 +565,79 @@ def capture_scene(camera_id: typing.Any = None, include_depth: bool = True,
                   note: str = "") -> dict:
     cam = _resolve_camera(camera_id) if camera_id else None
     return result_to_dict(perception().capture_scene(cam, include_depth, note))
+
+
+def detect_power_strip_head() -> dict:
+    return result_to_dict(power_strip_yolo().detect_power_strip_head())
+
+
+def capture_stereo_depth(timeout_s: float = 8.0) -> dict:
+    return result_to_dict(stereo_depth().capture_stereo_depth(timeout_s=timeout_s))
+
+
+def track_power_strip_head() -> dict:
+    return result_to_dict(power_strip_yolo().track_power_strip_head())
+
+
+def detect_charger_head() -> dict:
+    return result_to_dict(charger_yolo().detect_charger_head())
+
+
+def segment_charger_top_wrist() -> dict:
+    return result_to_dict(charger_yolo().segment_charger_top_wrist())
+
+
+def observe_charger_search() -> dict:
+    return result_to_dict(charger_search().observe_charger_search())
+
+
+def advance_charger_search(operator_confirmed: bool = False) -> dict:
+    """Advance one bounded head-camera search/approach step."""
+    return result_to_dict(
+        charger_search().advance_charger_search(
+            operator_confirmed=operator_confirmed
+        )
+    )
+
+
+def monitor_observation_navigation(task_id: str | None = None) -> dict:
+    return result_to_dict(
+        charger_search().monitor_observation_navigation(task_id=task_id)
+    )
+
+
+def align_wrist_from_head(operator_confirmed: bool = False) -> dict:
+    return result_to_dict(
+        charger_search().align_wrist_from_head(
+            operator_confirmed=operator_confirmed
+        )
+    )
+
+
+def reset_charger_search() -> dict:
+    return result_to_dict(charger_search().reset_charger_search())
+
+
+def plan_wrist_charger_pregrasp() -> dict:
+    """Generate a charger pre-grasp EndEffector pose without moving."""
+    return result_to_dict(charger_grasp().plan_wrist_charger_pregrasp())
+
+
+def move_to_wrist_charger_pregrasp(operator_confirmed: bool = False) -> dict:
+    """Re-observe and command the charger pre-grasp pose after confirmation."""
+    return result_to_dict(
+        charger_grasp().move_to_wrist_charger_pregrasp(
+            operator_confirmed=operator_confirmed
+        )
+    )
+
+
+def check_right_wrist_rgbd_calibration() -> dict:
+    return result_to_dict(calibration().check_right_wrist_rgbd_calibration())
+
+
+def check_right_arm_eye_in_hand() -> dict:
+    return result_to_dict(calibration().check_right_arm_eye_in_hand())
 
 
 # ══════════════════════════════════════════════════════════════════════════ #

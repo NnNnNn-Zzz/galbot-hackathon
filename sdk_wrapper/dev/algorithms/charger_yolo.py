@@ -45,6 +45,7 @@ class YoloInstance:
     confidence: float
     bbox_xyxy: tuple[float, float, float, float]
     mask: np.ndarray | None = None
+    track_id: int | None = None
 
 
 def _canonical_axis(vector: np.ndarray) -> np.ndarray:
@@ -192,9 +193,14 @@ def _surface_3d_geometry(
     covariance = centered.T @ centered / max(1, len(base_points) - 1)
     values, vectors = np.linalg.eigh(covariance)
     normal = vectors[:, int(np.argmin(values))]
+    normal_norm = float(np.linalg.norm(normal))
+    if normal_norm < 1e-12:
+        return {"available": False, "reason": "surface_normal_has_zero_norm"}
+    normal = normal / normal_norm
     if normal[2] < 0:
         normal = -normal
-    normal = _canonical_axis(normal)
+    # A generic first-nonzero-axis sign canonicalization can flip an almost
+    # vertical normal upside down when its small x component is negative.
 
     candidate_long = vectors[:, int(np.argmax(values))]
     long_axis = candidate_long - float(candidate_long @ normal) * normal
@@ -255,6 +261,9 @@ def analyze_charger_top(
     edge_margin_px: int = 3,
     min_depth_valid_ratio: float = 0.80,
     max_depth_m: float | None = 1.5,
+    min_long_dimension_m: float = 0.0,
+    min_short_dimension_m: float = 0.0,
+    max_surface_tilt_deg: float = 180.0,
     safe_standoff_m: float = 0.12,
     depth_sample_stride: int = 2,
 ) -> tuple[dict[str, typing.Any], np.ndarray]:
@@ -341,6 +350,23 @@ def analyze_charger_top(
                 )
                 if not surface.get("available"):
                     reasons.append("surface_3d_unavailable")
+                else:
+                    if float(surface["long_dimension_m"]) < float(
+                        min_long_dimension_m
+                    ):
+                        reasons.append("surface_long_dimension_below_minimum")
+                    if float(surface["short_dimension_m"]) < float(
+                        min_short_dimension_m
+                    ):
+                        reasons.append("surface_short_dimension_below_minimum")
+                    normal_z = max(
+                        -1.0,
+                        min(1.0, float(surface["surface_normal_base"][2])),
+                    )
+                    surface_tilt_deg = math.degrees(math.acos(normal_z))
+                    surface["tilt_from_base_up_deg"] = round(surface_tilt_deg, 6)
+                    if surface_tilt_deg > float(max_surface_tilt_deg):
+                        reasons.append("surface_normal_tilt_above_maximum")
             else:
                 reasons.append("surface_3d_intrinsics_or_extrinsics_unavailable")
     else:
@@ -447,6 +473,73 @@ def discover_latest_charger_seg_weights(
     return sorted(found.values(), key=lambda p: p.stat().st_mtime, reverse=True)
 
 
+def _install_torchvision_nms_fallback() -> str | None:
+    """Use a Python NMS when a custom PyTorch build cannot load torchvision ops.
+
+    NVIDIA Jetson PyTorch builds can be ABI-compatible with their matching
+    custom torchvision only. A generic torchvision wheel may import but fail
+    when Ultralytics calls ``torchvision.ops.nms``. Ultralytics also ships a
+    data-dependent NMS fast path, but that path is not selected when the
+    torchvision module is already imported. Patch only the broken callable.
+    """
+    try:
+        import torch
+        import torchvision
+    except Exception:  # noqa: BLE001 - YOLO may still work without this module
+        return None
+    try:
+        probe = torchvision.ops.nms(
+            torch.tensor([[0.0, 0.0, 1.0, 1.0]], dtype=torch.float32),
+            torch.tensor([1.0], dtype=torch.float32),
+            0.5,
+        )
+        if probe.numel() == 1:
+            return None
+    except Exception:
+        pass
+
+    def _nms(
+        boxes: typing.Any,
+        scores: typing.Any,
+        iou_threshold: float,
+    ) -> typing.Any:
+        if boxes.numel() == 0:
+            return torch.empty((0,), dtype=torch.long, device=boxes.device)
+        order = scores.argsort(descending=True)
+        keep: list[typing.Any] = []
+        while order.numel():
+            index = order[0]
+            keep.append(index)
+            if order.numel() == 1:
+                break
+            rest = order[1:]
+            selected = boxes[index]
+            candidates = boxes[rest]
+            inter_x1 = torch.maximum(selected[0], candidates[:, 0])
+            inter_y1 = torch.maximum(selected[1], candidates[:, 1])
+            inter_x2 = torch.minimum(selected[2], candidates[:, 2])
+            inter_y2 = torch.minimum(selected[3], candidates[:, 3])
+            inter = (
+                (inter_x2 - inter_x1).clamp(min=0)
+                * (inter_y2 - inter_y1).clamp(min=0)
+            )
+            area_selected = (
+                (selected[2] - selected[0]).clamp(min=0)
+                * (selected[3] - selected[1]).clamp(min=0)
+            )
+            area_candidates = (
+                (candidates[:, 2] - candidates[:, 0]).clamp(min=0)
+                * (candidates[:, 3] - candidates[:, 1]).clamp(min=0)
+            )
+            union = area_selected + area_candidates - inter
+            iou = inter / union.clamp(min=torch.finfo(inter.dtype).eps)
+            order = rest[iou <= float(iou_threshold)]
+        return torch.stack(keep)
+
+    torchvision.ops.nms = _nms
+    return "torchvision_nms_python_fallback"
+
+
 class UltralyticsYoloBackend:
     """Lazy Ultralytics YOLO backend with task/class validation.
 
@@ -491,6 +584,7 @@ class UltralyticsYoloBackend:
                 "ultralytics is not installed in this Python environment; "
                 "use the repository perception runtime or install it via dependency owner"
             ) from exc
+        nms_fallback = _install_torchvision_nms_fallback()
 
         candidates = (
             [Path(self.weights).expanduser()]
@@ -526,6 +620,8 @@ class UltralyticsYoloBackend:
                     "confidence": self.confidence,
                     "iou": self.iou,
                 }
+                if nms_fallback:
+                    self.model_info["runtime_workaround"] = nms_fallback
                 return model
             except Exception as exc:  # noqa: BLE001
                 errors.append(f"{path}: {type(exc).__name__}: {exc}")
@@ -553,13 +649,47 @@ class UltralyticsYoloBackend:
         )
         if not results:
             return []
-        result = results[0]
+        return self._normalize_result(results[0], image, model)
+
+    def track(self, bgr: np.ndarray, *, persist: bool = True) -> list[YoloInstance]:
+        """Track the configured class across sequential frames.
+
+        Ultralytics ByteTrack owns the track IDs. Callers must pass frames in
+        order and keep one backend instance for the whole navigation segment.
+        """
+        model = self._load()
+        image = np.asarray(bgr)
+        if image.ndim != 3 or image.dtype != np.uint8:
+            raise ValueError("bgr must be HxWx3 uint8")
+        results = model.track(
+            source=image,
+            imgsz=self.imgsz,
+            conf=self.confidence,
+            iou=self.iou,
+            device=self.device,
+            persist=bool(persist),
+            tracker="bytetrack.yaml",
+            verbose=False,
+        )
+        if not results:
+            return []
+        return self._normalize_result(results[0], image, model)
+
+    def _normalize_result(
+        self,
+        result: typing.Any,
+        image: np.ndarray,
+        model: typing.Any,
+    ) -> list[YoloInstance]:
         if result.boxes is None or len(result.boxes) == 0:
             return []
 
         boxes = result.boxes.xyxy.detach().cpu().numpy()
         confidences = result.boxes.conf.detach().cpu().numpy()
         class_ids = result.boxes.cls.detach().cpu().numpy().astype(int)
+        track_ids = None
+        if getattr(result.boxes, "id", None) is not None:
+            track_ids = result.boxes.id.detach().cpu().numpy().astype(int)
         masks = None
         if result.masks is not None and result.masks.data is not None:
             masks = result.masks.data.detach().cpu().numpy()
@@ -586,6 +716,11 @@ class UltralyticsYoloBackend:
                     confidence=float(score),
                     bbox_xyxy=tuple(float(v) for v in box.tolist()),
                     mask=mask,
+                    track_id=(
+                        None
+                        if track_ids is None or index >= len(track_ids)
+                        else int(track_ids[index])
+                    ),
                 )
             )
         return instances

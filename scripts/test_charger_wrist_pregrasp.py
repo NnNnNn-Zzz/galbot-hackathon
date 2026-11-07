@@ -1,0 +1,180 @@
+#!/usr/bin/env python3
+"""Staged test for wrist charger recognition -> pre-grasp EndEffector pose.
+
+Stages:
+    detect  only run YOLO-seg + D405 geometry and print the surface result;
+    plan    detect, then generate an absolute EndEffector pre-grasp pose;
+    move    detect + plan again, then command the pose after confirmation.
+
+The default stage is ``plan`` so the safe first test never commands the arm.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+import typing
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+
+def _print_result(label: str, result: dict[str, typing.Any]) -> None:
+    print(f"\n[{label}] status={result.get('status')} success={result.get('success')}")
+    print(result.get("message", ""))
+    if result.get("error_code"):
+        print(f"error_code={result['error_code']}")
+
+    observation = result.get("observation")
+    if isinstance(observation, dict):
+        surface = observation.get("surface") or {}
+        print(
+            "observation:",
+            json.dumps(
+                {
+                    "camera_id": observation.get("camera_id"),
+                    "confidence": observation.get("confidence"),
+                    "eligible_for_precision": observation.get("eligible_for_precision"),
+                    "rejection_reasons": observation.get("rejection_reasons"),
+                    "surface_center_m": surface.get("surface_center_m"),
+                    "surface_normal_base": surface.get("surface_normal_base"),
+                    "long_edge_axis_base": surface.get("long_edge_axis_base"),
+                    "short_dimension_m": surface.get("short_dimension_m"),
+                    "long_dimension_m": surface.get("long_dimension_m"),
+                    "overlay_ref": observation.get("overlay_ref"),
+                    "observation_ref": observation.get("observation_ref"),
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+        )
+    elif "surface" in result:
+        surface = result.get("surface") or {}
+        print(
+            "surface:",
+            json.dumps(
+                {
+                    "eligible_for_precision": result.get("eligible_for_precision"),
+                    "rejection_reasons": result.get("rejection_reasons"),
+                    "surface_center_m": surface.get("surface_center_m"),
+                    "surface_normal_base": surface.get("surface_normal_base"),
+                    "long_edge_axis_base": surface.get("long_edge_axis_base"),
+                    "short_dimension_m": surface.get("short_dimension_m"),
+                    "long_dimension_m": surface.get("long_dimension_m"),
+                    "overlay_ref": result.get("overlay_ref"),
+                    "observation_ref": result.get("observation_ref"),
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+        )
+
+    if "end_effector_goal" in result:
+        print(
+            "end_effector_goal:",
+            json.dumps(result["end_effector_goal"], ensure_ascii=False),
+        )
+        plan = result.get("grasp_plan") or result.get("plan", {}).get("grasp_plan") or {}
+        print(
+            "grasp_plan:",
+            json.dumps(
+                {
+                    "pre_grasp_position_m": plan.get("pre_grasp_position_m"),
+                    "approach_axis_base": plan.get("approach_axis_base"),
+                    "gripper_long_axis_base": plan.get("gripper_long_axis_base"),
+                    "jaw_closing_axis_base": plan.get("jaw_closing_axis_base"),
+                    "standoff_m": plan.get("standoff_m"),
+                    "rotation_from_current_deg": plan.get("rotation_from_current_deg"),
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+        )
+    if result.get("motion"):
+        print("motion:", json.dumps(result["motion"], ensure_ascii=False))
+    if "position_error_m" in result:
+        print(
+            "pose verification:",
+            json.dumps(
+                {
+                    "position_error_m": result.get("position_error_m"),
+                    "orientation_error_deg": result.get("orientation_error_deg"),
+                    "pose_matched": result.get("pose_matched"),
+                    "grasp_completed": result.get("grasp_completed"),
+                },
+                ensure_ascii=False,
+            ),
+        )
+
+
+def _confirm_motion() -> bool:
+    print(
+        "\n即将下发右臂绝对 EndEffector 位姿。"
+        "请确认急停可用、手臂活动区无人无物，且目标位姿已在计划输出中核对。"
+    )
+    try:
+        answer = input("输入 MOVE 继续，其它内容取消：").strip()
+    except EOFError:
+        return False
+    return answer == "MOVE"
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="腕部 charger YOLO-seg -> 坐标 -> 末端 pre-grasp 位姿分阶段测试"
+    )
+    parser.add_argument(
+        "--stage",
+        choices=("detect", "plan", "move"),
+        default="plan",
+        help="detect=只识别，plan=生成位姿但不运动，move=确认后下发（默认 plan）",
+    )
+    parser.add_argument(
+        "--mock",
+        action="store_true",
+        help="使用 MockAdapter；不连接真机",
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="跳过 move 阶段的 MOVE 交互确认；仅建议在 mock 使用",
+    )
+    args = parser.parse_args(argv)
+
+    if args.yes and not args.mock and args.stage == "move":
+        parser.error("真机 move 阶段不允许 --yes；必须交互输入 MOVE")
+
+    from sdk_wrapper.dev import toolhub
+
+    toolhub.configure(mock=bool(args.mock), force=True)
+    mode = toolhub.describe()
+    print(
+        f"mode={mode.get('mode')} adapter={mode.get('adapter')} stage={args.stage}"
+    )
+    if not args.mock:
+        print("真机测试会读取右腕 RGB/D405 并调用 YOLO-seg；plan 阶段不会下发动作。")
+
+    if args.stage == "detect":
+        result = toolhub.segment_charger_top_wrist()
+        _print_result("detect", result)
+        return 0 if result.get("success") else 1
+
+    if args.stage == "plan":
+        result = toolhub.plan_wrist_charger_pregrasp()
+        _print_result("plan", result)
+        return 0 if result.get("success") else 1
+
+    if not args.yes and not _confirm_motion():
+        print("已取消，未下发运动。")
+        return 2
+    result = toolhub.move_to_wrist_charger_pregrasp(operator_confirmed=True)
+    _print_result("move", result)
+    return 0 if result.get("success") else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

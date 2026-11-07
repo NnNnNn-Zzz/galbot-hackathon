@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import math
+import typing
+
 from sdk_wrapper.dev.adapters.base import RobotAdapter
 from sdk_wrapper.dev.contracts import RunMode, ToolResult
 from sdk_wrapper.dev.robot_tools.safety import RobotSafety
@@ -17,6 +20,7 @@ class NavigationTool:
         safety: RobotSafety | None = None,
         real_authorized: bool = False,
     ) -> None:
+        self.adapter = adapter
         self.safety = safety or RobotSafety(
             adapter, real_authorized=real_authorized
         )
@@ -30,6 +34,39 @@ class NavigationTool:
     def navigate_to_place(self, place_id: str) -> ToolResult:
         """Start navigation to a registered location."""
         return self.safety.start_navigation(place_id)
+
+    def get_map_pose(self) -> ToolResult:
+        """Read the chassis map pose used for observation-point composition."""
+        return self.adapter.get_map_pose()
+
+    def check_path_reachability(
+        self,
+        goal_pose: typing.Sequence[float],
+        start_pose: typing.Sequence[float] | None = None,
+    ) -> ToolResult:
+        return self.adapter.check_path_reachability(goal_pose, start_pose)
+
+    def navigate_to_pose(
+        self,
+        pose: typing.Sequence[float],
+        *,
+        frame: str = "map",
+        speed_ratio: float = 0.5,
+        enable_collision_check: bool = True,
+    ) -> ToolResult:
+        target = [float(v) for v in list(pose)]
+        if len(target) != 7 or not all(math.isfinite(v) for v in target):
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                "pose 必须是 7 个有限数值",
+                mode=self.mode,
+            )
+        return self.safety.start_navigation_pose(
+            target,
+            frame=frame,
+            speed_ratio=float(speed_ratio),
+            enable_collision_check=bool(enable_collision_check),
+        )
 
     def get_task_status(self, task_id: str) -> ToolResult:
         """Query a task and enforce its configured timeout."""

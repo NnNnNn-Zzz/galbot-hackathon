@@ -50,7 +50,7 @@
       "kind": "stereo_rgb_left",
       "depth_alignment": "none",
       "scale_hint": "广角，适合作全局场景描述",
-      "risk": "普通 RGB 接口不返回深度；双目深度请调用 StereoDepthTool.capture_stereo_depth（原始数值单位未确认）"
+      "risk": "普通 RGB 接口不返回深度；双目深度请调用 StereoDepthTool.capture_stereo_depth。2026-11-08 实测 raw 单位为 mm，应用层乘 0.001；需 Kannala-Brandt 去畸变后再用外参反投影"
     },
     "head_right": {
       "sensor": "HEAD_RIGHT_CAMERA",
@@ -58,7 +58,7 @@
       "kind": "stereo_rgb_right",
       "depth_alignment": "none",
       "scale_hint": "广角（与 head_left 构成双目）",
-      "risk": "普通 RGB 接口不返回深度；SDK FOUNDATION_STEREO 已提供双目深度图，原始数值单位未确认"
+      "risk": "普通 RGB 接口不返回深度；SDK FOUNDATION_STEREO 已提供双目深度图，2026-11-08 实测 raw 单位为 mm，应用层乘 0.001"
     },
     "front_left": {
       "sensor": "LEFT_FRONT_SURROUND_CAMERA",
