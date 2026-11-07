@@ -88,6 +88,7 @@ DEFAULT_SENSORS: tuple[str, ...] = (
     "RIGHT_ARM_CAMERA",
     "LEFT_ARM_DEPTH_CAMERA",
     "RIGHT_ARM_DEPTH_CAMERA",
+    "HEAD_LEFT_CAMERA",
 )
 
 #: 判定"机器人在动"的速度阈值（m/s 或 rad/s）
