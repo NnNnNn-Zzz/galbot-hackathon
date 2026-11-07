@@ -146,8 +146,51 @@
 
 ---
 
+### G-17 整机莫名进入数采模式（DATA_COLLECTION_MODE），所有运动接口失效
+- **报错原文**：
+  `I20261107 23:53:47 mode_arbitration.cpp:881] [Iteration]: current_mode_instance_ = DATA_COLLECTION_MODE`
+  `E20261107 23:58:48 machine_mode.cpp:298] [isProcessReady]: process galbot_vtn is not running`
+  现象侧：`get_ee_pose` 报 `GalbotMotion.init() 返回 False`；`set_base_pose` 返回 `TIMEOUT` 且底盘零位移
+- **触发条件**：有人跑过官方场景切换脚本 `/data/tools/service_display/mode_change_select.sh` 并选了 `data_collection`
+  （root 的 `~/.bash_history` 末尾能看到），之后**重启整机**才生效 —— 所以典型表现是「隔了一段时间突然变数采」
+- **真因**：`/userdata/user_config/mode_service_config_default.toml` 的 `[start_up_mode]` 被整体替换成数采场景：
+  `auto_enter_mode_type = "DATA_COLLECTION_MODE"`、`apply_scene = "data_collection"`，且全文 `para_dir`
+  从 `/userdata/user_config/base` 改为 `.../data_collection`。mission_manager **每次启动按这个值自动进模式**，
+  不是运行时谁手滑切的，所以重启也回不到 WORKING
+- **正确做法**：
+  1. 诊断：`ssh root@192.168.1.66` → `head -5 /userdata/user_config/mode_service_config_default.toml`
+     看 `auto_enter_mode_type`；对照出厂默认 `/data/config/default/mode_service_config_default.toml`（应为 `WORKING_MODE` / `base`）
+  2. 切回：`cd /data/tools/service_display && ./mode_change_select.sh --mode base`
+     （不带 `--force` 会 8 秒后自动重启整机；带 `--force` 只改配置 + 同步 HPU、不重启，需自己重启）
+  3. **必须重启才生效**。重启后校验：`grep "current_mode_instance_ = " /userdata/log/mission_manager/mission_manager.INFO | tail -1` → `WORKING_MODE`
+- **涉及接口**：整机模式（mission_manager / XCU），所有运动类 SDK 调用都受影响
+- **发现日期 / 验证**：2026-11-07，真机（SN R001ABDD22AA0480）
+
+### G-18 切回 WORKING_MODE 后 `singorix_wbcs_main` 起来又崩，`GalbotMotion.init()` 仍失败
+- **报错原文**：
+  ```
+  E controller_manager.cpp:819] [WBCS][CONTROLLER][SHUTDOWN_REJECTED] action=register, device=right_arm, process_exit=1
+  E main.cpp:462] Init fail
+  W wbcs_manager.cpp:898] [WBCS][SERVICE_STATE][ABNORMAL] source=embosa_exit_callback, reason=shutdown_requested_before_embosa_shutdown
+  ```
+  mission_manager 侧：`handle_child_exits_safely]: Erased process: singorix_wbcs_main, pid: 5818`，之后**不会自动重拉**
+- **触发条件**：模式切换后的整机重启 / `launcher` 重启过程中，wbcs 正在注册右臂控制器
+  （日志上一条还是 `galbot_compliance_base_controller.cpp:114] right_arm init successful`）
+- **真因**：初始化中途 Embosa 收到退出回调（`shutdown_requested_before_embosa_shutdown`），controller_manager
+  进入 shutdown gate 后拒绝后续 `register`，wbcs 主动 `Init fail` 退出；此时 `relaunch_flag=true` 也**不会**重拉。
+  属启动时序问题，不是配置写错、也不是代码问题
+- **正确做法**：`ssh root@192.168.1.66` → `systemctl restart launcher`，等 ~45s，
+  `ps -ef | grep singorix_wbcs_main` 应看到 `/data/bin/singorix_wbcs_main /userdata/user_config/base`；
+  再从 HPU 跑 `python3 scripts/selftest_dev_layer.py status`，`get_ee_pose` 应为 PASS
+- **涉及接口**：`GalbotMotion.init()` 及全部运动接口
+- **发现日期 / 验证**：2026-11-07，真机
+
+---
+
 ## 更新记录
 
 | 日期 | 条目 | 一句话 |
 |---|---|---|
 | 2026-11-07 | G-01 ~ G-16 | 首版：把当天真机踩过的 16 个坑全部落盘 |
+| 2026-11-07 | G-17 | 机器人莫名进数采模式：真因是 `mode_change_select.sh` 把 `auto_enter_mode_type` 改成 DATA_COLLECTION，重启才生效 |
+| 2026-11-07 | G-18 | 切回 WORKING 后 wbcs 因 Embosa exit callback 崩掉且不自动重拉，`systemctl restart launcher` 修 |
