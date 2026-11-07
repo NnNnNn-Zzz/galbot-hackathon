@@ -286,6 +286,43 @@ class MockAdapter(SyntheticCameraMixin, RobotAdapter):
                   "frame": "base_link", "unit": "m"},
         )
 
+    def get_chain_frame_pose(
+        self,
+        chain: str = "right_arm",
+        frame_id: str = "Camera",
+        reference_frame: str = "base_link",
+    ) -> ToolResult:
+        if frame_id not in {"EndEffector", "Camera", "TCP"}:
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                f"Mock 不支持坐标系帧：{frame_id!r}",
+                mode=self.mode,
+            )
+        if frame_id == "Camera":
+            sensor = "RIGHT_ARM_CAMERA" if chain == "right_arm" else "LEFT_ARM_CAMERA"
+            pose, timestamp_ns = self.get_sensor_extrinsic(sensor, reference_frame)
+        else:
+            if chain not in self._ee_pose:
+                return rejected(
+                    ErrorCode.INVALID_ARGUMENT,
+                    f"Mock 未记录该链的位姿：{chain!r}",
+                    mode=self.mode,
+                )
+            pose = list(self._ee_pose[chain])
+            timestamp_ns = 0
+        return ok(
+            f"Mock {chain}/{frame_id} 位姿",
+            mode=self.mode,
+            data={
+                "chain": chain,
+                "frame_id": frame_id,
+                "reference_frame": reference_frame,
+                "pose": list(pose),
+                "timestamp_ns": int(timestamp_ns),
+                "unit": "m",
+            },
+        )
+
     def move_ee_delta(
         self,
         chain: str,

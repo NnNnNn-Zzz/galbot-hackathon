@@ -1,0 +1,35 @@
+{
+  "note": [
+    "YOLO-seg charger-top tool configuration.",
+    "weights=null discovers the newest best.pt under model_search_roots, then validates task=segment and class=charger before use.",
+    "These quality thresholds are initial safety gates, not calibrated grasp tolerances."
+  ],
+  "model_search_roots": [
+    "/home/mr/yoloseg/runs"
+  ],
+  "weights": null,
+  "target_class": "charger",
+  "required_task": "segment",
+  "imgsz": 640,
+  "confidence": 0.3,
+  "iou": 0.7,
+  "device": "cpu",
+  "wrist_camera": "right_arm",
+  "wrist_depth_camera": "right_arm_depth",
+  "quality": {
+    "min_area_px": 600,
+    "min_area_ratio": 0.002,
+    "min_short_edge_px": 24.0,
+    "min_mask_fill_ratio": 0.3,
+    "edge_margin_px": 3,
+    "min_depth_valid_ratio": 0.8,
+    "max_depth_m": 1.5,
+    "safe_standoff_m": 0.12,
+    "depth_sample_stride": 2
+  },
+  "max_rgb_depth_skew_ms": 150.0,
+  "max_rgb_depth_translation_delta_m": 0.002,
+  "max_rgb_depth_rotation_delta_deg": 0.5,
+  "max_rgb_depth_focal_delta_px": 1.0,
+  "max_rgb_depth_principal_delta_px": 1.0
+}

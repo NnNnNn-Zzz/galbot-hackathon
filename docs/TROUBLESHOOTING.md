@@ -38,7 +38,7 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 | `TIMEOUT` | `is_blocking=True` 在部分固件上不报告到达 | wrapper 已改为 `set_base_pose(is_blocking=True)` 直接控制 |
 | `set_base_pose` 返回 `TIMEOUT` 且底盘零位移 | 整机进入 `ABNORMAL` 模式，运动被整机保护拒绝（2026-11-07 真机排查） | 在 XCU 运行 `/data/bin/sys_tool`，输入 `q` 检查 `mode_type`；再查 `/userdata/log/mission_manager/mission_manager.INFO` 中的 `abnormal_service`。恢复异常服务或重启机器人，确认回到 `WORKING_MODE` 后重试 |
 | `ImportError: libgalbot_sdk.so` | 没设 LD_LIBRARY_PATH | `source scripts/env_hpu.sh` |
-| `OpenSSL version mismatch` (WSL ssh) | `.bashrc` 自动加载 SDK setup.sh 污染了 LD_LIBRARY_PATH | 已注释掉 ~/.bashrc 第 121-123 行 |
+| `OpenSSL version mismatch. Built against 30000020, you have 30300000`（WSL `ssh`） | 当前 shell 的 `LD_LIBRARY_PATH` 先加载了 SDK 自带的 `libcrypto.so.3`，与系统 `ssh` 的 OpenSSL ABI 不匹配；不是机器人 SSH 服务或密码错误 | 只给 SSH 命令使用系统库：`export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu && ssh galbot@<HPU_IP>`；也可用 `env LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu ssh galbot@<HPU_IP>` 避免影响同一终端里的 SDK 命令。确认诊断：`LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu ldd "$(command -v ssh)" \| grep libcrypto` 应指向 `/usr/lib/x86_64-linux-gnu/libcrypto.so.3`。若不再需要 SDK，清除或修正 `.bashrc` 中自动加载 SDK 环境变量的行。2026-11-07 在 WSL 实测该修复后可登录 `galbot@192.168.166.7`。 |
 | Python 3.8 `TypeError: X | None` | HPU 是 Python 3.8，不支持 3.10 联合类型注解 | 所有 .py 已加 `from __future__ import annotations` |
 | `ModuleNotFoundError: galbot_sdk` (HPU) | HPU 没装 Python SDK 包 | `deploy_hpu.sh` 会自动推送；手动：从 WSL rsync `~/GalbotSDK/galbot_sdk/linux-aarch64-gcc940/lib/python/galbot_sdk`（只留 cp38）到 HPU `~/g1_runtime/` |
 | Web Console 网页和三维模型能打开，但机器人状态不更新 | 网页静态资源可独立运行；`--live` 只表示尝试初始化 SDK，不能证明 PC 后端已连到机器人 | 按下文“四层验收”检查 SDK 初始化、`connected`、设备时间戳持续推进和机器人 SN；先核对 PC—HPU—XCU 有线网络及同一 Python 环境中的 SDK 导入 |
@@ -82,6 +82,37 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 - **诊断**：在 HPU 执行 `source scripts/env_hpu.sh` 后，调用 `GalbotPerception().init({PerceptionModule.FOUNDATION_STEREO})`，等待约 10 秒，再依次检查 `run_once(...)`、`wait_for_new_result(..., timeout_s=8)`、`get_latest_result(...)` 是否成功，以及 `np.asarray(result.instance_mask).shape/dtype`。若在 PC 上 `init` 返回 `False`，先在 HPU 做同样检查，避免将 PC 到机器人服务的连通问题误判为没有双目能力。
 - **修复**：使用 `StereoDepthTool.capture_stereo_depth()` 直接调该 SDK 模块，保存原始 `.npy` 与伪彩色预览。SDK 未明确原始深度数值的物理单位，暂不换算成米。
 - **验证**：2026-11-07 在 HPU 真机完成封装调用，返回 `succeeded/real`，图像为 1280×960、`uint16`，有效像素比例 1.0，原始值范围 384–7798；预览能区分桌面、物体和背景。此结果验证深度图获取，不证明米制距离精度。
+
+### G1 躯干轴向：`leg_joint4/5` 不当前倾，`leg_joint3` 可产生俯仰（2026-11-07）
+
+- **现象**：监督脚本最初期望用 `torso` 链的 `leg_joint4`、`leg_joint5` 实现前倾，但真机中 `leg_joint4` 产生偏航，`leg_joint5` 也没有产生俯仰；现场观察到侧向运动，`leg_joint5` 微步时头部滚转约变化 1.14°，俯仰和偏航基本不变。
+- **确认原因**：G1 的 `set_leg_height()` 使用 `LEG_HEIGHT_CTRL` 协同解算前三个腿关节，`leg_joint4/5` 不属于该高度协同段，也没有可用的单关节前倾轴。改用 `leg_joint3` 做 0.002 rad 受控微步后，头部俯仰变化明显，确认它是前倾候选。
+- **诊断**：在 HPU 的 `source scripts/env_hpu.sh` 环境读取全部五条腿关节状态，再记录 `get_transform("base_link", "head_base_link")` 的四元数并计算 roll/pitch/yaw。单步只命令 `leg_joint3`，比较动作前后的目标关节、其它关节漂移、头部 X/Z 位移和姿态变化；只看 X/Y 位移会把偏航或滚转误判为前倾。
+- **决策与修复**：`TorsoLeanTool` 仍禁用 `leg_joint4/5` 的单关节动作；前倾控制应改用 `leg_joint3` 的受控小步。因为 `leg_joint3` 属于高度协同段，单动它也会耦合身高和支撑位置，不能直接套用之前的纯躯干关节范围。
+- **验证结果与边界**：2026-11-07 先单步 `+0.002 rad`，实际 `leg_joint3` 变化 `+0.001977 rad`；头部俯仰变化 `+0.002083 rad`（约 +0.119°），滚转变化 `+0.000068 rad`、偏航变化 `+0.000755 rad`；头部 X 前移约 `+1.258 mm`，高度变化约 `-0.053 mm`。随后监督执行更大一步 `+0.010 rad`，实际关节变化 `+0.009983 rad`；头部俯仰变化 `+0.009971 rad`（约 +0.571°）、滚转和偏航均只有约 0.01° 量级，X 前移约 `+6.00 mm`，高度变化约 `+0.04 mm`。目标位置在 `leg_joint3≈0.262107 rad` 保持；相隔 2 秒复读时 `leg_joint3` 漂移为 0，头部位置漂移小于 `0.04 mm`。随后把五条腿关节一次性恢复到实验前基线，返回 `SUCCESS`，各腿关节目标误差最大约 `0.000084 rad`；头部/双臂未被命令，最大自然漂移约 `0.00046 rad`。恢复后 2 秒内全部活动关节最大漂移约 `0.000049 rad`，无关节超过 `0.0001 rad`。这确认正方向小步可产生前倾且可保持和恢复，但不证明更大角度、长期承载或重心安全极限。
+
+### `set_leg_height` 返回 `FAULT` 但已到达目标（2026-11-07）
+
+- **现象**：把腿高从 `1.051637 m` 提升到 1.42 m 时，`set_leg_height(1.42, 6.0, True, 20.0)` 返回 `ControlStatus.FAULT`，但随后读取 `head_base_link` 的 Z 为 `1.419966 m`，距目标仅 0.034 mm。
+- **确认结果与原因边界**：已确认“返回 FAULT 时目标仍可能已经到达”，因此不能仅凭返回枚举判断是否执行成功。本次 FAULT 的具体触发原因尚未定位，可能是阻塞式任务完成状态的上报差异，尚属假设。
+- **诊断**：动作后立即读取 `get_transform("base_link", "head_base_link")`，比较 Z 与目标，并连续读取一次确认时间戳更新和位置稳定；不要因为 FAULT 就盲目重发同一个大位移命令。
+- **处理与验证**：本次没有重发命令，位置读数与目标误差小于 0.1 mm，随后正常执行 SDK shutdown。后续封装应把“SDK 状态”和“实际目标位姿”分开报告；只有位置复读也异常时才进入故障处理。
+
+### 头部关节已动但姿态校验不变：测错 frame（2026-11-07）
+
+- **现象**：`HeadLookTool` 命令 `head_joint2` 增加 0.01 rad，SDK 返回 `SUCCESS`，实际关节变化约 0.00713 rad；但工具读取 `head_base_link` 的姿态几乎不变，因此错误返回“实际俯仰方向与预期不符”。
+- **确认原因**：`head_base_link` 位于头部关节之前，是头部安装基座，不随 `head_joint1/2` 转动；用它做头部动作验收会得到假阴性。真正随头部运动的是 `head_end_effector_mount_link`。
+- **诊断**：同时读取 `head_joint2` 与 `head_base_link`、`head_link1`、`head_link2`、`head_end_effector_mount_link` 的 `get_transform("base_link", frame)`。若关节位置已更新而候选 frame 的姿态时间戳/数值不更新，逐层检查 frame 是否位于关节之后。
+- **修复**：`HeadLookTool` 改用 `head_end_effector_mount_link` 计算头部 roll/pitch/yaw 并验证低头方向；关节位置反馈和控制目标不变。
+- **验证结果与边界**：修正后 PC 端 6 个头部单元测试通过；截至记录时尚未重新发送真机头部动作，需用下一次单步键盘输入验证实际低头方向。
+
+### 头部键盘脚本动作成功后因日志格式化崩溃（2026-11-07）
+
+- **现象**：键盘脚本收到 `j` 后，头部工具返回成功，机器人也实际移动；随后脚本在打印 `OK ...` 时抛出 `ValueError: Unknown format code 'f' for object of type 'str'` 并退出。
+- **确认原因**：日志字符串混用了 `%s` 和 `str.format()`。未替换的 `%s` 留在字符串中，而第一个 `{:.4f}` 实际收到的是字符串 `head_joint2`，因此按浮点格式输出时报错。动作本身和 SDK 状态正常。
+- **诊断**：出现该 traceback 后先只读 `get_joint_states([], ["head_joint1", "head_joint2"])` 并读取 `head_end_effector_mount_link` 姿态，确认动作是否完成，不能因为脚本退出就立即重复动作。
+- **修复**：把成功日志封装为 `format_step_success()`，只用 `str.format()` 并固定参数顺序；新增格式化回归测试。脚本异常时仍会把未完成动作视为停止条件。
+- **验证**：2026-11-07 该次 `head_joint2` 已从约 0.0499 rad 到 0.059885 rad，头部末端 pitch 约 2.976°，按 `j` 后并未回退。修复后 PC 与 HPU 的 7 个头部测试全部通过；部署修正版后未重复发送动作。
 
 ### 部署架构：全机器人端（HPU），不在 PC 上跑
 

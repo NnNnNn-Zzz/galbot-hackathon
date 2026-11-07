@@ -71,6 +71,43 @@ print(result.to_dict())
 `sdk_raw_unverified`，不可直接当米使用，也不与臂部深度相机的米制数据混用。
 首次调用会初始化模型并等待约 10 秒，后续调用仅运行单次推理。
 
+G1 直立下蹲（使用官方 `GalbotRobot.set_leg_height()`，逐步且需要现场确认）：
+
+```bash
+source scripts/env_hpu.sh
+python3 scripts/supervised_squat.py
+```
+
+SDK 定义的 `head_base_link` 高度范围为 0.96–1.54 m，封装每步最多下降/上升
+2 cm，并要求操作者对每一步逐项确认。0.96 m 是 SDK 支持下限，不等同于真机
+验证过的机械极限或平衡极限。全程用 `get_transform("base_link", "head_base_link")`
+读回实际高度；完成恢复后可按官方示例切回 `leg_pvt_ctrl`。流程不会关闭共享
+SDK 单例，真机启动必须在有现场监督者和可触达急停的环境中进行。
+
+G1 前倾关节不能用 `torso` 链的 `leg_joint4/5`：2026-11-07 监督测试确认
+`leg_joint4` 产生偏航，`leg_joint5` 动作时头部俯仰/偏航基本不变而滚转变化。
+`TorsoLeanTool` 因此继续禁用这两个关节的动作，仅保留只读状态查询。
+
+同日 `leg_joint3 +0.002 rad` 和 `+0.010 rad` 两次受控微步均产生主导俯仰
+（头部 pitch 分别约 `+0.119°`、`+0.571°`，X 分别前移约 `1.26 mm`、
+`6.00 mm`），说明 `leg_joint3` 是前倾候选。但它属于
+`LEG_HEIGHT_CTRL` 使用的前三条腿关节，单动会耦合身高与支撑位置；在实现和
+真机验证专用单步工具前，不应假定更大的角度范围或平衡安全边界。
+
+G1 头部键盘控制（只动 `head_joint2` 俯仰）：
+
+```bash
+source scripts/env_hpu.sh
+python3 scripts/keyboard_head_control.py
+```
+
+`HeadLookTool` 每步最多 0.02 rad、速度 0.05 rad/s，测试阶段软件范围暂限
+-0.25–0.40 rad；每步复读 `head_joint2`、实际头部 pitch 和未命令的
+`head_joint1` 漂移。头部姿态必须从会随头关节运动的
+`head_end_effector_mount_link` 读取；`head_base_link` 位于头关节之前，不能用
+来判断低头方向。脚本中 `j/k` 以 0.01 rad 低头/抬头，`J/K` 以 0.02 rad
+低头/抬头，`r` 逐步回起始，`q` 退出。正负方向会由实际头部末端姿态验证。
+
 推杯子闭环（判不安全 → 语音 → 小步推 → 回位复测）：
 
 ```python

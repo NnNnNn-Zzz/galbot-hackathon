@@ -1,0 +1,23 @@
+{
+  "note": [
+    "Head-camera power_strip detector for coarse approach.",
+    "Detection is direction-only; metric distance and grasp coordinates are not emitted."
+  ],
+  "model_search_roots": [
+    "/home/mr/yoloseg/runs"
+  ],
+  "weights": null,
+  "target_class": "power_strip",
+  "required_task": "detect",
+  "imgsz": 640,
+  "confidence": 0.3,
+  "iou": 0.7,
+  "device": "cpu",
+  "camera": "head_left",
+  "quality": {
+    "min_confidence": 0.3,
+    "min_width_px": 12.0,
+    "min_height_px": 8.0,
+    "edge_margin_px": 3
+  }
+}

@@ -465,6 +465,61 @@ class GalbotAdapter(RobotAdapter):
                   "unit": "m"},
         )
 
+    def get_chain_frame_pose(
+        self,
+        chain: str = "right_arm",
+        frame_id: str = "Camera",
+        reference_frame: str = "base_link",
+    ) -> ToolResult:
+        """Read an SDK semantic frame without commanding motion."""
+        rejection = self._authorization_rejection()
+        if rejection is not None:
+            return rejection
+        if frame_id not in {"EndEffector", "Camera", "TCP"}:
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                f"unsupported chain frame {frame_id!r}",
+                mode=self.mode,
+                data={"supported": ["EndEffector", "Camera", "TCP"]},
+            )
+        try:
+            _robot, motion, _nav = self._ensure_interfaces()
+            status, pose = motion.get_end_effector_pose_on_chain(
+                chain, frame_id, reference_frame
+            )
+        except Exception as exc:  # noqa: BLE001
+            return unknown(
+                ErrorCode.STATE_UNCERTAIN,
+                f"读取 {chain}/{frame_id} 位姿失败：{exc}",
+                mode=self.mode,
+                data={"chain": chain, "frame_id": frame_id},
+            )
+        name = _enum_name(status)
+        pose = [float(v) for v in list(pose)]
+        data = {
+            "chain": chain,
+            "frame_id": frame_id,
+            "reference_frame": reference_frame,
+            "motion_status": name,
+            "pose": pose,
+            "unit": "m",
+        }
+        if name == "SUCCESS" and len(pose) == 7:
+            return ok(f"{chain}/{frame_id} 位姿已读取", mode=self.mode, data=data)
+        if name == "INVALID_INPUT":
+            return rejected(
+                ErrorCode.NOT_READY,
+                f"{chain}/{frame_id} 尚不可用；TCP 需要先 attach_tool",
+                mode=self.mode,
+                data=data,
+            )
+        return failed(
+            ErrorCode.SDK_ERROR,
+            f"读取 {chain}/{frame_id} 位姿失败（{name}）",
+            mode=self.mode,
+            data=data,
+        )
+
     def _execute_cartesian(
         self,
         chain: str,
