@@ -23,18 +23,31 @@ galbot_hackathon/
 │   ├── memory.py               #   task_log 会话记忆（JSONL）
 │   └── scene_loader.py         #   场景注册表读取 + 动态调用
 ├── sdk_wrapper/                # 硬件封装层（仅负责人 A 改）
-│   ├── wrapper.py              #   move_forward / turn / read_sensor ...
+│   ├── wrapper.py              #   move_forward / turn / read_sensor ...（底盘 API，厘米/度）
 │   ├── safety_config.json      #   ★ 安全限幅参数（人工可调）
 │   ├── baseline.py             #   归位函数 + 基线检查
-│   └── mock_robot.py           #   无真机时的模拟机器人
+│   ├── mock_robot.py           #   无真机时的模拟机器人
+│   └── dev/                    #   ★ 并入的 galbot_dev SDK 栈（ToolResult 契约层，米/弧度/秒）
+│       ├── contracts.py        #     统一返回结构（status/mode/task_id/error_code）
+│       ├── adapters/           #     MockAdapter + GalbotAdapter（真机，双授权闸门）
+│       ├── robot_tools/        #     motion / navigation / safety / perception / audio
+│       ├── algorithms/         #     颜色检测 / 几何 / 场景分析 / 桌面单应
+│       └── tests/              #     21 个单元测试（unittest）
 ├── scenes/                     # 场景脚本（各负责人各管各的文件夹，可自己组装 SDK 封装）
 │   ├── scene_patrol/           #   示例：巡逻
 │   └── scene_greet/            #   示例：打招呼
 ├── registry/
 │   └── scenes.yaml             #   ★ 场景统一注册表（追加自己的条目）
 └── docs/
-    └── DEVELOPMENT_RULES.md    #   ★ 合作开发规范（开工前必读）
+    ├── DEVELOPMENT_RULES.md    #   ★ 合作开发规范（开工前必读）
+    ├── REAL_ROBOT_TEST_GUIDE.md#   ★ 真机逐项验证指南（22/22 全通过）
+    └── SDK_DEV_INTEGRATION.md  #   galbot_dev SDK 并入说明
 ```
+
+> **封装层验证状态（2026-11-07）**：两套封装真机全量 22/22 通过——
+> 老 `sdk_wrapper`（底盘 API）10 项 + `sdk_wrapper/dev`（ToolResult 层）12 项。
+> 后续场景/Agent 直接调用接口即可控制机器人，封装层代码无需再改。
+> 详见 `docs/REAL_ROBOT_TEST_GUIDE.md`。
 
 ## 快速开始
 

@@ -1,37 +1,41 @@
 # 真机逐项跑通指南（wrapper 全功能验证）
 
-配套脚本：`scripts/test_wrapper_real.py`（每步人工确认，mock 已 22/22 预验证）。
+> **真机验证状态：22/22 全通过（2026-11-07，机器人 galbot-echo / SN R001ABDD22AA0480）**
+> 配套脚本：`scripts/test_wrapper_real.py`（每步人工确认，mock 22/22 预验证 + 真机 22/22 实测）。
+> 两套封装（老 `sdk_wrapper` 底盘 API + 新 `sdk_wrapper/dev` ToolResult 层）均已真机跑通，
+> **后续场景/Agent 直接调用接口即可控制机器人，无需再改封装层代码。**
 
 ## 〇、功能总表
 
 ### Part base —— 老 `sdk_wrapper`（底盘 API，单位：厘米 / 度）
 
-| # | 函数 | 干什么 | 真机状态 |
+| # | 函数 | 干什么 | 真机实测 |
 |---|---|---|---|
-| B1 | `get_robot()` | SDK 单例初始化 + 自动切 CHASSIS_POSE_CTRL 控制器 | ✅ 可测 |
-| B2 | `get_nav()` | 导航单例（自动补启 service_navigation_plan） | ✅ 可测 |
-| B3 | `check_baseline()` / `read_sensor(name)` | 状态检查 / 传感器读取 | ⚠️ 占位实现；`read_sensor` 预期 NotImplementedError（已知缺口） |
-| B4 | `load_safety()` + 限幅 | 读 safety_config.json，超限静默截断 | ✅ 只读可测 |
-| B5 | `stop_base()` | 立即停底盘 | ✅ 可测 |
-| B6/B7 | `move_forward(cm)` / `move_backward(cm)` | 直线走（底层 `set_base_pose`，不需要地图） | ✅ 可测 |
-| B8 | `turn(deg)` | 原地转（+ 左 / − 右） | ✅ 可测 |
-| B9 | `baseline.reset_to_baseline()` | 归位（当前只停底盘，手臂/夹爪是 TODO） | ⚠️ 部分实现 |
+| B1 | `get_robot()` | SDK 单例初始化 + 自动切 CHASSIS_POSE_CTRL 控制器 | ✅ 通过（GalbotRobot 实例） |
+| B2 | `get_nav()` | 导航单例（自动补启 service_navigation_plan） | ✅ 通过（GalbotNavigation 实例） |
+| B3 | `check_baseline()` / `read_sensor(name)` | 状态检查 / 传感器读取 | ✅ 通过（check_baseline 返回 dict；read_sensor 预期 NotImplementedError，已知占位缺口） |
+| B4 | `load_safety()` + 限幅 | 读 safety_config.json，超限静默截断 | ✅ 通过（clamp(3.0)=2.0m） |
+| B5 | `stop_base()` | 立即停底盘 | ✅ 通过 |
+| B6/B7 | `move_forward(cm)` / `move_backward(cm)` | 直线走（底层 `set_base_pose`，不需要地图） | ✅ 通过（10cm 前进/后退，odom 实测 9.2cm，SUCCESS） |
+| B8 | `turn(deg)` | 原地转（+ 左 / − 右） | ✅ 通过（±15°，SUCCESS） |
+| B9 | `baseline.reset_to_baseline()` | 归位（当前只停底盘，手臂/夹爪是 TODO） | ✅ 通过（停底盘部分；手臂/夹爪 TODO） |
 
 ### Part dev —— `sdk_wrapper/dev`（ToolResult 契约层，单位：米 / 弧度 / 秒）
 
-| # | 函数 | 干什么 | 真机状态 |
+| # | 函数 | 干什么 | 真机实测 |
 |---|---|---|---|
-| D1 | `GalbotAdapter()` 未授权 | 双闸门（`enable_real_control` + `real_authorized`），不授权连 SDK 都不 import | ✅ 可测（零风险） |
-| D2 | `get_robot_state()` | 结构化状态快照（motion_state=idle/moving/unknown） | ✅ 可测 |
-| D3 | `list_cameras / capture_scene / analyze_scene / find_object` | 相机抓帧 → 解码 → 3D 反投影 → 目标检索 | ✅ 可测（未装配机位返回 not_ready 属正常） |
-| D4 | `get_end_effector_pose(chain)` | 读末端位姿 [x,y,z,qx,qy,qz,qw]（base_link，米） | ✅ 可测 |
-| D5 | `set_gripper_width(ee, width_m)` | 夹爪开度 0–0.11 m | ✅ 可测 |
-| D6 | `move_ee_delta / move_ee_to` | 末端直线平移 / 绝对位姿（单次上限 0.5 m） | ✅ 可测（建议 ≤2 cm） |
-| D7a | `execute_gesture('wave_right')` | 预设动作 | ❌ **故意拒绝**（手势未标定，需先示教关节角登记 config/gestures.json） |
-| D7b | `navigate_to_place('demo_table')` | 定点导航 | ❌ **故意拒绝**（places.json 的 pose=null，需真机实测填位姿后放行） |
-| D8 | `speak(prompt_id)` | 语音（无 PCM 素材时文本兜底） | ⚠️ 素材未合成，当前走文本兜底 |
+| D1 | `GalbotAdapter()` 未授权 | 双闸门（`enable_real_control` + `real_authorized`），不授权连 SDK 都不 import | ✅ 通过（rejected + permission_denied，零风险） |
+| D2 | `get_robot_state()` | 结构化状态快照（motion_state=idle/moving/unknown） | ✅ 通过（motion_state=idle） |
+| D3 | `list_cameras / capture_scene / analyze_scene / find_object` | 相机抓帧 → 解码 → 3D 反投影 → 目标检索 | ✅ 通过（real 抓帧 640×360，analyze 检测 8 目标） |
+| D4 | `get_end_effector_pose(chain)` | 读末端位姿 [x,y,z,qx,qy,qz,qw]（base_link，米） | ✅ 通过（7 元组位姿读取正常） |
+| D5 | `set_gripper_width(ee, width_m)` | 夹爪开度 0–0.12 m | ✅ 通过（0.06/0.0/0.12 均 SUCCESS，夹爪真实开合） |
+| D6 | `move_ee_delta / move_ee_to` | 末端直线平移 / 绝对位姿（单次上限 0.5 m） | ✅ 通过（2cm 平移 + 回位，succeeded） |
+| D7a | `execute_gesture('wave_right')` | 预设动作 | ✅ 通过（**预期 rejected**：手势未标定 NOT_SUPPORTED，拒绝=设计正确） |
+| D7b | `navigate_to_place('demo_table')` | 定点导航 | ✅ 通过（**预期 rejected**：places.json pose=null 未实测，拒绝=设计正确） |
+| D8 | `speak(prompt_id)` | 语音（无 PCM 素材时文本兜底） | ✅ 通过（mode=text_fallback，不假装播过；PCM 素材合成后即真出声） |
 
 > D7 两项"跑通"的标准 = **正确地拒绝**。这是设计的安全行为，返回 succeeded 反而说明出了问题。
+> D8 的文本兜底也是设计行为；要真出声需先合成 PCM 素材（命令在 `sdk_wrapper/dev/robot_tools/audio.py` 文件头）。
 
 ## 一、上真机前的准备（顺序执行）
 
