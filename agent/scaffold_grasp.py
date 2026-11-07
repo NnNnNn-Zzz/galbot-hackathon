@@ -68,14 +68,20 @@ SENSORS = ["LEFT_ARM_CAMERA", "RIGHT_ARM_CAMERA",
            "HEAD_LEFT_CAMERA"]
 
 DETECT_PROMPT = (
-    "这是一台人形机器人头部相机拍的照片。请找出画面里的矿泉水瓶（塑料瓶装水，"
-    "瓶身有标签；可能被手臂部分遮挡，只要能看到瓶身就算找到），"
-    "返回它的紧致外接矩形，**坐标用 0~1 的比例表示**（左上角是 0,0，右下角是 1,1）。"
+    "这是一台人形机器人头部相机拍的照片。机器人正前方是一张白色工作桌。"
+    "请只在**这张白色桌面范围内**找矿泉水瓶（塑料瓶装水，瓶身可能带标签，"
+    "可能被机器人手臂部分遮挡，只要能看到瓶身就算找到）。"
+    "**注意**：画面边缘其他台子/箱子上的瓶子不算；不在桌面上的不算。"
+    "返回瓶子的紧致外接矩形，**坐标用 0~1 的比例表示**（左上角是 0,0，右下角是 1,1）。"
     "框要框住整个瓶身，从瓶盖或瓶肩到瓶底。\n"
     "只输出 JSON：\n"
     '{"found": true, "bbox_norm": [x1, y1, x2, y2]}\n'
     "没找到就返回 {\"found\": false}。"
 )
+
+# 检测有效性防线：框贴着画面边缘（鱼眼畸变会把射线拉飞）/ 目标离机器人太远 → 拒绝
+BBOX_EDGE_MARGIN = 0.02   # 归一化，框任一边距画面边缘 <2% 视为可疑
+FOOT_MAX_REACH_M = 0.65   # 瓶脚到 base 原点的水平距离上限（臂展内）
 
 VERIFY_PROMPT = (
     "这是机器人头部相机刚拍的照片。机器人的夹爪刚才闭合并抬起。"
@@ -116,7 +122,8 @@ def _vlm_raw(prompt: str, image_paths: list[str]) -> dict:
 
 
 def detect_bottle(image_path: str) -> dict:
-    """VLM 检测瓶子。归一化框由代码乘分辨率，不让模型报像素。"""
+    """VLM 检测瓶子。归一化框由代码乘分辨率，不让模型报像素。
+    附带有效性防线：贴边框（鱼眼畸变危险区）直接拒绝。"""
     import cv2
     img = cv2.imread(image_path)
     if img is None:
@@ -128,6 +135,11 @@ def detect_bottle(image_path: str) -> dict:
     n = [float(v) for v in d["bbox_norm"]]
     bbox = [max(0.0, min(w - 1.0, n[0] * w)), max(0.0, min(h - 1.0, n[1] * h)),
             max(0.0, min(w - 1.0, n[2] * w)), max(0.0, min(h - 1.0, n[3] * h))]
+    # 贴边检查：框任一边压到画面边缘 ±margin 内 → 鱼眼边缘畸变大，射线不可信
+    if (n[0] < BBOX_EDGE_MARGIN or n[1] < BBOX_EDGE_MARGIN
+            or n[2] > 1 - BBOX_EDGE_MARGIN or n[3] > 1 - BBOX_EDGE_MARGIN):
+        return {"success": False,
+                "message": f"框贴画面边缘（{[round(v, 2) for v in n]}），鱼眼畸变危险区，拒绝"}
     return {"success": True, "bbox": bbox, "width": w, "height": h}
 
 
@@ -268,6 +280,12 @@ def main() -> int:
     foot = ray_plane_hit((x1 + x2) / 2, y2, K, ext, z_table)
     if foot is None:
         logger.error("射线与桌面无交点（像素 %.0f,%.0f）", (x1 + x2) / 2, y2)
+        wrapper.shutdown()
+        return 1
+    if (foot[0] ** 2 + foot[1] ** 2) ** 0.5 > FOOT_MAX_REACH_M:
+        logger.error("瓶脚=(%.3f,%.3f) 离机器人 %.2fm 超臂展上限 %.2fm，"
+                     "疑似检测到桌外物体，中止", foot[0], foot[1],
+                     (foot[0] ** 2 + foot[1] ** 2) ** 0.5, FOOT_MAX_REACH_M)
         wrapper.shutdown()
         return 1
     logger.info("瓶脚=(%.3f, %.3f) 框=[%d,%d,%d,%d]", foot[0], foot[1],
