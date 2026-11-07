@@ -1,0 +1,50 @@
+{
+  "name": "medicine.vlm",
+  "description": "VLM 校验版：预抓取后拍照交多模态大模型确认，通过才下爪",
+  "version": 3,
+  "steps": [
+    {
+      "id": "preflight",
+      "stage": "preflight",
+      "non_fatal": true
+    },
+    {
+      "id": "grasp",
+      "stage": "grasp_vlm",
+      "params": {
+        "chain": "right_arm",
+        "tool": "galbot_gripper"
+      }
+    },
+    {
+      "id": "announce",
+      "stage": "announce"
+    },
+    {
+      "id": "shift_left",
+      "stage": "shift_left",
+      "params": {
+        "distance_m": 0.5
+      }
+    },
+    {
+      "id": "turn_bin",
+      "stage": "turn",
+      "params": {
+        "deg_key": "bin_turn_deg",
+        "default_deg": -30.0,
+        "label": "右转"
+      }
+    },
+    {
+      "id": "drop",
+      "stage": "drop"
+    },
+    {
+      "id": "home",
+      "stage": "return_home",
+      "must_run": true,
+      "non_fatal": true
+    }
+  ]
+}
