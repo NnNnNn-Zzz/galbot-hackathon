@@ -98,6 +98,14 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 - **诊断**：动作后立即读取 `get_transform("base_link", "head_base_link")`，比较 Z 与目标，并连续读取一次确认时间戳更新和位置稳定；不要因为 FAULT 就盲目重发同一个大位移命令。
 - **处理与验证**：本次没有重发命令，位置读数与目标误差小于 0.1 mm，随后正常执行 SDK shutdown。后续封装应把“SDK 状态”和“实际目标位姿”分开报告；只有位置复读也异常时才进入故障处理。
 
+### `8092` 相机桥进程存活但请求队列堵满、页面超时（2026-11-08）
+
+- **现象**：`http://192.168.166.7:8092/` 的腕部及健康接口请求超时，`galbot-camera-robot.service` 仍显示 `active (running)`；`ss -ltnp` 显示 `8092` 的 `Recv-Q/Send-Q` 都为 `5`，达到 `ThreadingHTTPServer` 默认 backlog。日志同时出现 `BrokenPipeError`。
+- **原因边界**：已确认存在请求队列耗尽，重启服务后恢复；尚不能确认队列为何未及时排空，可能是浏览器持续轮询叠加长时间未结束的请求。该现象发生在接入腕部 YOLO 叠加之前，不能归因于模型推断。
+- **诊断**：在 HPU 执行 `ss -ltnp | grep 8092`，检查监听进程是否存活以及队列是否为 `5/5`；再查 `systemctl --user status galbot-camera-robot.service` 和 `/home/galbot/galbot-camera-shots/systemd.log`。不要仅因进程存活就判断服务正常。
+- **修复**：先备份 `/home/galbot/galbot-camera-shots/robot_server.py` 与对应的 user unit，再执行 `systemctl --user daemon-reload && systemctl --user restart galbot-camera-robot.service`。该操作只重启只读相机桥，不发送机器人运动或夹爪命令。
+- **验证**：2026-11-08 重启后队列恢复为 `0/5`，主页返回 HTTP 200，认证后的 `/health` 以及左右腕 `/frame/*` 均返回 JPEG；腕部实例分割状态为 `ready`。后续若再次出现 `5/5`，应同时检查前端轮询和单个请求是否阻塞，不能无限重启掩盖问题。
+
 ### 夹爪碰到物体后继续收窄会返回 `TIMEOUT`（2026-11-08）
 
 - **现象**：右手夹爪夹住约 2 cm 宽的充电器时，先后请求 1.8 cm 和 1.6 cm 开度，`set_gripper` 均返回 `control_status: TIMEOUT`、`success: false`；现场确认 1.6 cm 指令后夹持已足够紧。返回结果只保留请求值，没有实际夹爪开度反馈。
