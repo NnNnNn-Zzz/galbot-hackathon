@@ -587,20 +587,27 @@ class GalbotAdapter(RobotAdapter):
             return rejection
         try:
             gm = self._import_sdk()
-            members = gm.G1JointGroup.__members__
-            if end_effector not in members:
+            # ⚠️ G1JointGroup 是普通常量类（ClassVar[str] 属性），不是 pybind 枚举，
+            # 没有 __members__（2026-11-07 真机实测 AttributeError）。用 vars() 取属性表。
+            groups = {
+                name: value
+                for name, value in vars(gm.G1JointGroup).items()
+                if isinstance(value, str)
+            }
+            if end_effector not in groups or "gripper" not in end_effector:
                 return rejected(
                     ErrorCode.INVALID_ARGUMENT,
                     f"未知夹爪 {end_effector!r}",
                     mode=self.mode,
-                    data={"supported_ids": sorted(k for k in members if "gripper" in k)},
+                    data={"supported_ids": sorted(
+                        v for v in groups.values() if "gripper" in v
+                    )},
                 )
             robot, _m, _n = self._ensure_interfaces()
-            # ⚠️ SDK set_gripper_command(end_effector: str, ...) 要的是字符串，
-            # 不是 G1JointGroup 枚举成员——传枚举 pybind 会抛 TypeError（2026-11-07 真机实测）。
-            # members 只用于白名单校验，真正下发用原始字符串。
+            # set_gripper_command(end_effector: str, ...) 要字符串。
+            # groups 的值本身就是 str（如 "left_gripper"），直接下发。
             status = robot.set_gripper_command(
-                str(end_effector),
+                groups[end_effector],
                 float(width_m),
                 float(velocity_mps),
                 float(effort),
