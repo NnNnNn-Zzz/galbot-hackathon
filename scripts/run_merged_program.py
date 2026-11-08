@@ -4,7 +4,8 @@
 
     ① 腰部回正          scripts/set_waist_upright.py       leg_joint4/5 → 0°
     ② 到抬手程序的腰高   scripts/set_waist_height.py        腰高取自 right_arm_sequence.json
-    ③ probe_pull 预检   scripts/probe_pull.py 0.15         只读：查后退 15 cm 是否可达
+    ③ run_sequence 全序列 ~/run_sequence.py                夹爪4cm → 摆姿态 → 视觉标定 →
+                                                          前进 5×5cm → 夹爪2cm → 拉出 27cm → 6cm
     ④ 张爪 + 后退 15 cm  scripts/gripper_open_retreat.py    夹爪开到最大，沿夹爪轴退 15 cm
     ⑤ 抬手程序          scripts/replay_joint_waypoints.py   右臂 7 关节分步回放（默认倒序）
 
@@ -18,12 +19,13 @@ adapter 各持一套），代价是跑一次崩一次。所以这里用 subproce
 好处是这些脚本各自真机验证过的行为**一字不改**地保留下来，
 合并只是把调用顺序和前置条件固定住，不重新发明一遍运动逻辑。
 
-★ 顺序为什么必须是「先回正、再设高、后预检」
+★ 顺序为什么必须是「先回正、再设高、后序列」
 ------------------------------------------------
 - 腰的偏航/侧倾（leg_joint4/5）回正会改变 head_base_link 的高度读数，
   所以**必须先回正、再设腰高**（反过来设完高度会被回正动作带偏）。
-- probe_pull 检查的是"从**当前**位姿沿夹爪轴后退"的 IK 可达性。腰一动末端就变，
-  所以预检必须在腰姿稳定之后、真正后退之前。
+- 第③步 run_sequence 会把末端姿态摆成 Rx(-90°)（夹爪水平向前 + 内旋 90°），
+  并沿这个轴拉出 27 cm。第④步紧接着沿同一个轴再退 15 cm，
+  所以是**接近纯水平**的退 —— 姿态竖直时那种"后退变升降"的情形不会出现。
 - 抬手程序只下发 right_arm_joint1..7 的关节角，不动腰。它的采样序列是在
   「腰高 1.3904 m」这个前提下录的，所以前面必须把腰摆回去，否则同样的关节角
   末端位置对不上。
@@ -36,6 +38,11 @@ adapter 各持一套），代价是跑一次崩一次。所以这里用 subproce
     python3 -u scripts/run_merged_program.py --yes         # 真跑且免确认（ssh 一条命令必须带）
     python3 -u scripts/run_merged_program.py --skip 1,2     # 跳过前两步（腰已就位时）
     python3 -u scripts/run_merged_program.py --retreat 0.10 --waist-height 1.405
+    python3 -u scripts/run_merged_program.py --sequence-args "--pull 0.20 --fwd 4"
+
+★ 第③步是既有的 ~/run_sequence.py（不在 scripts/ 里，和 wrist_align.py 同住 home）。
+  它**没有 dry-run 模式，一跑就会动**，所以 --dry-run 时空跑会跳过这一步。
+  给它调参走 --sequence-args，别改 run_sequence.py 本身。
 
 ★ 非交互环境（Windows 侧 ssh 一条命令）**必须显式 --yes** 才会真跑。
   不会因为"读不到 stdin"就默默放行 —— 那样用户以为程序在等他确认，
@@ -57,18 +64,21 @@ DEFAULT_BASELINE = os.path.expanduser("~/joint_records/waist_baseline.json")
 SDK_PY = os.path.expanduser("~/g1_runtime")
 SDK_LIB = "/data/galbot/lib"
 
-#: 各步骤用到的子脚本，必须与 run_merged_program.py 同目录
+#: 第③步用的既有脚本。它住在机器人 home 而不是 scripts/，
+#: 因为它 `import wrist_align` 并要求同目录有 wrist_align.py + 基准图 ~/ref_handle.jpg。
+DEFAULT_SEQUENCE_SCRIPT = os.path.expanduser("~/run_sequence.py")
+
+#: 与 run_merged_program.py 同目录的子脚本（第③步不在此列，单独校验）
 STEP_SCRIPTS = {
     1: "set_waist_upright.py",
     2: "set_waist_height.py",
-    3: "probe_pull.py",
     4: "gripper_open_retreat.py",
     5: "replay_joint_waypoints.py",
 }
 STEP_TITLES = {
     1: "腰部回正（leg_joint4 偏航 / leg_joint5 侧倾 → 0°）",
     2: "把腰高设到抬手程序规定的值",
-    3: "probe_pull 预检（只读，不动机器人）",
+    3: "run_sequence 全序列（姿态 + 视觉标定 + 前进 + 拉出 27 cm）",
     4: "夹爪张到最大 + 沿夹爪朝向后退",
     5: "抬手程序（右臂 7 关节回放，默认倒序）",
 }
@@ -235,9 +245,9 @@ def confirm(prompt):
 # ──────────────────────────────────────────────────────────────
 def main() -> int:
     ap = argparse.ArgumentParser(
-        description="合并流程：腰部回正 → 腰高 → probe_pull → 张爪后退 15 cm → 抬手程序",
+        description="合并流程：腰部回正 → 腰高 → run_sequence → 张爪后退 15 cm → 抬手程序",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="步骤编号：1 腰部回正 / 2 腰高 / 3 probe_pull / 4 张爪后退 / 5 抬手程序")
+        epilog="步骤编号：1 腰部回正 / 2 腰高 / 3 run_sequence / 4 张爪后退 / 5 抬手程序")
     ap.add_argument("--waist-height", type=float, default=None,
                     help="显式指定腰高（米）；默认从抬手程序序列里读")
     ap.add_argument("--seq", default=DEFAULT_SEQ, help="抬手程序的序列文件")
@@ -246,6 +256,10 @@ def main() -> int:
                     help="第④步沿夹爪后退距离（米），默认 0.15")
     ap.add_argument("--open-cm", type=float, default=12.0,
                     help="第④步夹爪目标开度（cm），默认 12")
+    ap.add_argument("--sequence-script", default=DEFAULT_SEQUENCE_SCRIPT,
+                    help="第③步脚本，默认 ~/run_sequence.py")
+    ap.add_argument("--sequence-args", default="",
+                    help="给第③步的额外参数，如 \"--pull 0.20 --fwd 4\"")
     ap.add_argument("--order", default="",
                     help="第⑤步回放顺序（逗号分隔 label），默认倒序")
     ap.add_argument("--skip", default="", help="跳过步骤，逗号分隔，如 \"1,2\"")
@@ -287,7 +301,13 @@ def main() -> int:
     if dry:
         cmd2.append("--dry-run")
 
-    cmd3 = [py, "-u", os.path.join(HERE, STEP_SCRIPTS[3]), "%.4f" % args.retreat]
+    # 第③步：既有的 run_sequence.py。
+    # 它**没有 dry-run 模式**，一跑就动，所以 dry-run 时整步跳过（见下面执行循环）。
+    # 非交互环境必须给 --yes，否则内部的 input() 会 EOF 直接退出。
+    seq_script = os.path.expanduser(args.sequence_script)
+    cmd3 = [py, "-u", seq_script, "--yes"]
+    if args.sequence_args:
+        cmd3 += args.sequence_args.split()
 
     cmd4 = [py, "-u", os.path.join(HERE, STEP_SCRIPTS[4]),
             "--retreat", "%.4f" % args.retreat,
@@ -306,7 +326,7 @@ def main() -> int:
     # ── 预检 ────────────────────────────────────────────────
     print("")
     print("=" * 70)
-    print("  合并流程：腰回正 → 腰高 → probe_pull → 张爪后退 → 抬手程序")
+    print("  合并流程：腰回正 → 腰高 → run_sequence → 张爪后退 → 抬手程序")
     print("=" * 70)
     print("  工作目录：%s" % workdir)
     print("  Python  ：%s" % py)
@@ -321,7 +341,19 @@ def main() -> int:
             continue
         p = os.path.join(HERE, name)
         if not os.path.exists(p):
-            missing.append("%s（步骤 %d）" % (name, idx))
+            missing.append("%s（步骤 %d，应与本脚本同目录）" % (name, idx))
+
+    # 第③步：run_sequence.py 及其两个同目录依赖
+    if 3 not in skip:
+        if not os.path.exists(seq_script):
+            missing.append("%s（步骤 3，可用 --sequence-script 指定）" % seq_script)
+        else:
+            dep_dir = os.path.dirname(seq_script) or "."
+            for dep in ("wrist_align.py", "ref_handle.jpg"):
+                dp = os.path.join(dep_dir, dep)
+                if not os.path.exists(dp):
+                    missing.append("%s（步骤 3 依赖，run_sequence 会起不来/中止）" % dp)
+
     if missing:
         print("")
         print("  ✘ 缺少子脚本，先补齐再跑：", file=sys.stderr)
@@ -345,7 +377,11 @@ def main() -> int:
             else:
                 print("       腰高：%.4f m   （来源：%s）" % (waist_h, waist_src))
         elif idx == 3:
-            print("       预检后退 %.1f cm 的可达性" % (args.retreat * 100))
+            print("       脚本：%s" % seq_script)
+            if args.sequence_args:
+                print("       额外参数：%s" % args.sequence_args)
+            if dry:
+                print("       ⚠ 该脚本没有 dry-run 模式，本次空跑会跳过这一步")
         elif idx == 4:
             print("       张到 %.1f cm，然后沿夹爪轴退 %.1f cm"
                   % (args.open_cm, args.retreat * 100))
@@ -401,6 +437,17 @@ def main() -> int:
             if idx in skip:
                 results.append((idx, None, 0.0))
                 continue
+            if idx == 3 and dry:
+                # run_sequence.py 没有 dry-run 模式，一跑就动，空跑只能整步跳过
+                print("")
+                print("─" * 70)
+                print("  [3/5] %s" % STEP_TITLES[3])
+                print("  ⏭ 跳过：run_sequence.py 没有 dry-run 模式（一跑就会动）")
+                print("     空跑不覆盖这一步。想看它的计划，单独跑（它会真的动）：")
+                print("       python3 -u %s" % seq_script)
+                print("─" * 70, flush=True)
+                results.append((idx, -1, 0.0))
+                continue
             rc, dt = run_step(idx, cmds[idx], workdir, env, log_fp)
             results.append((idx, rc, dt))
             if rc != 0:
@@ -423,6 +470,9 @@ def main() -> int:
     for idx, r, dt in results:
         if r is None:
             print("  %d. %-44s  跳过" % (idx, STEP_TITLES[idx][:44]))
+        elif r == -1:
+            print("  %d. %-44s  dry-run 跳过（该步无 dry-run 模式）"
+                  % (idx, STEP_TITLES[idx][:44]))
         elif r == 0:
             print("  %d. %-44s  ✓  %.1f s" % (idx, STEP_TITLES[idx][:44], dt))
         else:
@@ -433,7 +483,9 @@ def main() -> int:
     if rc != 0:
         return rc
     if args.dry_run:
-        print("\n  dry-run 全部走完，机器人没有动。去掉 --dry-run 就是真跑。")
+        print("\n  dry-run 走完，机器人没有动。")
+        print("  （第③步 run_sequence 没有 dry-run 模式，已整步跳过 —— 这一步只有真跑才验证得到）")
+        print("  去掉 --dry-run 就是真跑。")
     else:
         print("\n  五步全部完成。")
         print("  提示：抬手程序结束后手臂停在序列首点；腰仍是回正 + 规定腰高，未再改动。")
@@ -448,8 +500,10 @@ def _tips(idx):
         return ["set_leg_height 会假 FAULT：以回读的 Z 为准，脚本已自带 3 次补发",
                 "差几毫米不动属 G-22 类，检查目标是否已接近当前值"]
     if idx == 3:
-        return ["probe_pull 只读，报 FAULT/IK 失败说明这段后退路径本身不可达",
-                "夹爪轴太偏（z 分量大）时后退会带明显升降，考虑先摆水平"]
+        return ["视觉标定没完全收敛（返回 3）会打警告并继续，属既有设计；返回 1 才中止",
+                "硬失败多是画面里找不到红把手 —— 先用 jog_ee.py 把把手摆进视野",
+                "基准图固定 ~/ref_handle.jpg；换把手就换图：--sequence-args \"--ref 新图\"",
+                "拉出 27 cm 那步历史上 6 步里 3 步首次 FAULT、重试后成功，属正常"]
     if idx == 4:
         return ["张爪 TIMEOUT 是顶到限位，属正常；实测宽度 <8 cm 才是真没张开",
                 "后退失败会自动重试 3 次；仍失败看打印的起点/目标/当前，多半是姿态漂了"]
