@@ -51,13 +51,20 @@ TEACH = os.path.join(REPO, "scenes", "scene_medicine_check", "pipeline",
 ARM_J = [f"right_arm_joint{i}" for i in range(1, 8)]
 LEAF, ROOT = "right_arm_end_effector_mount_link", "base_link"
 
-#: 下探总深度（m）。P0 的 TCP z ≈ 1.245 → 落点 z ≈ 0.825，
-#: 对应「药盒立在内腔底面上、TCP 抓在盒腰」这个最常见的情形。
+#: 下探总深度（m）。0.42 这个数来自「P0 的 TCP z ≈ 1.245 → 落点 z ≈ 0.825，
+#: 对应药盒立在内腔底面上、TCP 抓在盒腰」的环境估算。
+#:
+#: ⚠️ 2026-11-08 11:47 用户定下硬约束：**底盘与桌子的相对位置每次布置随机**，
+#:    base_link 下的环境坐标不成立。所以 0.42 **不是判据，只是目标档**。
+#:    真机上必须先量 P0 到抽屉内底的竖直距离，或按 0.10 → 0.20 → 0.30 → 0.42 逐档加深：
+#:        python tools/drawer_calib/_plan_exp2_dive.py --depth 0.10 --prefix VIA_P0_DIVE_SH --write
 DEFAULT_DEPTH_M = 0.42
 DEFAULT_STEPS = 10
 
-#: 抽屉占位盒（手工包络盒，**估算值**）。下探会主动进入它 —— 那是"伸进抽屉里"，属预期，
-#: 不算碰撞；它只用来在报告里区分"还在外面"和"已经进腔"。
+#: ⚠️ **已作废，仅留作回看历史报告**。
+#: 抽屉占位盒是手工包络盒（估算值），依赖底盘↔桌子的相对位置，跨场次无效。
+#: 用户 11-08 11:47 明确：不得用环境坐标做碰撞/净空判据。默认**不输出**任何进盒信息，
+#: 只有显式加 `--legacy-box` 时才打印，且只作参考、不进判定。
 BOX = {"x": (0.42, 0.80), "y": (-0.46, 0.00), "z": (0.70, 1.05)}
 
 LIMIT_FAIL_DEG = 2.0     # 与 s11_exp_stages.LIMIT_FAIL_DEG 一致
