@@ -289,6 +289,30 @@
 ---
 
 
+### G-25 `set_joint_positions` 对 <3° 的关节指令直接 FAULT 且一动不动
+
+- **报错原文**：`[STOP] 状态 FAULT 且未到位（差 2.23°）—— 停下，请人工确认`
+  调的是 `set_joint_positions(joint_positions=cmd, joint_groups=[], joint_names=[right_arm_joint1..7],
+  is_blocking=True, speed_rad_s=0.35, timeout_s=4.0)`，其中 `cmd` 与当前位姿最大只差 **2.23°**；
+  返回 `MotionStatus.FAULT`，紧接着回读 7 个关节角 —— **一个数都没变**
+- **触发条件**：关节空间步进回放的收尾零头（该段剩余差 <3°），
+  或任何"只差几度"的关节下发。本机稳定复现（`replay_joint_waypoints.py --order seq01`）
+- **真因**：跟 G-22（`move_ee_to` 对 <6 mm 位移回 SUCCESS 但不动）是同一类边界，
+  但表现**相反**：关节空间这条链路对过小位移是**直接拒绝**（FAULT + 零位移），
+  不是假成功。重试没有意义 —— 它永远"太小"。原脚本把它当普通失败处理，
+  于是整段回放卡在一个 2° 的零头上
+- **正确做法**：
+  1. 下发前先判 `max|Δq| < 3°` → **直接判到位、不发指令**；
+  2. `FAULT` 分支里保留同样兜底（本次请求步长 ≤3° 时按到位处理），
+     防止 `scale` 之后才变小的情形；
+  3. 段末残差容差要 ≥3.5°，否则会被自己的零头判失败（容差比阈值还小就自相矛盾）
+  `scripts/replay_joint_waypoints.py` 里的 `MIN_STEP_DEG = 3.0` 即此阈值
+- **涉及接口**：`GalbotRobot.set_joint_positions(is_blocking=True)`
+- **发现日期 / 验证**：2026-11-08，真机（galbot-echo / 右臂 7 关节 / 起始差 2.23°，
+  修后同命令返回 0，段末残差 0.42~0.43°）
+
+---
+
 ## 更新记录
 
 | 日期 | 条目 | 一句话 |
@@ -302,3 +326,4 @@
 | 2026-11-08 | G-22 | move_ee_to 对 <6mm 位移回 SUCCESS 但不动（假成功）；平移+旋转组合走直线 FAULT |
 | 2026-11-08 | G-23 | `get_joint_states` 的 velocity/effort 恒为 0，只有 position 和 current 可信 |
 | 2026-11-08 | G-24 | leg_joint4=躯干偏航、leg_joint5 实测侧倾；torso_lean 的 pitch 假设不成立 |
+| 2026-11-08 | G-25 | set_joint_positions 对 <3° 小位移直接 FAULT 且零位移；下发前拦掉，别当失败 |
