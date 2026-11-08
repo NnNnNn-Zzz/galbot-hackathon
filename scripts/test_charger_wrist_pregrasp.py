@@ -102,6 +102,11 @@ def _print_result(label: str, result: dict[str, typing.Any]) -> None:
         )
     if result.get("motion"):
         print("motion:", json.dumps(result["motion"], ensure_ascii=False))
+    if result.get("plan_result"):
+        print(
+            "replan_result:",
+            json.dumps(result["plan_result"], ensure_ascii=False, indent=2),
+        )
     if "position_error_m" in result:
         print(
             "pose verification:",
@@ -190,6 +195,15 @@ def main(argv: list[str] | None = None) -> int:
         result = grasp_tool.plan_wrist_charger_pregrasp().to_dict()
         _print_result("plan", result)
         return 0 if result.get("success") else 1
+
+    # Re-observe and preflight IK before asking the operator to authorize motion.
+    # Otherwise a failed fresh observation looks like an unexplained rejection
+    # after the operator has already typed MOVE.
+    preflight = grasp_tool.plan_wrist_charger_pregrasp().to_dict()
+    _print_result("move_preflight", preflight)
+    if not preflight.get("success"):
+        print("预检未通过，未要求 MOVE，也未下发运动。")
+        return 1
 
     if not args.yes and not _confirm_motion(args.arm):
         print("已取消，未下发运动。")
