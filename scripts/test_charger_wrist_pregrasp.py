@@ -110,6 +110,7 @@ def _print_result(label: str, result: dict[str, typing.Any]) -> None:
             json.dumps(
                 {
                     "pre_grasp_position_m": plan.get("pre_grasp_position_m"),
+                    "translation_to_goal_m": data.get("translation_to_goal_m"),
                     "approach_axis_base": plan.get("approach_axis_base"),
                     "gripper_long_axis_base": plan.get("gripper_long_axis_base"),
                     "jaw_closing_axis_base": plan.get("jaw_closing_axis_base"),
@@ -118,6 +119,25 @@ def _print_result(label: str, result: dict[str, typing.Any]) -> None:
                 },
                 ensure_ascii=False,
                 indent=2,
+            ),
+        )
+    if data.get("ik_preflight"):
+        ik = data["ik_preflight"]
+        print(
+            "ik_preflight:",
+            json.dumps(
+                {
+                    "status": ik.get("status"),
+                    "message": ik.get("message"),
+                    "reachable": (ik.get("data") or {}).get("reachable"),
+                    "motion_status": (ik.get("data") or {}).get(
+                        "motion_status"
+                    ),
+                    "collision_check": (ik.get("data") or {}).get(
+                        "collision_check"
+                    ),
+                },
+                ensure_ascii=False,
             ),
         )
     if data.get("motion"):
