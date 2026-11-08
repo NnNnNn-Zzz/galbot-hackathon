@@ -31,6 +31,7 @@ s11 里已有 exp_arm_snapshot / exp_replay_chain / exp_verify_chain 三个通�
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any, Dict, Optional
 
 from .. import outcome, tuning
@@ -40,6 +41,26 @@ from ..teach import _safe_read, load_point
 from .s11_exp_stages import DEG, _snapshot
 
 logger = logging.getLogger("scene.medicine.stage.exp2")
+
+#: capture_image 在不同后端上把图放在不同字段里，认图时必须都试一遍：
+#:   · 真机 wrapper：只返回 `frame_id`（是**绝对路径**，形如
+#:     `/home/galbot/.../logs/frames/frame_1794108359_prep_exp2.jpg`），**没有 `path`**
+#:   · MockIO：`path` 是假的 `/tmp/mock_*.jpg`（文件不存在），`frame_id` 是假 id
+#: 只在真机上试出来的差异 —— 2026-11-08 HPU 只读体检发现 `path` 为 None，
+#: 若照抄 `shot["path"]`，视觉段在真机上必然走成"后端异常"。
+_FRAME_KEYS = ("path", "frame_id", "file", "image", "saved_to")
+
+
+def _resolve_frame_path(shot: Dict[str, Any]) -> str:
+    """从 capture_image 的返回里挑出**真实存在**的图片路径；没有就退第一个非空值。"""
+    cands = [str(shot[k]) for k in _FRAME_KEYS if shot.get(k)]
+    for c in cands:
+        try:
+            if os.path.exists(c):
+                return c
+        except OSError:
+            continue
+    return cands[0] if cands else ""
 
 
 @register_stage("exp_gate_start")
@@ -189,12 +210,16 @@ class ExpVisionCheck(Stage):
             shot = {"success": False, "message": f"capture_image 抛异常：{exc}"}
         img = {
             "success": bool(shot.get("success")),
-            "path": shot.get("path"),
+            "path": _resolve_frame_path(shot) if shot.get("success") else None,
             "frame_id": shot.get("frame_id"),
             "camera": camera,
             "mock": bool(shot.get("mock")),
             "message": shot.get("message", ""),
         }
+        if img["success"] and not img["path"]:
+            # 拍到了但没有可读路径 —— 与"拍不到"一样处理：看不见就不许说看见
+            img["success"] = False
+            img["message"] = "capture_image 返回成功，但没有可用的图片路径"
         if not img["success"]:
             ctx.flags["vision"] = {"enabled": True, "policy": policy, "image": img,
                                    "verified": False,

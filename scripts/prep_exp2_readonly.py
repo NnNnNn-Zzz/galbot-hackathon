@@ -285,8 +285,10 @@ def check_camera():
     except Exception as exc:  # noqa: BLE001
         shot = {"success": False, "message": f"抛异常：{exc}"}
     if shot.get("success"):
+        # 真机 wrapper 只返回 frame_id（就是绝对路径），没有 path 字段
         add("PASS", "相机通路",
-            f"head_left 出图：{shot.get('path')}（frame={shot.get('frame_id')}）")
+            f"head_left 出图：{shot.get('path') or shot.get('frame_id')}"
+            f"（frame={shot.get('frame_id')}）")
     else:
         add("WARN", "相机通路",
             f"拍不到：{shot.get('message')} —— 视觉段会记 verified=False（advisory 不拦路），"
