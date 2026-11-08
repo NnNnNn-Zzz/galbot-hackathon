@@ -270,6 +270,24 @@
 
 ---
 
+### G-24 腰部关节轴向：`leg_joint4` = 躯干偏航；`leg_joint5` 实测是侧倾（roll），不是 `torso_lean` 假设的 pitch
+- **报错原文**：无报错。**数据对不上**：静止姿态下 `leg_joint4 = -24.611°`，
+  `get_transform("base_link","head_base_link")` 的 rpy 里 `yaw = -24.614°`（差 0.003°）；
+  同一姿态 `leg_joint5 = +8.938°`，rpy 是 `roll = +9.288°`、`pitch = -0.241°`
+- **触发条件**：腰高 1.3904 m、双臂展开、机器人静止
+- **真因**：G1 没有独立"腰轴"。躯干姿态是 `leg_joint4`（偏航）+ `leg_joint5`（侧倾）叠加，
+  而 `sdk_wrapper/dev/robot_tools/torso_lean.py` 把 `leg_joint5` 当**前后俯仰**轴、
+  拿"head 前移"当成功判据 —— 与实际轴向不符，用它调 pitch 会实际得到 roll
+- **正确做法**：① 腰"回正" = `leg_joint4` 与 `leg_joint5` 各自归 0，用 `set_joint_positions`
+  单关节小步下发（实测 4°/步、0.05 rad/s 安全，24.6° 分 6 步走完，末端贴桌也未触发碰撞）；
+  ② 要改**前后俯仰**请走 leg_joint1/2/3 的通道（`set_leg_height` / forward_lean 的 `leg_joint3`），
+  不要用 torso_lean；③ 回正后残差要再补一小步（0.5°/0.02 rad/s）压到 0.15° 内，
+  否则 0.6° 的腰扭在 0.4 m 力臂上约等于 4 mm 末端偏差
+- **涉及接口**：`GalbotRobot.get_joint_states()` / `GalbotRobot.get_transform()` / `GalbotRobot.set_joint_positions()`
+- **发现日期**：2026-11-08，真机（`scripts/probe_waist.py` + `scripts/set_waist_upright.py`）
+
+---
+
 
 ## 更新记录
 
@@ -283,3 +301,4 @@
 | 2026-11-08 | G-21 | IK 要纯 list 7 元，传 `Pose` 报 TypeError、漏四元数静默 INVALID_INPUT |
 | 2026-11-08 | G-22 | move_ee_to 对 <6mm 位移回 SUCCESS 但不动（假成功）；平移+旋转组合走直线 FAULT |
 | 2026-11-08 | G-23 | `get_joint_states` 的 velocity/effort 恒为 0，只有 position 和 current 可信 |
+| 2026-11-08 | G-24 | leg_joint4=躯干偏航、leg_joint5 实测侧倾；torso_lean 的 pitch 假设不成立 |
