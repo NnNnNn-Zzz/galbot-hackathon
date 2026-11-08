@@ -237,6 +237,25 @@
 
 ---
 
+### G-22 `move_ee_to` 对 3~5 mm 位移返回 SUCCESS 但机器人一动不动；平移+旋转组合走直线会 FAULT
+- **报错原文**：① 小步：**无报错**，`data.motion_status == "SUCCESS"`，但前后
+  `get_end_effector_pose` 完全一致；② 组合步：
+  `末端移动失败（FAULT）`，可同一目标 `check_end_effector_reachable` 却返回 `SUCCESS`
+- **触发条件**：① `move_ee_to` 纯平移 3 / 4 / 5 mm；② `move_ee_to(straight_line=True)`
+  同时改位置（dx≈-4 mm, dy≈+10 mm）与姿态（绕末端局部 +X 转 5°）
+- **真因**：① 位移低于运动服务最小分辨率，规划器认为"已在目标"，直接回 SUCCESS 而不下发。
+  比 G-20 的死等更危险——**它假装成功**，脚本会以为动了继续往下走；
+  ② `straight_line=True` 的直线规划在有姿态变化时解不出路径 → FAULT，
+  与 IK 无关（IK 预检是通的，别去调几何）
+- **正确做法**：① 每步要么跳过、要么 ≥6 mm。实测：6 mm→6.24 mm（准）、
+  7/8/10/12 mm 均准，**5/4/3 mm 全部 0.0 mm 纹丝不动**；
+  下发后必须**回读位姿确认真的动了**，只看返回值会被骗；
+  ② 平移+旋转同时下发一律 `straight_line=False`；能拆成两步就拆开
+- **涉及接口**：`GalbotAdapter.move_ee_to()` / `_execute_cartesian()` / `check_end_effector_reachable()`
+- **发现日期**：2026-11-08，真机（`scripts/align_green_box.py` 视觉伺服调试中）
+
+---
+
 ## 更新记录
 
 | 日期 | 条目 | 一句话 |
@@ -247,3 +266,4 @@
 | 2026-11-08 | G-19 | 头部相机静默失败：DEFAULT_SENSORS 没列 HEAD_LEFT_CAMERA，init 只开声明过的传感器 |
 | 2026-11-08 | G-20 | 1.6 mm 的 move_line 会死等不返回：小步要有容差和下界，脚本一律 `python3 -u` |
 | 2026-11-08 | G-21 | IK 要纯 list 7 元，传 `Pose` 报 TypeError、漏四元数静默 INVALID_INPUT |
+| 2026-11-08 | G-22 | move_ee_to 对 <6mm 位移回 SUCCESS 但不动（假成功）；平移+旋转组合走直线 FAULT |
