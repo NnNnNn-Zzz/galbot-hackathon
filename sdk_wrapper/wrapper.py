@@ -47,6 +47,10 @@ GRIPPER_DEFAULT_EFFORT = 10.0
 #: 手臂单次平移限幅（米）。
 ARM_MAX_STEP_M = 0.10
 
+#: 单次「沿夹爪方向」行程限幅（米）。与 dev 层 ALONG_MAX_TRAVEL_M 保持一致：
+#: 本层只做截断，真正的拒绝在 dev 层（那里还要查安全高度）。
+ALONG_GRIPPER_MAX_M = 0.30
+
 #: 夹爪物理开度上限（米）。dev 层 D5 真机验证 0~0.12m 均 SUCCESS，保守取 0.085m。
 GRIPPER_MAX_WIDTH_M = 0.085
 
@@ -244,6 +248,41 @@ def move_arm_delta(dx: float, dy: float, dz: float, chain: str = "right_arm",
     dy = _clamp(dy, ARM_MAX_STEP_M, "arm_dy")
     dz = _clamp(dz, ARM_MAX_STEP_M, "arm_dz")
     return _hub().move_arm_delta(dx, dy, dz, chain=chain, straight_line=False)
+
+
+def move_along_gripper(distance_m: float, chain: str = "right_arm",
+                       use_torso: bool = True, auto_lift: bool = False) -> dict:
+    """沿**夹爪指向**直线走 distance_m 米（米制；正=伸出逼近，负=后退）。
+
+    SDK 没有工具系相对运动的原语，这里按当前姿态算出夹爪 +X 轴再走直线，
+    姿态全程不变。抓取逼近 / 抓后退出用它，别用 move_arm_delta 手算方向。
+
+    Args:
+        use_torso: True 让躯干协助（默认，够得更远）；
+            False 走纯手臂 with_chain_only（躯干零动作，但安全高度更高）。
+        auto_lift: 默认 **False** —— 纯沿夹爪轴平移，不抬升、不拒绝。
+            True 才会在路径偏低时先抬到"建议高度"再走，但那会让动作
+            多出一段竖直位移（前进变斜向上），只在明确要避障时才开。
+
+    超过 ``ALONG_GRIPPER_MAX_M`` 会**拒绝**（不截断），因为截断后的动作和调用方
+    要的不是一回事。
+    """
+    if abs(float(distance_m)) > ALONG_GRIPPER_MAX_M:
+        # 这里**不截断**：沿夹爪方向走 30 cm 和 50 cm 是完全不同的动作，
+        # 静默截断会让调用方以为"要走 50 结果只走了 30"，行为不可预期。
+        return {
+            "success": False,
+            "status": "rejected",
+            "error_code": "safety_limit",
+            "message": f"单次沿夹爪行程 {float(distance_m):.3f} m 超过上限 "
+                       f"{ALONG_GRIPPER_MAX_M:.2f} m；请拆成多次、每次走完复测位姿",
+        }
+    return _hub().move_along_gripper(
+        float(distance_m),
+        chain=chain,
+        actuate="with_torso" if use_torso else "with_chain_only",
+        auto_lift=bool(auto_lift),
+    )
 
 
 #: 单步手腕旋转限幅（度）。给 VLM 直控用，小步慢转防止甩到位姿奇异。

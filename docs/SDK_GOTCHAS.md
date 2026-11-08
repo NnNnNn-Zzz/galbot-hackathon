@@ -201,6 +201,42 @@
 
 ---
 
+
+### G-20 极小位移的 `move_line` 永不返回（进程挂死，无报错）
+- **报错原文**：无。调用不返回、不抛错、`timeout=10` 也不生效；
+  进程只能 `kill`，表现是"脚本卡住、连 print 都没输出"
+- **触发条件**：抬到安全高度时"补最后一小步"——当前 z=0.8484，目标 z=0.8500，
+  **下发 1.6 mm 的直线运动**。同一进程先前 5 cm 的步都正常
+- **真因**：位移量小到规划器认为无需规划，`blocking=True` 的执行回调却不返回，
+  于是同步等待永远不结束。不是崩溃，是死等
+- **正确做法**：给所有自动补偿的小步设容差和下界 ——
+  ① 判断"是否需要抬"时留 5 mm 容差（`abs(z-safe_z)>0.005` 才算不达标）；
+  ② 剩余量 <5 mm 直接跳过，不下发；
+  ③ 对外接口拒绝 `|distance| < 5 mm` 的请求（`move_along_gripper` 已按此实现）。
+  另：跑长脚本一律 `python3 -u`，否则输出被缓冲，卡住时完全看不到进行到哪
+- **涉及接口**：`GalbotMotion.move_line()`
+- **发现日期**：2026-11-08，真机
+
+---
+
+
+### G-21 `inverse_kinematics` 参数类型：传 `Pose` 报错、漏姿态静默 INVALID_INPUT
+- **报错原文**：
+  `TypeError: inverse_kinematics(): incompatible function arguments. ... target_pose: collections.abc.Sequence[typing.SupportsFloat]`
+  / 以及**不报错**的一版：返回 `MotionStatus.INVALID_INPUT`（31 个点全失败）
+- **触发条件**：① `target_pose=gm.Pose([...])`；② 只传 `[x,y,z]` 三个数、漏掉四元数
+- **真因**：`inverse_kinematics` 要**纯 list 的 7 个数**（xyz + qx,qy,qz,qw），
+  和 `move_line` 的 `t.cart.pose = gm.Pose([...7])` 正好相反。漏姿态时长度不足，
+  它不抛异常、只返回 `INVALID_INPUT`，极易误判成"目标不可达"
+- **正确做法**：IK 一律 `motion.inverse_kinematics(list7, [chain], "EndEffector", "base_link")`；
+  看到 `INVALID_INPUT` 先数参数长度，别急着怀疑几何。
+  `initial_joint_positions={}` 和 `gm.Parameter()` 作为位置参数补上是**可以**的
+- **涉及接口**：`GalbotMotion.inverse_kinematics()` / `inverse_kinematics_by_state()`
+- **发现日期**：2026-11-08，真机
+
+
+---
+
 ## 更新记录
 
 | 日期 | 条目 | 一句话 |
@@ -209,3 +245,5 @@
 | 2026-11-07 | G-17 | 机器人莫名进数采模式：真因是 `mode_change_select.sh` 把 `auto_enter_mode_type` 改成 DATA_COLLECTION，重启才生效 |
 | 2026-11-07 | G-18 | 切回 WORKING 后 wbcs 因 Embosa exit callback 崩掉且不自动重拉，`systemctl restart launcher` 修 |
 | 2026-11-08 | G-19 | 头部相机静默失败：DEFAULT_SENSORS 没列 HEAD_LEFT_CAMERA，init 只开声明过的传感器 |
+| 2026-11-08 | G-20 | 1.6 mm 的 move_line 会死等不返回：小步要有容差和下界，脚本一律 `python3 -u` |
+| 2026-11-08 | G-21 | IK 要纯 list 7 元，传 `Pose` 报 TypeError、漏四元数静默 INVALID_INPUT |

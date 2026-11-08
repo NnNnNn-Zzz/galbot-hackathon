@@ -35,6 +35,37 @@ SUPPORTED_GESTURES: frozenset[str] = _load_registered_ids(
 )
 SUPPORTED_PLACES: frozenset[str] = _load_registered_ids("places.json", "places", _FALLBACK_PLACES)
 
+#: 沿夹爪方向执行时的建议高度（米），按参与的链分档。真机实测：纯手臂伸展时
+#: 肘部下沉更多，z=0.834 会让前臂扫掠被判碰撞（第 4 步 FAULT），抬到 0.865 才
+#: 走完全程；带躯干 0.85 就够。mock 与真机共用，避免两套阈值漂移。
+ALONG_SAFE_Z: dict[str, float] = {"with_torso": 0.85, "with_chain_only": 0.865}
+
+#: 沿夹爪方向单次调用的总行程上限（米）。太长则一次失败后难以回退。
+ALONG_MAX_TRAVEL_M: float = 0.30
+
+#: 通用最低高度（米）：不管哪种模式、往哪个方向，末端都不应该低于这个值。
+#: 桌面实测约 0.709，留 5 cm 余量。后退时用它做门槛，避免为了"抬高"而多做一个
+#: 手臂已伸展时容易 FAULT 的抬升动作。
+ALONG_FLOOR_Z: float = 0.76
+
+
+def quat_to_rot(q: typing.Sequence[float]) -> list[list[float]]:
+    """四元数 ``(qx, qy, qz, qw)`` -> 3x3 旋转矩阵（行优先）。
+
+    mock 与真机共用这一份实现：两边算出的"夹爪指向"必须完全一致，
+    否则会出现"模拟通过、真机走歪"。列向量即该轴在参考系下的指向，
+    所以 ``rot[*][0]``（第一列）就是夹爪的逼近方向 —— 真机 FK 实测
+    EndEffector 的 +X 指向 TCP 相对法兰的偏移方向。
+    """
+    x, y, z, w = [float(v) for v in q]
+    n = (x * x + y * y + z * z + w * w) ** 0.5 or 1.0
+    x, y, z, w = x / n, y / n, z / n, w / n
+    return [
+        [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+        [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+        [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)],
+    ]
+
 
 class RobotAdapter(ABC):
     """Contract for robot state, motion, navigation, and raw camera access.
@@ -173,6 +204,37 @@ class RobotAdapter(ABC):
         """把末端移到 base_link 下的**绝对**位姿 ``[x,y,z,qx,qy,qz,qw]``。
 
         用于"测完推走了、回到观察位姿再复测"这类回位动作。
+        """
+
+    @abstractmethod
+    def move_along_gripper(
+        self,
+        chain: str,
+        distance_m: float,
+        *,
+        actuate: str = "with_torso",
+        auto_lift: bool = False,
+        max_step_m: float = 0.05,
+        enable_collision_check: bool = True,
+        timeout_s: float = 10.0,
+    ) -> ToolResult:
+        """沿**夹爪指向**直线走 ``distance_m`` 米（正=伸出逼近，负=后退），姿态不变。
+
+        SDK 没有"沿工具轴运动"的原语：参考系只支持 base_link/map/world，
+        ``is_relative_pose`` 也拿不到工具系。所以这里读当前位姿 → 取旋转矩阵
+        第一列（EndEffector 的 +X，真机 FK 实测即 TCP 相对法兰的偏移方向）
+        → 换成 base_link 下的位移 → 用 move_line 下发绝对目标。
+
+        Args:
+            actuate: ``"with_torso"``（默认，躯干协助，伸得更远）或
+                ``"with_chain_only"``（纯手臂，躯干零借用）。
+            auto_lift: 默认 **False**，即纯沿夹爪轴平移，既不抬升也不因高度拒绝。
+                设 True 才会在路径偏低时先垂直抬到该模式的建议高度再走 ——
+                注意那会给轨迹额外塞一段竖直位移，前进会变成"斜着往前上"。
+                高度门槛依赖"桌面高度已知/深度可信"，这两条不成立时不要开它。
+
+        注意：夹爪指向通常带 z 分量（实测相对 +Z 倾角 95.3°），所以"前进"
+        同时会下降；不加 auto_lift 直接走长距离很容易贴桌被碰撞检查拒绝。
         """
 
     @abstractmethod

@@ -63,7 +63,14 @@ import threading
 import time
 import typing
 
-from sdk_wrapper.dev.adapters.base import RobotAdapter, SUPPORTED_GESTURES
+from sdk_wrapper.dev.adapters.base import (
+    ALONG_FLOOR_Z,
+    ALONG_MAX_TRAVEL_M,
+    ALONG_SAFE_Z,
+    RobotAdapter,
+    SUPPORTED_GESTURES,
+    quat_to_rot,
+)
 from sdk_wrapper.dev.contracts import (
     ErrorCode,
     RunMode,
@@ -96,6 +103,18 @@ _MOTION_EPS = 0.02
 
 #: "with_torso" 让躯干协助手臂到达更高/更远的点（官方 move_line.py 用的就是这个）
 _ACTUATE = "with_torso"
+
+#: 沿夹爪方向的推荐执行高度（米），按参与的链分档。真机实测：
+#: 纯手臂伸展时肘部下沉更多，z=0.834 时前臂扫掠会被判碰撞（第 4 步 FAULT），
+#: 抬到 0.865 才走完全程；带躯干 0.85 就够。两档别混用同一个阈值。
+#: 定义在 base 里，与 MockAdapter 共用，防止两边漂移。
+_ALONG_SAFE_Z = ALONG_SAFE_Z
+
+#: 沿夹爪方向单次调用的总行程上限（米）。超过请拆多次，避免一次走太远无法回退。
+_ALONG_MAX_TRAVEL_M = ALONG_MAX_TRAVEL_M
+
+#: 通用最低高度（米）。后退时用它做抬升门槛，见 base.ALONG_FLOOR_Z。
+_ALONG_FLOOR_Z = ALONG_FLOOR_Z
 
 #: NavigationTaskStatus -> (协议 status, error_code)  见 g1/__init__.pyi:4090-4133
 _NAV_STATUS_MAP: dict[str, tuple[TaskStatus, ErrorCode | None]] = {
@@ -528,8 +547,14 @@ class GalbotAdapter(RobotAdapter):
         straight_line: bool,
         enable_collision_check: bool,
         timeout_s: float,
+        actuate: str = _ACTUATE,
     ) -> typing.Any:
-        """下发一个绝对末端目标，返回 SDK 的 MotionStatus（异常向上抛）。"""
+        """下发一个绝对末端目标，返回 SDK 的 MotionStatus（异常向上抛）。
+
+        ``actuate`` 决定参与规划的链：``with_torso`` 让躯干协助手臂，
+        ``with_chain_only`` 只用该臂（躯干零动作）。注意 assist_chains 只在
+        带躯干时设 —— 两个开关方向不一致会让规划器把躯干也算进来。
+        """
         gm = self._import_sdk()
         _robot, motion, _nav = self._ensure_interfaces()
         target = [float(v) for v in target]
@@ -541,7 +566,8 @@ class GalbotAdapter(RobotAdapter):
             target_obj.cart.frame_id = "EndEffector"
             target_obj.cart.reference_frame = "base_link"
             target_obj.cart.pose = gm.Pose(target)
-            target_obj.cart.assist_chains = {"torso"}
+            if actuate == "with_torso":
+                target_obj.cart.assist_chains = {"torso"}
 
             params = gm.Parameter()
             params.set_direct_execute(True)
@@ -549,7 +575,7 @@ class GalbotAdapter(RobotAdapter):
             params.set_timeout(float(timeout_s))
             params.set_check_collision(bool(enable_collision_check))
             params.set_reference_frame("base_link")
-            params.set_actuate(_ACTUATE)
+            params.set_actuate(actuate)
             status, _traj = motion.move_line([[target_obj]], params)
             return status
         target_obj = gm.MotionPlanChainTarget()
@@ -791,6 +817,244 @@ class GalbotAdapter(RobotAdapter):
                 "straight_line": bool(straight_line),
             },
             on_success=f"{chain} 末端平移完成",
+        )
+
+    def move_along_gripper(
+        self,
+        chain: str,
+        distance_m: float,
+        *,
+        actuate: str = _ACTUATE,
+        auto_lift: bool = False,
+        max_step_m: float = 0.05,
+        enable_collision_check: bool = True,
+        timeout_s: float = 10.0,
+    ) -> ToolResult:
+        """沿夹爪指向（EndEffector 的 +X）直线走 ``distance_m`` 米，姿态不变。
+
+        实现要点：SDK 的参考系只有 base_link/map/world，``is_relative_pose``
+        也拿不到工具系，所以方向必须自己算 —— 读当前位姿，用旋转矩阵**第一列**
+        当基向量换成 base_link 位移，再用 move_line 下发绝对目标。
+
+        ``actuate`` 分两档，安全高度也分两档：纯手臂伸展时肘部下沉更多，
+        沿用带躯干的高度会在中途被判碰撞（实测 z=0.834 时第 4 步 FAULT）。
+        """
+        rejection = self._authorization_rejection()
+        if rejection is not None:
+            return rejection
+
+        try:
+            distance_m = float(distance_m)
+            max_step_m = float(max_step_m)
+        except (TypeError, ValueError):
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT, "distance_m / max_step_m 必须是数值", mode=self.mode
+            )
+        if not math.isfinite(distance_m):
+            return rejected(ErrorCode.INVALID_ARGUMENT, "distance_m 必须是有限数值", mode=self.mode)
+        if abs(distance_m) < 0.005:
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                f"distance_m={distance_m:.4f} 太小；单次至少 5 mm。"
+                f"毫米级位移没有实际意义，而且极小步长会让规划器卡住不返回",
+                mode=self.mode,
+            )
+        if abs(distance_m) > _ALONG_MAX_TRAVEL_M:
+            return rejected(
+                ErrorCode.SAFETY_LIMIT,
+                f"单次沿夹爪行程 {distance_m:.3f} m 超过上限 {_ALONG_MAX_TRAVEL_M:.2f} m；"
+                f"请拆成多次，每次走完复测位姿再继续",
+                mode=self.mode,
+                data={"max_travel_m": _ALONG_MAX_TRAVEL_M},
+            )
+        if actuate not in _ALONG_SAFE_Z:
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                f"未知 actuate {actuate!r}",
+                mode=self.mode,
+                data={"legal_actuate": sorted(_ALONG_SAFE_Z)},
+            )
+        if not (0.0 < max_step_m <= 0.05):
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                f"max_step_m 必须在 (0, 0.05] 内，收到 {max_step_m}",
+                mode=self.mode,
+            )
+
+        safe_z = _ALONG_SAFE_Z[actuate]
+
+        try:
+            _robot, motion, _nav = self._ensure_interfaces()
+            status, pose = motion.get_end_effector_pose_on_chain(chain, "EndEffector", "base_link")
+        except Exception as exc:  # noqa: BLE001
+            return unknown(
+                ErrorCode.STATE_UNCERTAIN, f"移动前读位姿失败：{exc}；未下发运动", mode=self.mode,
+                data={"chain": chain},
+            )
+        name = _enum_name(status)
+        pose = [float(v) for v in pose]
+        if name != "SUCCESS" or len(pose) != 7:
+            return failed(
+                ErrorCode.SDK_ERROR, f"移动前读位姿失败（{name}）；未下发运动",
+                self.mode, data={"chain": chain, "motion_status": name},
+            )
+
+        start_pose = list(pose)
+        quat = pose[3:]
+        rot = quat_to_rot(quat)
+        axis = (rot[0][0], rot[1][0], rot[2][0])
+        predicted_end_z = pose[2] + distance_m * axis[2]
+        #: 安全高度容差（米）。安全高度本身是经验值，差几毫米没有意义；
+        #: 但为这几毫米单独下发一次运动指令会让规划器在极小位移上卡住
+        #: （实测：从 0.8484 补到 0.8500 的 1.6 mm 一步，move_line 不再返回）。
+        along_z_tol = 0.005
+        # 前进：路径整体在下沉，按模式的建议高度算。
+        # 后退：路径是往上升的，只有起点可能贴桌，按通用下限算就行 ——
+        # 否则会为了"抬高"下发一次纯臂抬升，而手臂已伸展时这个动作会 FAULT，
+        # 白白挡掉一个本来完全安全的退出动作。
+        if distance_m > 0:
+            lowest_z, gate_z = min(pose[2], predicted_end_z), safe_z
+        else:
+            lowest_z, gate_z = pose[2], _ALONG_FLOOR_Z
+        need_lift = lowest_z < gate_z - along_z_tol
+
+        lifted = 0.0
+        executed = 0.0
+        steps_done = 0
+
+        def _read() -> tuple[str, list[float]]:
+            st, p = motion.get_end_effector_pose_on_chain(chain, "EndEffector", "base_link")
+            return _enum_name(st), [float(v) for v in list(p)]
+
+        def _step(target: list[float]) -> str | None:
+            """下达一个绝对目标；成功返回 None，否则返回最后的状态名。
+
+            实测 `FAULT` 很不可靠：同一目标 IK 带碰撞检查 SUCCESS、不带反而 FAULT，
+            说明它是规划器/控制器的偶发状态，不是稳定的"到不了"。所以：
+              1. 失败后**先重读位姿**——可能其实已经走到位了，只是状态码报错，
+                 这种情况直接当成功，避免重复走一遍导致位移翻倍；
+              2. 确实没到就重试，前两次仍走直线，最后一次改用绕行规划。
+            """
+            last = "UNKNOWN"
+            for attempt in range(3):
+                straight = attempt < 2
+                try:
+                    st = self._execute_cartesian(
+                        chain, target,
+                        straight_line=straight,
+                        enable_collision_check=enable_collision_check,
+                        timeout_s=timeout_s,
+                        actuate=actuate,
+                    )
+                    name = _enum_name(st)
+                except Exception as exc:  # noqa: BLE001 - 下发失败≠没动
+                    LOG.warning("move_along_gripper 下发抛错（第%d次）：%s", attempt + 1, exc)
+                    name = f"EXC:{type(exc).__name__}"
+                if name == "SUCCESS":
+                    return None
+
+                st2, cur = _read()
+                if st2 == "SUCCESS":
+                    gap = math.sqrt(sum((cur[i] - target[i]) ** 2 for i in range(3)))
+                    if gap < 0.005:
+                        LOG.info(
+                            "move_along_gripper 报 %s 但实际已到位（差 %.1f mm），按成功处理",
+                            name, gap * 1000,
+                        )
+                        return None
+                last = name
+                if attempt < 2:
+                    LOG.warning(
+                        "move_along_gripper 第%d次失败（%s），%.1fs 后重试（%s）",
+                        attempt + 1, name, 0.3, "直线" if attempt == 0 else "绕行",
+                    )
+                    time.sleep(0.3)
+            return last
+
+        # ---- 阶段 1：抬到该模式的建议高度（仅在 auto_lift=True 时）----
+        # auto_lift=False = 纯沿夹爪平移：不抬、也不拒绝。
+        # 高度门槛建立在"桌面高度已知 / 深度可信"的假设上，假设不成立时
+        # 强行抬升只会给轨迹塞进一段竖直位移（实测每步被抬 6 cm，完全跑偏）。
+        if need_lift and auto_lift:
+            while True:
+                st_name, cur = _read()
+                if st_name != "SUCCESS":
+                    return unknown(
+                        ErrorCode.STATE_UNCERTAIN, f"抬升中读位姿失败（{st_name}）", mode=self.mode,
+                        data={"lifted_m": lifted},
+                    )
+                if cur[2] >= safe_z - along_z_tol:
+                    break
+                dz = min(max_step_m, safe_z - cur[2])
+                # 余量过小就别单独发一次运动：极小位移会让规划器卡住（见上）
+                if dz < along_z_tol:
+                    break
+                bad = _step([cur[0], cur[1], cur[2] + dz] + cur[3:])
+                if bad is not None:
+                    return failed(
+                        ErrorCode.SDK_ERROR,
+                        f"抬升到 z={cur[2] + dz:.3f} 失败（{bad}）；"
+                        f"已抬 {lifted:.3f} m，尚未开始沿夹爪移动。"
+                        f"纯手臂在已伸展的状态下抬升容易被拒 —— "
+                        f"改用 actuate='with_torso'，或先手动把手臂抬到 {safe_z:.3f} 附近再调",
+                        self.mode,
+                        data={"chain": chain, "lifted_m": lifted, "actuate": actuate,
+                              "motion_status": bad, "suggested_z": safe_z},
+                    )
+                lifted += dz
+
+        # ---- 阶段 2：沿夹爪方向分步直线走 ----
+        n_steps = max(1, math.ceil(abs(distance_m) / max_step_m))
+        step_len = distance_m / n_steps
+        for i in range(n_steps):
+            st_name, cur = _read()
+            if st_name != "SUCCESS":
+                return unknown(
+                    ErrorCode.STATE_UNCERTAIN,
+                    f"第 {i + 1}/{n_steps} 步前读位姿失败（{st_name}）；"
+                    f"已走 {executed:.3f} m，机器人位置未知",
+                    mode=self.mode,
+                    data={"executed_m": executed, "steps_done": steps_done},
+                )
+            cur_rot = quat_to_rot(cur[3:])
+            ax = (cur_rot[0][0], cur_rot[1][0], cur_rot[2][0])
+            target = [cur[j] + step_len * ax[j] for j in range(3)] + cur[3:]
+            bad = _step(target)
+            if bad is not None:
+                return failed(
+                    ErrorCode.SDK_ERROR,
+                    f"第 {i + 1}/{n_steps} 步沿夹爪移动失败（{bad}）；"
+                    f"已实际走 {executed:.3f} m / 目标 {distance_m:.3f} m",
+                    self.mode,
+                    data={"chain": chain, "executed_m": executed, "steps_done": steps_done,
+                          "actuate": actuate, "motion_status": bad, "axis_base": list(ax)},
+                )
+            st_name, after = _read()
+            if st_name == "SUCCESS":
+                moved = [after[j] - cur[j] for j in range(3)]
+                executed += sum(moved[j] * ax[j] for j in range(3))
+                cur = after
+            else:
+                executed += step_len
+            steps_done += 1
+
+        st_name, end_pose = _read()
+        return ok(
+            f"{chain} 沿夹爪{'伸出' if distance_m > 0 else '后退'} {executed:.3f} m"
+            f"（{actuate}{f'，先抬 {lifted:.3f} m' if lifted > 0 else ''}）",
+            mode=self.mode,
+            data={
+                "chain": chain,
+                "requested_m": distance_m,
+                "executed_m": round(executed, 4),
+                "actuate": actuate,
+                "gripper_axis_base": [round(v, 5) for v in axis],
+                "start_pose": [round(v, 5) for v in start_pose],
+                "end_pose": [round(v, 5) for v in end_pose] if st_name == "SUCCESS" else None,
+                "lifted_m": round(lifted, 4),
+                "steps": steps_done,
+                "motion_status": "SUCCESS",
+            },
         )
 
     def rotate_ee(
