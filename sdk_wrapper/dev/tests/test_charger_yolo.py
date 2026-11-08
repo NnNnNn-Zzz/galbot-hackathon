@@ -568,6 +568,36 @@ class ChargerYoloToolTest(unittest.TestCase):
             "capture_error",
         )
 
+    def test_valid_frames_with_no_target_stop_at_detection_limit(self):
+        adapter = MockAdapter()
+        perception = PerceptionTool(adapter)
+        backend = ConstantBackend([])
+        with tempfile.TemporaryDirectory() as directory:
+            config = json.loads(
+                (
+                    Path(__file__).resolve().parents[1]
+                    / "config"
+                    / "charger_yolo.json"
+                ).read_text(encoding="utf-8")
+            )
+            config["capture_attempts"] = 20
+            config["detection_attempts"] = 3
+            config["capture_retry_delay_s"] = 0.0
+            config_path = Path(directory) / "config.json"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            tool = ChargerYoloTool(
+                perception,
+                backend=backend,
+                config_path=config_path,
+                output_dir=Path(directory),
+            )
+            result = tool.segment_charger_top_wrist()
+
+        self.assertEqual(result.status, TaskStatus.FAILED)
+        self.assertEqual(result.error_code, ErrorCode.NOT_READY)
+        self.assertEqual(backend.calls, 3)
+        self.assertEqual(result.data["capture_attempts"], 3)
+
     def test_rgbd_calibration_mismatch_blocks_precision(self):
         adapter = MockAdapter()
         original = adapter.get_sensor_extrinsic

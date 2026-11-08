@@ -285,6 +285,15 @@ class ChargerYoloTool:
             if purpose == "precision"
             else 1,
         )
+        detection_attempts = max(
+            1,
+            min(
+                capture_attempts,
+                int(self.config.get("detection_attempts", 3)),
+            )
+            if purpose == "precision"
+            else 1,
+        )
         retry_delay_s = max(
             0.0,
             float(self.config.get("capture_retry_delay_s", 0.35)),
@@ -293,6 +302,7 @@ class ChargerYoloTool:
         cascade_report: dict[str, typing.Any] = {}
         attempt_reports: list[dict[str, typing.Any]] = []
         capture_attempt = 0
+        detection_failures = 0
         snap = None
         last_capture_error: str | None = None
         for capture_attempt in range(1, capture_attempts + 1):
@@ -317,6 +327,7 @@ class ChargerYoloTool:
                     time.sleep(retry_delay_s)
                 continue
             if snap.bgr is None:
+                detection_failures += 1
                 attempt_reports.append(
                     {
                         "attempt": capture_attempt,
@@ -370,7 +381,11 @@ class ChargerYoloTool:
                         "cascade": cascade_report,
                     }
                 )
+                if not instances:
+                    detection_failures += 1
             if instances:
+                break
+            if detection_failures >= detection_attempts:
                 break
             if capture_attempt < capture_attempts:
                 time.sleep(retry_delay_s)
@@ -383,6 +398,7 @@ class ChargerYoloTool:
                 data={
                     "camera_id": camera_id,
                     "capture_attempts": capture_attempt,
+                    "detection_attempts": detection_attempts,
                     "capture_attempt_reports": attempt_reports,
                     "model": model_info,
                 },
@@ -398,6 +414,7 @@ class ChargerYoloTool:
                     "model": model_info,
                     "cascade": cascade_report,
                     "capture_attempts": capture_attempt,
+                    "detection_attempts": detection_attempts,
                     "capture_attempt_reports": attempt_reports,
                 },
             )
