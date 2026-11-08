@@ -9,7 +9,10 @@ This tool composes existing building blocks without duplicating their logic:
 ``MotionTool.move_ee_to``
     optional supervised pose command.
 
-The final grasp (descent/closing/lift) is deliberately outside this tool.
+The final sequence is split into two supervised stages: move to the diagonal
+observation pose and open/re-observe, then execute bounded descent, close and
+lift. A close ``TIMEOUT`` is retained as possible contact evidence, never as a
+standalone declaration that the grasp succeeded.
 """
 
 from __future__ import annotations
@@ -23,7 +26,10 @@ import typing
 from pathlib import Path
 
 from sdk_wrapper.dev.algorithms.calibration import rotation_error_deg
-from sdk_wrapper.dev.algorithms.observation_pose import plan_end_effector_grasp_pose
+from sdk_wrapper.dev.algorithms.observation_pose import (
+    plan_diagonal_observation_pose,
+    plan_grasp_descent_pose,
+)
 from sdk_wrapper.dev.contracts import (
     ErrorCode,
     RunMode,
@@ -64,7 +70,11 @@ def _tool(method: typing.Callable[..., ToolResult]) -> typing.Callable[..., Tool
 class ChargerGraspTool:
     """Plan and optionally command a pose above a wrist-observed charger."""
 
-    TOOL_NAMES = ("plan_wrist_charger_pregrasp", "move_to_wrist_charger_pregrasp")
+    TOOL_NAMES = (
+        "plan_wrist_charger_pregrasp",
+        "move_to_wrist_charger_pregrasp",
+        "execute_wrist_charger_grasp",
+    )
 
     def __init__(
         self,
@@ -129,6 +139,20 @@ class ChargerGraspTool:
                 "model",
             )
         }
+
+    @staticmethod
+    def _result_with_data(
+        result: ToolResult,
+        data: dict[str, typing.Any],
+    ) -> ToolResult:
+        return ToolResult(
+            status=result.status,
+            mode=result.mode,
+            message=result.message,
+            task_id=result.task_id,
+            data={**dict(result.data), **data},
+            error_code=result.error_code,
+        )
 
     def _call_plan(self) -> ToolResult:
         """Use the public planning method so internal composition keeps one contract."""
@@ -210,6 +234,55 @@ class ChargerGraspTool:
                 )
             time.sleep(min(poll_s, remaining))
 
+    def _open_gripper_max(self) -> ToolResult:
+        return self.motion_tool.set_gripper(
+            str(self.config.get("end_effector", "right_gripper")),
+            float(self.config.get("gripper_open_width_m", 0.11)),
+            effort=float(self.config.get("gripper_open_effort", 10.0)),
+        )
+
+    def _descent_plan_from_observation(
+        self,
+        observation: dict[str, typing.Any],
+        current_pose: typing.Sequence[float],
+    ) -> dict[str, typing.Any]:
+        surface = observation.get("surface") or {}
+        if not observation.get("eligible_for_precision") or not surface.get("available"):
+            return {
+                "safe_to_plan": False,
+                "reasons": list(
+                    observation.get("rejection_reasons")
+                    or ["observation_not_eligible_for_descent"]
+                ),
+            }
+        plan = plan_grasp_descent_pose(
+            surface["surface_center_m"],
+            surface["long_edge_axis_base"],
+            current_pose,
+            clearance_m=float(self.config.get("grasp_clearance_m", 0.008)),
+            max_descent_m=float(
+                self.config.get("max_descent_distance_m", 0.12)
+            ),
+            tool_approach_offset_m=float(
+                self.config.get("tool_approach_offset_m", 0.146)
+            ),
+        )
+        if plan.get("safe_to_plan") and bool(
+            self.config.get("require_ik_reachability", True)
+        ):
+            reachable = self.motion_tool.check_ee_pose_reachable(
+                plan["descent_pose"],
+                chain=str(self.config.get("chain", "right_arm")),
+                enable_collision_check=True,
+            )
+            plan["ik_preflight"] = reachable.to_dict()
+            if not reachable.succeeded:
+                plan["safe_to_plan"] = False
+                plan.setdefault("reasons", []).append(
+                    "descent_pose_unreachable"
+                )
+        return plan
+
     @_tool
     def plan_wrist_charger_pregrasp(self) -> ToolResult:
         """Observe with the wrist camera and return a pre-grasp pose without motion."""
@@ -269,27 +342,39 @@ class ChargerGraspTool:
                 },
             )
         current_pose = list(current_result.data["pose"])
-        grasp_plan = plan_end_effector_grasp_pose(
+        grasp_plan = plan_diagonal_observation_pose(
             surface["surface_center_m"],
             surface["surface_normal_base"],
             surface["long_edge_axis_base"],
-            standoff_m=float(surface["safe_standoff_m"]),
+            observation_distance_m=float(
+                self.config.get("diagonal_observation_distance_m", 0.05)
+            ),
+            tilt_from_normal_deg=float(
+                self.config.get("diagonal_observation_tilt_deg", 35.0)
+            ),
             current_end_effector_pose_base=current_pose,
-            min_standoff_m=float(self.config.get("min_plan_standoff_m", 0.02)),
-            max_standoff_m=float(self.config.get("max_plan_standoff_m", 0.30)),
+            min_observation_distance_m=float(
+                self.config.get("min_diagonal_observation_distance_m", 0.03)
+            ),
+            max_observation_distance_m=float(
+                self.config.get("max_diagonal_observation_distance_m", 0.08)
+            ),
+            tool_approach_offset_m=float(
+                self.config.get("tool_approach_offset_m", 0.146)
+            ),
         )
         delta_m = math.sqrt(
             sum(
                 (float(target) - float(current)) ** 2
                 for target, current in zip(
-                    grasp_plan["pre_grasp_pose"][:3],
+                    grasp_plan["observation_pose"][:3],
                     current_pose[:3],
                 )
             )
         )
         rotation_delta_deg = rotation_error_deg(
             current_pose,
-            grasp_plan["pre_grasp_pose"],
+            grasp_plan["observation_pose"],
         )
         data = {
             "chain": chain,
@@ -299,7 +384,7 @@ class ChargerGraspTool:
             "observation": observation_summary,
             "grasp_plan": grasp_plan,
             "current_end_effector_pose": current_pose,
-            "end_effector_goal": grasp_plan["pre_grasp_pose"],
+            "end_effector_goal": grasp_plan["observation_pose"],
             "translation_to_goal_m": round(delta_m, 7),
             "rotation_to_goal_deg": round(rotation_delta_deg, 6),
             "motion_dispatched": False,
@@ -310,13 +395,13 @@ class ChargerGraspTool:
             self._pending_plan_at = None
             return rejected(
                 ErrorCode.SAFETY_LIMIT,
-                "charger pre-grasp 位姿不在安全规划范围内",
+                "charger 斜上方观察位不在安全规划范围内",
                 self.mode,
                 data=data,
             )
         if bool(self.config.get("require_ik_reachability", True)):
             reachable = self.motion_tool.check_ee_pose_reachable(
-                grasp_plan["pre_grasp_pose"],
+                grasp_plan["observation_pose"],
                 chain=chain,
                 enable_collision_check=True,
             )
@@ -333,7 +418,11 @@ class ChargerGraspTool:
         self._pending_plan = dict(data)
         self._pending_plan_at = time.monotonic()
         return ok(
-            "腕部 charger 坐标已生成 pre-grasp 末端位姿；尚未下发运动",
+            (
+                "腕部 charger 坐标已生成约 "
+                f"{self.config.get('diagonal_observation_distance_m', 0.05):.2f} m "
+                "斜上方观察位；尚未下发运动"
+            ),
             self.mode,
             data=data,
         )
@@ -343,7 +432,7 @@ class ChargerGraspTool:
         self,
         operator_confirmed: bool = False,
     ) -> ToolResult:
-        """Re-observe, then command the right arm to the charger pre-grasp pose."""
+        """Move to the diagonal observation pose, open, re-observe and plan descent."""
         if operator_confirmed is not True:
             return rejected(
                 ErrorCode.PERMISSION_DENIED,
@@ -441,14 +530,327 @@ class ChargerGraspTool:
         if not matched:
             return failed(
                 ErrorCode.NOT_READY,
-                "右臂已移动，但未达到腕部视觉生成的 pre-grasp 位姿",
+                "机械臂已移动，但未达到斜上方观察位",
+                self.mode,
+                data=data,
+            )
+
+        open_result = self._open_gripper_max()
+        data["gripper_open"] = open_result.to_dict()
+        if not open_result.succeeded:
+            return failed(
+                open_result.error_code or ErrorCode.SDK_ERROR,
+                f"到达斜上方观察位后夹爪未能全开：{open_result.message}",
+                self.mode,
+                data=data,
+            )
+
+        observation_result = self.charger_tool.segment_charger_top_wrist()
+        if not observation_result.succeeded:
+            data["observation_after_diagonal"] = observation_result.to_dict()
+            return failed(
+                observation_result.error_code or ErrorCode.NOT_READY,
+                f"斜上方观察位二次识别失败：{observation_result.message}",
+                self.mode,
+                data=data,
+            )
+        observation_after = dict(observation_result.data)
+        data["observation_after_diagonal"] = self._observation_summary(
+            observation_after
+        )
+
+        descent_plan = self._descent_plan_from_observation(
+            observation_after,
+            actual,
+        )
+        data["descent_plan"] = descent_plan
+        data["grasp_started"] = False
+        if not descent_plan.get("safe_to_plan"):
+            return rejected(
+                ErrorCode.SAFETY_LIMIT,
+                "斜上方二次观测未生成安全下探位",
                 self.mode,
                 data=data,
             )
         return ok(
-            "右臂已到达 charger 上方 pre-grasp 位姿；未下降、未闭爪",
+            "机械臂已到达约 5 cm 斜上方观察位，夹爪已全开并完成二次识别；"
+            "已生成下探位，尚未下降和闭爪",
             self.mode,
             data=data,
+        )
+
+    @_tool
+    def execute_wrist_charger_grasp(
+        self,
+        operator_confirmed: bool = False,
+    ) -> ToolResult:
+        """Open, re-observe, descend in bounded steps, close and lift."""
+        if operator_confirmed is not True:
+            return rejected(
+                ErrorCode.PERMISSION_DENIED,
+                "charger 下探夹取必须由现场监督者确认",
+                self.mode,
+                data={"motion_dispatched": False, "grasp_started": False},
+            )
+        idle_result = self._settle_robot_idle()
+        if not idle_result.succeeded:
+            return idle_result
+
+        chain = str(self.config.get("chain", "right_arm"))
+        end_effector = str(self.config.get("end_effector", "right_gripper"))
+        open_result = self._open_gripper_max()
+        if not open_result.succeeded:
+            return failed(
+                open_result.error_code or ErrorCode.SDK_ERROR,
+                f"下探前夹爪未能全开：{open_result.message}",
+                self.mode,
+                data={
+                    "idle_stabilization": idle_result.data,
+                    "gripper_open": open_result.to_dict(),
+                    "motion_dispatched": False,
+                    "grasp_started": False,
+                },
+            )
+
+        observation_result = self.charger_tool.segment_charger_top_wrist()
+        if not observation_result.succeeded:
+            return failed(
+                observation_result.error_code or ErrorCode.NOT_READY,
+                f"下探前二次识别失败：{observation_result.message}",
+                self.mode,
+                data={
+                    "idle_stabilization": idle_result.data,
+                    "gripper_open": open_result.to_dict(),
+                    "observation": observation_result.to_dict(),
+                    "motion_dispatched": False,
+                    "grasp_started": False,
+                },
+            )
+        observation = dict(observation_result.data)
+        surface = observation.get("surface") or {}
+        if not observation.get("eligible_for_precision") or not surface.get("available"):
+            return failed(
+                ErrorCode.NOT_READY,
+                "下探前二次观测未通过精定位门槛",
+                self.mode,
+                data={
+                    "idle_stabilization": idle_result.data,
+                    "gripper_open": open_result.to_dict(),
+                    "observation": self._observation_summary(observation),
+                    "motion_dispatched": False,
+                    "grasp_started": False,
+                },
+            )
+
+        current_result = self.motion_tool.get_end_effector_pose(chain)
+        if not current_result.succeeded:
+            return failed(
+                current_result.error_code or ErrorCode.NOT_READY,
+                f"无法读取当前 {chain} 末端位姿：{current_result.message}",
+                self.mode,
+                data={
+                    "observation": self._observation_summary(observation),
+                    "motion_dispatched": False,
+                    "grasp_started": False,
+                },
+            )
+        current_pose = list(current_result.data["pose"])
+
+        expected_observation = plan_diagonal_observation_pose(
+            surface["surface_center_m"],
+            surface["surface_normal_base"],
+            surface["long_edge_axis_base"],
+            observation_distance_m=float(
+                self.config.get("diagonal_observation_distance_m", 0.05)
+            ),
+            tilt_from_normal_deg=float(
+                self.config.get("diagonal_observation_tilt_deg", 35.0)
+            ),
+            current_end_effector_pose_base=current_pose,
+            min_observation_distance_m=float(
+                self.config.get("min_diagonal_observation_distance_m", 0.03)
+            ),
+            max_observation_distance_m=float(
+                self.config.get("max_diagonal_observation_distance_m", 0.08)
+            ),
+            tool_approach_offset_m=float(
+                self.config.get("tool_approach_offset_m", 0.146)
+            ),
+        )
+        expected_pose = expected_observation["observation_pose"]
+        diagonal_position_error = math.sqrt(
+            sum(
+                (float(target) - float(current)) ** 2
+                for target, current in zip(expected_pose[:3], current_pose[:3])
+            )
+        )
+        diagonal_rotation_error = rotation_error_deg(expected_pose, current_pose)
+        diagonal_ready = (
+            diagonal_position_error
+            <= float(self.config.get("diagonal_pose_position_tolerance_m", 0.02))
+            and diagonal_rotation_error
+            <= float(self.config.get("diagonal_pose_rotation_tolerance_deg", 8.0))
+        )
+        base_data = {
+            "chain": chain,
+            "end_effector": end_effector,
+            "idle_stabilization": idle_result.data,
+            "gripper_open": open_result.to_dict(),
+            "observation": self._observation_summary(observation),
+            "expected_diagonal_observation_pose": expected_pose,
+            "diagonal_position_error_m": round(diagonal_position_error, 7),
+            "diagonal_rotation_error_deg": round(diagonal_rotation_error, 6),
+            "diagonal_ready": diagonal_ready,
+        }
+        if not diagonal_ready:
+            return rejected(
+                ErrorCode.SAFETY_LIMIT,
+                "当前末端不在二次观测确认的斜上方观察位；拒绝直接下探",
+                self.mode,
+                data={**base_data, "motion_dispatched": False, "grasp_started": False},
+            )
+
+        descent_plan = self._descent_plan_from_observation(
+            observation,
+            current_pose,
+        )
+        base_data["descent_plan"] = descent_plan
+        if not descent_plan.get("safe_to_plan"):
+            return rejected(
+                ErrorCode.SAFETY_LIMIT,
+                "二次观测未生成安全下探位",
+                self.mode,
+                data={**base_data, "motion_dispatched": False, "grasp_started": False},
+            )
+
+        target_pose = [float(v) for v in descent_plan["descent_pose"]]
+        approach_axis = [
+            float(v) for v in descent_plan["approach_axis_base"]
+        ]
+        lift_distance = max(0.0, float(self.config.get("lift_distance_m", 0.03)))
+        lift_pose = list(target_pose)
+        lift_pose[:3] = [
+            float(value) - approach * lift_distance
+            for value, approach in zip(target_pose[:3], approach_axis)
+        ]
+        base_data["lift_pose"] = lift_pose
+        if bool(self.config.get("require_ik_reachability", True)):
+            lift_reachable = self.motion_tool.check_ee_pose_reachable(
+                lift_pose,
+                chain=chain,
+                enable_collision_check=True,
+            )
+            base_data["lift_ik_preflight"] = lift_reachable.to_dict()
+            if not lift_reachable.succeeded:
+                return rejected(
+                    lift_reachable.error_code or ErrorCode.SAFETY_LIMIT,
+                    "夹取后的抬升位姿未通过只读 IK 预检",
+                    self.mode,
+                    data={
+                        **base_data,
+                        "motion_dispatched": False,
+                        "grasp_started": False,
+                    },
+                )
+
+        descent_distance = float(descent_plan["descent_distance_m"])
+        max_step = max(
+            0.001,
+            min(
+                float(self.config.get("descent_step_m", 0.01)),
+                float(self.config.get("max_descent_step_m", 0.02)),
+            ),
+        )
+        step_count = max(1, int(math.ceil(descent_distance / max_step)))
+        descent_motions: list[dict[str, typing.Any]] = []
+        for step_index in range(1, step_count + 1):
+            fraction = step_index / float(step_count)
+            waypoint = list(target_pose)
+            waypoint[:3] = [
+                float(start) + (float(target) - float(start)) * fraction
+                for start, target in zip(current_pose[:3], target_pose[:3])
+            ]
+            motion = self.motion_tool.move_ee_to(
+                waypoint,
+                chain=chain,
+                straight_line=True,
+            )
+            descent_motions.append(motion.to_dict())
+            if not motion.succeeded:
+                return self._result_with_data(
+                    motion,
+                    {
+                        **base_data,
+                        "descent_motions": descent_motions,
+                        "motion_dispatched": True,
+                        "grasp_started": True,
+                    },
+                )
+
+        short_dimension = float(surface.get("short_dimension_m") or 0.0)
+        close_width = min(
+            float(self.config.get("grasp_close_max_width_m", 0.025)),
+            max(
+                float(self.config.get("grasp_close_min_width_m", 0.012)),
+                short_dimension
+                * float(self.config.get("grasp_close_width_ratio", 0.85)),
+            ),
+        )
+        close_result = self.motion_tool.set_gripper(
+            end_effector,
+            close_width,
+            effort=float(self.config.get("grasp_close_effort", 10.0)),
+        )
+        control_status = str(
+            (close_result.data or {}).get("control_status") or ""
+        )
+        contact_limited = control_status == "TIMEOUT"
+        base_data.update(
+            {
+                "descent_motions": descent_motions,
+                "grasp_close_width_m": round(close_width, 6),
+                "gripper_close": close_result.to_dict(),
+                "close_contact_limited": contact_limited,
+            }
+        )
+        if not close_result.succeeded and not contact_limited:
+            return failed(
+                close_result.error_code or ErrorCode.SDK_ERROR,
+                f"下探后夹爪闭合失败：{close_result.message}",
+                self.mode,
+                data={
+                    **base_data,
+                    "motion_dispatched": True,
+                    "grasp_started": True,
+                },
+            )
+
+        lift = self.motion_tool.move_ee_to(
+            lift_pose,
+            chain=chain,
+            straight_line=True,
+        )
+        base_data["lift_motion"] = lift.to_dict()
+        if not lift.succeeded:
+            return self._result_with_data(
+                lift,
+                {
+                    **base_data,
+                    "motion_dispatched": True,
+                    "grasp_started": True,
+                    "grasp_completed": False,
+                },
+            )
+        return ok(
+            "已按二次观测完成下探、闭爪和抬起；抓取结果仍需视觉复核",
+            self.mode,
+            data={
+                **base_data,
+                "motion_dispatched": True,
+                "grasp_started": True,
+                "grasp_state": "closed_and_lifted_unverified",
+                "grasp_completed": False,
+            },
         )
 
 

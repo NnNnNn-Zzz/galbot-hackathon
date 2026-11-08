@@ -1,7 +1,7 @@
 import unittest
 
 from sdk_wrapper.dev.adapters import MockAdapter
-from sdk_wrapper.dev.contracts import ErrorCode, TaskStatus, ok, rejected
+from sdk_wrapper.dev.contracts import ErrorCode, TaskStatus, failed, ok, rejected
 from sdk_wrapper.dev.robot_tools.charger_grasp import ChargerGraspTool
 from sdk_wrapper.dev.robot_tools.motion import MotionTool
 from sdk_wrapper.dev.robot_tools.perception import PerceptionTool
@@ -67,8 +67,20 @@ class ChargerGraspToolTest(unittest.TestCase):
         self.assertEqual(charger_tool.calls, 1)
         self.assertFalse(result.data["motion_dispatched"])
         self.assertEqual(
-            result.data["end_effector_goal"][:3],
-            [0.45, -0.2, 0.82],
+            result.data["grasp_plan"]["target_kind"],
+            "wrist_charger_diagonal_observation",
+        )
+        offset = [
+            float(tcp) - float(center)
+            for tcp, center in zip(
+                result.data["grasp_plan"]["tcp_observation_position_m"],
+                result.data["grasp_plan"]["surface_center_m"],
+            )
+        ]
+        self.assertAlmostEqual(
+            sum(value * value for value in offset) ** 0.5,
+            0.05,
+            places=6,
         )
         self.assertEqual(adapter.ee_moves, [])
 
@@ -111,15 +123,18 @@ class ChargerGraspToolTest(unittest.TestCase):
         result = tool.move_to_wrist_charger_pregrasp(operator_confirmed=True)
 
         self.assertEqual(result.status, TaskStatus.SUCCEEDED)
-        self.assertEqual(charger_tool.calls, 1)
+        self.assertEqual(charger_tool.calls, 2)
         self.assertEqual(len(adapter.ee_moves), 1)
         self.assertTrue(result.data["motion_dispatched"])
         self.assertTrue(result.data["pose_matched"])
         self.assertFalse(result.data["grasp_completed"])
-        self.assertEqual(
-            adapter.ee_moves[0]["target"][:3],
-            [0.45, -0.2, 0.82],
+        self.assertTrue(result.data["plan"]["grasp_plan"]["safe_to_plan"])
+        self.assertTrue(result.data["descent_plan"]["safe_to_plan"])
+        self.assertAlmostEqual(
+            adapter.gripper_widths["right_gripper"],
+            0.11,
         )
+        self.assertFalse(result.data["grasp_started"])
 
     def test_confirmed_move_reuses_recent_preflight_plan(self):
         tool, adapter, charger_tool = self.make_tool()
@@ -130,8 +145,57 @@ class ChargerGraspToolTest(unittest.TestCase):
         self.assertEqual(preflight.status, TaskStatus.SUCCEEDED)
         self.assertEqual(result.status, TaskStatus.SUCCEEDED)
         self.assertEqual(result.data["plan_source"], "recent_preflight")
-        self.assertEqual(charger_tool.calls, 1)
+        self.assertEqual(charger_tool.calls, 2)
         self.assertEqual(len(adapter.ee_moves), 1)
+
+    def test_execute_grasp_descends_closes_and_lifts(self):
+        tool, adapter, charger_tool = self.make_tool()
+        move = tool.move_to_wrist_charger_pregrasp(operator_confirmed=True)
+
+        result = tool.execute_wrist_charger_grasp(operator_confirmed=True)
+
+        self.assertEqual(move.status, TaskStatus.SUCCEEDED)
+        self.assertEqual(result.status, TaskStatus.SUCCEEDED)
+        self.assertEqual(charger_tool.calls, 3)
+        self.assertTrue(result.data["motion_dispatched"])
+        self.assertTrue(result.data["grasp_started"])
+        self.assertEqual(
+            result.data["grasp_state"],
+            "closed_and_lifted_unverified",
+        )
+        self.assertFalse(result.data["grasp_completed"])
+        self.assertGreaterEqual(len(adapter.ee_moves), 3)
+        self.assertAlmostEqual(
+            adapter.gripper_widths["right_gripper"],
+            0.025,
+        )
+
+    def test_contact_limited_close_timeout_is_recorded_and_lift_still_runs(self):
+        tool, adapter, _charger_tool = self.make_tool()
+        tool.move_to_wrist_charger_pregrasp(operator_confirmed=True)
+        calls = {"count": 0}
+        original = tool.motion_tool.set_gripper
+
+        def set_gripper(*args, **kwargs):
+            calls["count"] += 1
+            if calls["count"] == 2:
+                return failed(
+                    ErrorCode.SDK_ERROR,
+                    "close timeout",
+                    "mock",
+                    data={"control_status": "TIMEOUT"},
+                )
+            return original(*args, **kwargs)
+
+        tool.motion_tool.set_gripper = set_gripper
+        result = tool.execute_wrist_charger_grasp(operator_confirmed=True)
+
+        self.assertEqual(result.status, TaskStatus.SUCCEEDED)
+        self.assertTrue(result.data["close_contact_limited"])
+        self.assertEqual(
+            result.data["grasp_state"],
+            "closed_and_lifted_unverified",
+        )
 
     def test_residual_base_motion_is_stopped_and_allowed_to_settle(self):
         tool, adapter, _charger_tool = self.make_tool()

@@ -1,7 +1,7 @@
 {
   "note": [
-    "Wrist YOLO-seg observation -> charger-top coordinates -> absolute pre-grasp EndEffector pose.",
-    "This stage stops above the surface. It does not descend, close the gripper, or claim a grasp.",
+    "Wrist observation -> 5 cm diagonal observation pose -> maximum gripper opening -> fresh observation -> short descent -> close and lift.",
+    "The diagonal pose keeps the wrist camera aimed at the surface center. Descent remains bounded and collision checked.",
     "The EndEffector axis mapping is the initial project convention and must be rechecked with a short supervised motion test."
   ],
   "chain": "right_arm",
@@ -17,5 +17,23 @@
   "position_tolerance_m": 0.01,
   "rotation_tolerance_deg": 3.0,
   "min_plan_standoff_m": 0.02,
-  "max_plan_standoff_m": 0.30
+  "max_plan_standoff_m": 0.30,
+  "diagonal_observation_distance_m": 0.05,
+  "diagonal_observation_tilt_deg": 35.0,
+  "min_diagonal_observation_distance_m": 0.03,
+  "max_diagonal_observation_distance_m": 0.08,
+  "diagonal_pose_position_tolerance_m": 0.02,
+  "diagonal_pose_rotation_tolerance_deg": 8.0,
+  "tool_approach_offset_m": 0.146,
+  "gripper_open_width_m": 0.11,
+  "gripper_open_effort": 10.0,
+  "grasp_clearance_m": 0.008,
+  "descent_step_m": 0.01,
+  "max_descent_step_m": 0.02,
+  "max_descent_distance_m": 0.12,
+  "grasp_close_width_ratio": 0.85,
+  "grasp_close_min_width_m": 0.012,
+  "grasp_close_max_width_m": 0.025,
+  "grasp_close_effort": 10.0,
+  "lift_distance_m": 0.03
 }

@@ -109,7 +109,12 @@ def _print_result(label: str, result: dict[str, typing.Any]) -> None:
             "grasp_plan:",
             json.dumps(
                 {
-                    "pre_grasp_position_m": plan.get("pre_grasp_position_m"),
+                    "observation_position_m": plan.get("observation_position_m"),
+                    "tcp_observation_position_m": plan.get(
+                        "tcp_observation_position_m"
+                    ),
+                    "observation_distance_m": plan.get("observation_distance_m"),
+                    "tilt_from_normal_deg": plan.get("tilt_from_normal_deg"),
                     "translation_to_goal_m": data.get("translation_to_goal_m"),
                     "approach_axis_base": plan.get("approach_axis_base"),
                     "gripper_long_axis_base": plan.get("gripper_long_axis_base"),
@@ -120,6 +125,21 @@ def _print_result(label: str, result: dict[str, typing.Any]) -> None:
                 ensure_ascii=False,
                 indent=2,
             ),
+        )
+    if data.get("descent_plan"):
+        print(
+            "descent_plan:",
+            json.dumps(data["descent_plan"], ensure_ascii=False, indent=2),
+        )
+    if data.get("gripper_open"):
+        print(
+            "gripper_open:",
+            json.dumps(data["gripper_open"], ensure_ascii=False, indent=2),
+        )
+    if data.get("gripper_close"):
+        print(
+            "gripper_close:",
+            json.dumps(data["gripper_close"], ensure_ascii=False, indent=2),
         )
     if data.get("ik_preflight"):
         ik = data["ik_preflight"]
@@ -174,15 +194,31 @@ def _confirm_motion(arm: str) -> bool:
     return answer == "MOVE"
 
 
+def _confirm_grasp(arm: str) -> bool:
+    print(
+        f"\n即将执行{'左' if arm == 'left' else '右'}手斜向观察后的下探、闭爪和抬起。"
+        "请确认夹爪已全开、目标仍在视野内、下方区域安全且急停可用。"
+    )
+    try:
+        answer = input("输入 GRASP 继续，其它内容取消：").strip()
+    except EOFError:
+        return False
+    return answer == "GRASP"
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="腕部 charger YOLO-seg -> 坐标 -> 末端 pre-grasp 位姿分阶段测试"
     )
     parser.add_argument(
         "--stage",
-        choices=("detect", "plan", "move"),
+        choices=("detect", "plan", "move", "grasp"),
         default="plan",
-        help="detect=只识别，plan=生成位姿但不运动，move=确认后下发（默认 plan）",
+        help=(
+            "detect=只识别，plan=生成斜上方观察位，"
+            "move=移动到斜上方并全开夹爪后二次观测，"
+            "grasp=确认后下探、闭爪和抬起（默认 plan）"
+        ),
     )
     parser.add_argument(
         "--mock",
@@ -202,8 +238,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    if args.yes and not args.mock and args.stage == "move":
-        parser.error("真机 move 阶段不允许 --yes；必须交互输入 MOVE")
+    if args.yes and not args.mock and args.stage in ("move", "grasp"):
+        parser.error("真机 move/grasp 阶段不允许 --yes；必须交互确认")
 
     from sdk_wrapper.dev import toolhub
     from sdk_wrapper.dev.robot_tools.charger_grasp import ChargerGraspTool
@@ -238,6 +274,16 @@ def main(argv: list[str] | None = None) -> int:
     if args.stage == "plan":
         result = grasp_tool.plan_wrist_charger_pregrasp().to_dict()
         _print_result("plan", result)
+        return 0 if result.get("status") == "succeeded" else 1
+
+    if args.stage == "grasp":
+        if not args.yes and not _confirm_grasp(args.arm):
+            print("已取消，未下发运动。")
+            return 2
+        result = grasp_tool.execute_wrist_charger_grasp(
+            operator_confirmed=True
+        ).to_dict()
+        _print_result("grasp", result)
         return 0 if result.get("status") == "succeeded" else 1
 
     # Re-observe and preflight IK before asking the operator to authorize motion.

@@ -58,6 +58,7 @@ __all__ = [
     "advance_charger_search", "monitor_observation_navigation",
     "align_wrist_from_head", "reset_charger_search",
     "plan_wrist_charger_pregrasp", "move_to_wrist_charger_pregrasp",
+    "execute_wrist_charger_grasp",
     "check_right_wrist_rgbd_calibration", "check_right_arm_eye_in_hand",
     # 手臂 / 夹爪
     "get_ee_pose", "move_arm_to", "move_arm_delta", "rotate_wrist",
@@ -627,6 +628,15 @@ def move_to_wrist_charger_pregrasp(operator_confirmed: bool = False) -> dict:
     """Re-observe and command the charger pre-grasp pose after confirmation."""
     return result_to_dict(
         charger_grasp().move_to_wrist_charger_pregrasp(
+            operator_confirmed=operator_confirmed
+        )
+    )
+
+
+def execute_wrist_charger_grasp(operator_confirmed: bool = False) -> dict:
+    """Open, re-observe, descend, close and lift after explicit confirmation."""
+    return result_to_dict(
+        charger_grasp().execute_wrist_charger_grasp(
             operator_confirmed=operator_confirmed
         )
     )
