@@ -552,14 +552,24 @@ class GalbotAdapter(RobotAdapter):
             params.set_actuate(_ACTUATE)
             status, _traj = motion.move_line([[target_obj]], params)
             return status
-        return motion.set_end_effector_pose(
-            target,
-            chain,
-            "base_link",
-            enable_collision_check=bool(enable_collision_check),
-            is_blocking=True,
-            timeout=float(timeout_s),
-        )
+        target_obj = gm.MotionPlanChainTarget()
+        target_obj.chain_name = chain
+        target_obj.mode = gm.MotionPlanTargetMode.kCartesian
+        target_obj.cart.chain_name = chain
+        target_obj.cart.frame_id = "EndEffector"
+        target_obj.cart.reference_frame = "base_link"
+        target_obj.cart.pose = gm.Pose(target)
+        target_obj.cart.assist_chains = {"torso"}
+
+        params = gm.PlannerConfig()
+        params.is_direct_execute = True
+        params.is_blocking = True
+        params.timeout_second = float(timeout_s)
+        params.is_check_collision = bool(enable_collision_check)
+        params.enable_env_collision_check = bool(enable_collision_check)
+        params.reference_frame = "base_link"
+        status, _traj = motion.motion_plan([[target_obj]], params)
+        return status
 
     def check_end_effector_reachable(
         self,
@@ -568,7 +578,7 @@ class GalbotAdapter(RobotAdapter):
         *,
         enable_collision_check: bool = True,
     ) -> ToolResult:
-        """Run read-only IK before an absolute EndEffector motion."""
+        """Run a read-only collision-aware path plan for an EndEffector target."""
         rejection = self._authorization_rejection()
         if rejection is not None:
             return rejection
@@ -589,13 +599,24 @@ class GalbotAdapter(RobotAdapter):
             )
         try:
             _robot, motion, _nav = self._ensure_interfaces()
-            status, joints = motion.inverse_kinematics(
-                target,
-                [chain],
-                target_frame="EndEffector",
-                reference_frame="base_link",
-                enable_collision_check=bool(enable_collision_check),
-            )
+            gm = self._import_sdk()
+            target_obj = gm.MotionPlanChainTarget()
+            target_obj.chain_name = chain
+            target_obj.mode = gm.MotionPlanTargetMode.kCartesian
+            target_obj.cart.chain_name = chain
+            target_obj.cart.frame_id = "EndEffector"
+            target_obj.cart.reference_frame = "base_link"
+            target_obj.cart.pose = gm.Pose(target)
+            target_obj.cart.assist_chains = {"torso"}
+
+            params = gm.PlannerConfig()
+            params.is_direct_execute = False
+            params.is_blocking = True
+            params.timeout_second = 15.0
+            params.is_check_collision = bool(enable_collision_check)
+            params.enable_env_collision_check = bool(enable_collision_check)
+            params.reference_frame = "base_link"
+            status, trajectory = motion.motion_plan([[target_obj]], params)
         except Exception as exc:  # noqa: BLE001
             return unknown(
                 ErrorCode.STATE_UNCERTAIN,
@@ -609,12 +630,15 @@ class GalbotAdapter(RobotAdapter):
             "target_pose": target,
             "reachable": name == "SUCCESS",
             "collision_check": bool(enable_collision_check),
+            "environment_collision_check": bool(enable_collision_check),
             "motion_status": name,
+            "trajectory_points": {
+                key: len(value) for key, value in trajectory.items()
+            },
         }
         if name == "SUCCESS":
-            data["joint_positions"] = joints
             return ok(
-                f"{chain} 目标位姿存在 IK 解",
+                f"{chain} 目标存在无碰撞自由空间路径",
                 mode=self.mode,
                 data=data,
             )

@@ -176,6 +176,15 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 - **修复**：最大表面倾角从 `30°` 调整为 `50°`，仍低于此前约 `60.9°` 的侧面误检；`--stage move` 改为先重新观测、生成位姿并做 IK 预检，全部通过后才要求输入 `MOVE`。通过预检的位姿在 15 秒内直接复用，不会再因为输入确认后重新拍照导致第二次拒绝；超时后才重新规划。预检失败时直接退出，失败输出会打印嵌套观测及具体拒绝原因。
 - **验证结果与边界**：2026-11-08 本地 105 项单测通过；同一 `08:39` 观测放开到 `50°` 后几何合格，左臂碰撞感知 IK 有解。复核时实时画面已没有 charger，`move` 在预检阶段直接退出，未要求 `MOVE`，也未下发真机动作。此前一次 `moving` 拒绝是动作前状态门槛，连续复读后机器人已回到 `idle`，不是规划失败。
 
+### `collision_check=True` 不等于机械臂会绕开桌子（2026-11-08）
+
+- **现象**：`move_ee_to(straight_line=False)` 带有碰撞检查参数，但仍可能选择贴近桌面的不良轨迹；现场表现为夹爪容易撞桌。
+- **确认原因**：旧实现走 `set_end_effector_pose()`，服务日志为 `MpsTask handling on traj plan`，本质是目标关节轨迹规划，不是采样式自由空间路径搜索。`collision_check` 只能拒绝与**已加载碰撞环境**相交的轨迹，不会自动把实时相机看到的桌子加入碰撞世界。
+- **诊断**：检查 `service_motion_plan` 日志中的 planner 类型。`traj plan` 表示直接轨迹规划；低层采样式避障应显示 `Start Unified Motion Planning` 和 `MpsTask handling on motion plan`。SDK 文档也明确：GalbotMotion 不自动导入实时感知，环境障碍必须通过 `add_obstacle()` / `attach_target_object()` 加载。
+- **修复**：`straight_line=False` 的绝对末端移动改为低层 `motion_plan([[MotionPlanChainTarget]], PlannerConfig)`，同时启用 `is_check_collision` 和 `enable_env_collision_check`，并允许 torso 协助；只读预检使用同一 planner 但设置 `is_direct_execute=False`，确认有完整路径后才执行。
+- **验证**：2026-11-08 在 HPU 对当前左臂 EndEffector 位姿做只读路径预检，返回 `SUCCESS`；服务日志从 `MpsTask handling on traj plan` 变为 `MpsTask handling on motion plan`。本地 105 项单测通过，未执行额外真机动作。
+- **边界**：这只保证在“已加载的碰撞环境”中搜索安全路径，不会凭空知道桌子几何。若桌子未被机器人碰撞服务加载，仍需通过底盘观察位、提高预抓取高度，或显式添加桌面/目标障碍后再规划。
+
 ### 头部关节已动但姿态校验不变：测错 frame（2026-11-07）
 
 - **现象**：`HeadLookTool` 命令 `head_joint2` 增加 0.01 rad，SDK 返回 `SUCCESS`，实际关节变化约 0.00713 rad；但工具读取 `head_base_link` 的姿态几乎不变，因此错误返回“实际俯仰方向与预期不符”。
