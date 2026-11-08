@@ -144,6 +144,26 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 - **修复**：末端姿态改为 local `+X=接近轴`、local `Y=两指闭合轴`、local `Z=夹爪长轴`；`plan` 阶段先调用只读 `inverse_kinematics`，无解时直接返回 `rejected/safety_limit`，不再把命令送进运动服务。腕部精定位同时增加物理长/短边最小值（`0.02/0.015 m`）和表面法向相对竖直最大倾角门槛；当前校准值为 `50°`。
 - **验证**：2026-11-08 HPU 单测通过。修正轴映射后，首个位姿的旋转量从约 `167°` 降到约 `93°`，但只读 IK 仍返回 `FAULT`，工具在运动前明确拒绝。调整机器人位置后再次观测到完整顶面：中心 `[0.60777, -0.052781, 0.735523]`、长/短边 `3.02/2.37 cm`、平面 RMS `1.38 mm`、法向倾角 `3.98°`，证明该充电器本身是小型目标，最初 `4×6 cm` 门槛过严。最终门槛改为 `2×1.5 cm` 并新增小尺寸合法样本回归。更新后的目标 `[0.7025586, -0.034594, 0.8552943]` 仍因距离稍远而无 IK 解；虚拟底盘前移约 `0.12 m` 后即可求解，因此继续测试时应先小幅靠近再重新 `plan`。
 
+### 左臂 charger `move` 预检成功但执行仍报 `FAULT`：动态碰撞监控在轨迹执行中急停（2026-11-08）
+
+- **现象**：左腕已经识别 charger 并生成 pre-grasp 位姿，`ik_preflight` 返回 `SUCCESS/reachable=true`；现场输入 `MOVE` 后仍得到 `[move] status=failed`、`末端移动失败（FAULT）`、`error_code=sdk_error`。另一部分观测中预检本身返回 `rejected(FAULT)`，但下一次同类目标又能成功规划。
+- **确认原因**：`service_motion_plan` 在 `10:16:15`、`10:17:01`、`10:18:07` 的异步预检都找到 TRAC-IK 解，并分别返回 `SERVICE_STATUS_FINISHED`；之后的直接执行日志明确为 `Direct execute task, send target to WBC`。失败发生在轨迹开始后的动态碰撞监控，不是通信断开、急停按钮、没有 IK 解或目标不可达。已确认的碰撞点包括：
+  - `10:16:25`：`right_gripper_l_finger_link` sphere；
+  - `10:17:06`：`left_arm_link7` sphere；
+  - `10:18:13`：`right_arm_link2` sphere。
+
+  随后日志出现 `Trajectory collision!`、`SendStopSingorixTarget` 和 `SERVICE_STATUS_EXECUTE_FAILED`。因此 `FAULT` 是 WBC 执行阶段被轨迹碰撞监控中止；预检通过只代表规划 snapshot 中的路径可解。
+- **诊断**：
+
+  ```bash
+  grep -nE "Start Unified Motion Planning|TRAC-IK solver found|Async task, not send target|Direct execute task|Collision detected|Trajectory collision|SERVICE_STATUS_EXECUTE_FAILED" \
+    /userdata/log/service_motion_plan/service_motion_plan.INFO | tail -160
+  ```
+
+  2026-11-08 同机只读复核结果：左臂当前末端约 `[0.439, 0.248, 0.909]`，右臂约 `[0.586, -0.207, 1.152]`，机器人 `idle`；对同一左臂目标分别用 `with_torso+collision`、`chain_only+collision`、`chain_only+no_collision` 做 `motion_plan`，三者都返回 `SUCCESS`。这进一步排除了稳定 IK 不可达，并把差异指向预检与执行时动态 ESDF/机器人状态不一致。
+- **修复与安全处理**：失败后禁止直接重复发送同一 `MOVE`。先把非执行臂收回到安全收拢位、停止并等待底盘残余运动结束，再重新拍照和规划；显式比较 `with_torso` 与 chain-only 路径，必要时关闭 torso 协助。充电器目标距离较远时优先使用更近的二次观察位，减少跨工作空间的大姿态变化。动态碰撞监控触发后必须视为“运动已部分执行并被停止”，重新读取两臂实际位姿后再决定下一步。
+- **验证边界**：截至本记录，已确认故障链路和碰撞监控触发点，尚无一次完整的真机左臂 `move` 成功验收；chain-only 与斜向近距离观察位仍是待现场验证的缓解方案。
+
 ### charger 上表面接近水平却被判成法向倒置（2026-11-08）
 
 - **现象**：D405 点云估计的充电器上表面中心为 `[0.571627, -0.27607, 0.737347]`，三维尺寸和平面残差都正常，但 `surface_normal_base.z=-0.9983`，因此被 `surface_normal_tilt_above_maximum` 拒绝。
