@@ -903,19 +903,49 @@ class GalbotAdapter(RobotAdapter):
             return _enum_name(st), [float(v) for v in list(p)]
 
         def _step(target: list[float]) -> str | None:
-            """下达一个绝对目标；返回 None 表示成功，否则返回状态名。"""
-            try:
-                st = self._execute_cartesian(
-                    chain, target,
-                    straight_line=True,
-                    enable_collision_check=enable_collision_check,
-                    timeout_s=timeout_s,
-                    actuate=actuate,
-                )
-            except Exception as exc:  # noqa: BLE001 - 下发失败≠没动
-                LOG.warning("move_along_gripper 下发抛错：%s", exc)
-                return f"EXC:{type(exc).__name__}"
-            return None if _enum_name(st) == "SUCCESS" else _enum_name(st)
+            """下达一个绝对目标；成功返回 None，否则返回最后的状态名。
+
+            实测 `FAULT` 很不可靠：同一目标 IK 带碰撞检查 SUCCESS、不带反而 FAULT，
+            说明它是规划器/控制器的偶发状态，不是稳定的"到不了"。所以：
+              1. 失败后**先重读位姿**——可能其实已经走到位了，只是状态码报错，
+                 这种情况直接当成功，避免重复走一遍导致位移翻倍；
+              2. 确实没到就重试，前两次仍走直线，最后一次改用绕行规划。
+            """
+            last = "UNKNOWN"
+            for attempt in range(3):
+                straight = attempt < 2
+                try:
+                    st = self._execute_cartesian(
+                        chain, target,
+                        straight_line=straight,
+                        enable_collision_check=enable_collision_check,
+                        timeout_s=timeout_s,
+                        actuate=actuate,
+                    )
+                    name = _enum_name(st)
+                except Exception as exc:  # noqa: BLE001 - 下发失败≠没动
+                    LOG.warning("move_along_gripper 下发抛错（第%d次）：%s", attempt + 1, exc)
+                    name = f"EXC:{type(exc).__name__}"
+                if name == "SUCCESS":
+                    return None
+
+                st2, cur = _read()
+                if st2 == "SUCCESS":
+                    gap = math.sqrt(sum((cur[i] - target[i]) ** 2 for i in range(3)))
+                    if gap < 0.005:
+                        LOG.info(
+                            "move_along_gripper 报 %s 但实际已到位（差 %.1f mm），按成功处理",
+                            name, gap * 1000,
+                        )
+                        return None
+                last = name
+                if attempt < 2:
+                    LOG.warning(
+                        "move_along_gripper 第%d次失败（%s），%.1fs 后重试（%s）",
+                        attempt + 1, name, 0.3, "直线" if attempt == 0 else "绕行",
+                    )
+                    time.sleep(0.3)
+            return last
 
         # ---- 阶段 1：抬到该模式的建议高度（仅在 auto_lift=True 时）----
         # auto_lift=False = 纯沿夹爪平移：不抬、也不拒绝。
