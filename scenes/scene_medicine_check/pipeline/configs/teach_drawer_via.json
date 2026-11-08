@@ -1,0 +1,583 @@
+{
+  "version": 1,
+  "created": "2026-11-08 07:10",
+  "chain": "right_arm",
+  "gripper_side": "right",
+  "frame": "base_link",
+  "unit": "m / rad",
+  "calibration": {
+    "method": "R_corr = R_meas @ R_fk.T + off = p_meas - p_fk，在 ALIGN_handle 单点反解",
+    "raw_orientation_error_deg": 1.72,
+    "fk_position_residual_mm": 17.4,
+    "position_policy": "FK + 常量平移 off；单点标定，3 点之间一致性已验证"
+  },
+  "provenance": {
+    "P0_measured": "WAYPOINTS.json P0, 50 帧, grasp_capture_20261107_194545",
+    "P1_measured": "WAYPOINTS.json P1, 20 帧, pregrasp_to_initial_..._P1",
+    "P2_measured": "WAYPOINTS.json P2, 20 帧, pregrasp_to_initial_..._P2",
+    "ALIGN_handle": "sdk_snapshot.json (drawer_final_20261107_121006), 实测 TCP",
+    "CARRY_home": "tuning.CARRY_JOINT_POSITIONS, FK 估计，无实测",
+    "VIA_*": "ik_subdivision_candidate，离线 IK 求解，未做碰撞检查"
+  },
+  "chain_order": [
+    "P0_measured",
+    "VIA_P0_P1_1",
+    "VIA_P0_P1_2",
+    "VIA_P0_P1_3",
+    "P1_measured",
+    "P2_measured",
+    "VIA_P2_ALIGN_1",
+    "VIA_P2_ALIGN_2",
+    "VIA_P2_ALIGN_3",
+    "ALIGN_handle",
+    "VIA_ALIGN_CARRY_1",
+    "VIA_ALIGN_CARRY_2",
+    "VIA_ALIGN_CARRY_3",
+    "VIA_ALIGN_CARRY_4",
+    "CARRY_home"
+  ],
+  "points": {
+    "P0_measured": {
+      "pose": [
+        0.524537875,
+        -0.21621028,
+        1.24604399,
+        -0.523283599,
+        0.416793066,
+        0.533307038,
+        0.517727166
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        1.210147703,
+        0.731030414,
+        -1.541503417,
+        1.631141517,
+        0.517174339,
+        -0.562479734,
+        -1.459487524
+      ],
+      "gripper_width": 0.05,
+      "note": "实测示教点 P0（50 帧均值，抖动 <0.04 mrad）。关节角为真实 SDK 回读；pose 为已标定 URDF FK（单点标定 + 常量平移）。",
+      "src": "handoff_WAYPOINTS",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": true,
+      "position_source": "urdf_fk_calibrated"
+    },
+    "P1_measured": {
+      "pose": [
+        0.478661309,
+        -0.794433137,
+        1.02489989,
+        -0.495510229,
+        0.448525489,
+        -0.272349587,
+        0.692185091
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        0.569245872,
+        0.26886019,
+        -1.660486865,
+        0.840237242,
+        0.745443493,
+        -0.470323366,
+        0.172741596
+      ],
+      "gripper_width": 0.05,
+      "note": "实测示教点 P1（20 帧均值，抖动 <0.04 mrad）。关节角为真实 SDK 回读；pose 为已标定 URDF FK（单点标定 + 常量平移）。",
+      "src": "handoff_WAYPOINTS",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": true,
+      "position_source": "urdf_fk_calibrated"
+    },
+    "P2_measured": {
+      "pose": [
+        0.350284102,
+        -0.653743014,
+        1.008039663,
+        -0.85323663,
+        0.08310342,
+        -0.00662215,
+        0.514817658
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.593401921,
+        0.732880965,
+        1.306081784,
+        1.517073023,
+        -1.155238962,
+        0.389880896,
+        0.08773726
+      ],
+      "gripper_width": 0.05,
+      "note": "实测示教点 P2（20 帧均值，抖动 <0.04 mrad）。关节角为真实 SDK 回读；pose 为已标定 URDF FK（单点标定 + 常量平移）。",
+      "src": "handoff_WAYPOINTS",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": true,
+      "position_source": "urdf_fk_calibrated"
+    },
+    "ALIGN_handle": {
+      "pose": [
+        0.751721747,
+        -0.238316443,
+        0.822836383,
+        -0.699969386,
+        0.042835595,
+        0.014368136,
+        0.712742258
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -0.2359685,
+        1.427297115,
+        0.137818173,
+        0.438260883,
+        -1.154680014,
+        -0.074782118,
+        0.271609873
+      ],
+      "gripper_width": 0.05,
+      "note": "对位把手：唯一同时有【实测 TCP】+ operator 确认「夹爪正确围住把手」的数据。位置直接用 SDK 实测 pose，姿态由同一组关节角的已标定 FK 给出。",
+      "src": "handoff_sdk_snapshot",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": true,
+      "pose_position_measured": true
+    },
+    "CARRY_home": {
+      "pose": [
+        0.222882705,
+        -0.214920814,
+        0.801489171,
+        -0.030841369,
+        0.028893653,
+        0.037609451,
+        0.998398466
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.9,
+        1.46,
+        0.54,
+        1.96,
+        0.0,
+        0.4,
+        0.0
+      ],
+      "gripper_width": 0.1,
+      "note": "初始抱持位（官方 example6 右臂段）：关节角取自 tuning.CARRY_JOINT_POSITIONS。⚠️ 无实测 TCP，pose 为 FK 估计值（±17mm），仅作 mock / 预览参考，不作真机判据。",
+      "src": "fk_estimate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_estimate"
+    },
+    "VIA_P0_P1_1": {
+      "pose": [
+        0.513311148,
+        -0.360827025,
+        1.189820525,
+        -0.553907094,
+        0.457250071,
+        0.345796626,
+        0.603766509
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        1.285587286,
+        0.407497811,
+        -1.721319728,
+        1.740589945,
+        0.210063696,
+        -0.651999487,
+        -1.249681274
+      ],
+      "gripper_width": 0.05,
+      "note": "P0_measured → P1_measured 的第 1/4 个中间点（t=0.25）。IK 求解值，未做碰撞检查。",
+      "src": "ik_subdivision_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated"
+    },
+    "VIA_P0_P1_2": {
+      "pose": [
+        0.501638805,
+        -0.505472633,
+        1.134872404,
+        -0.559625808,
+        0.475925582,
+        0.142974092,
+        0.663228622
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        1.286299559,
+        0.153393127,
+        -1.833056706,
+        1.667761703,
+        -0.000983204,
+        -0.702788565,
+        -0.945074748
+      ],
+      "gripper_width": 0.05,
+      "note": "P0_measured → P1_measured 的第 2/4 个中间点（t=0.50）。IK 求解值，未做碰撞检查。",
+      "src": "ik_subdivision_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated"
+    },
+    "VIA_P0_P1_3": {
+      "pose": [
+        0.490025756,
+        -0.650115869,
+        1.079876539,
+        -0.54010328,
+        0.473129296,
+        -0.066315012,
+        0.692848782
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        1.17010745,
+        0.093192556,
+        -1.916468794,
+        1.396133963,
+        0.207106137,
+        -0.697746553,
+        -0.374970653
+      ],
+      "gripper_width": 0.05,
+      "note": "P0_measured → P1_measured 的第 3/4 个中间点（t=0.75）。IK 求解值，未做碰撞检查。",
+      "src": "ik_subdivision_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated"
+    },
+    "VIA_P2_ALIGN_1": {
+      "pose": [
+        0.450487717,
+        -0.550079937,
+        0.961669841,
+        -0.82016505,
+        0.074026876,
+        -0.001047662,
+        0.56731668
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.301820808,
+        0.763374413,
+        0.894497074,
+        1.571520757,
+        -1.125445271,
+        0.152172362,
+        -0.04727692
+      ],
+      "gripper_width": 0.05,
+      "note": "P2_measured → ALIGN_handle 的第 1/4 个中间点（t=0.25）。IK 求解值，未做碰撞检查。",
+      "src": "ik_subdivision_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated"
+    },
+    "VIA_P2_ALIGN_2": {
+      "pose": [
+        0.550889814,
+        -0.446154359,
+        0.915398243,
+        -0.783257076,
+        0.063888104,
+        0.004113718,
+        0.618392869
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -0.942546133,
+        0.901448337,
+        0.513648825,
+        1.447568816,
+        -1.168179534,
+        -0.009628023,
+        -0.09412058
+      ],
+      "gripper_width": 0.05,
+      "note": "P2_measured → ALIGN_handle 的第 2/4 个中间点（t=0.50）。IK 求解值，未做碰撞检查。",
+      "src": "ik_subdivision_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated"
+    },
+    "VIA_P2_ALIGN_3": {
+      "pose": [
+        0.651243998,
+        -0.342219701,
+        0.869159236,
+        -0.743135808,
+        0.053507659,
+        0.009275198,
+        0.666933334
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -0.631130735,
+        1.148655075,
+        0.302470684,
+        1.132411478,
+        -1.229712005,
+        -0.078623454,
+        -0.026238959
+      ],
+      "gripper_width": 0.05,
+      "note": "P2_measured → ALIGN_handle 的第 3/4 个中间点（t=0.75）。IK 求解值，未做碰撞检查。",
+      "src": "ik_subdivision_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated"
+    },
+    "VIA_ALIGN_CARRY_1": {
+      "pose": [
+        0.64608633,
+        -0.23366217,
+        0.818465019,
+        -0.586300317,
+        0.041703982,
+        0.020114921,
+        0.808769501
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -0.661522226,
+        1.35374436,
+        0.283605043,
+        1.085049462,
+        -0.971564512,
+        -0.109068421,
+        0.083212942
+      ],
+      "gripper_width": 0.05,
+      "note": "ALIGN_handle → CARRY_home 的第 1/5 个中间点（t=0.20）。IK 求解值，未做碰撞检查。",
+      "src": "ik_subdivision_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated"
+    },
+    "VIA_ALIGN_CARRY_2": {
+      "pose": [
+        0.540157167,
+        -0.228949622,
+        0.814336196,
+        -0.459662714,
+        0.039869711,
+        0.025457598,
+        0.886832851
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -0.989336999,
+        1.371507639,
+        0.403613706,
+        1.453022759,
+        -0.767013543,
+        -0.085509301,
+        0.037804994
+      ],
+      "gripper_width": 0.05,
+      "note": "ALIGN_handle → CARRY_home 的第 2/5 个中间点（t=0.40）。IK 求解值，未做碰撞检查。",
+      "src": "ik_subdivision_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated"
+    },
+    "VIA_ALIGN_CARRY_3": {
+      "pose": [
+        0.434400129,
+        -0.224262556,
+        0.810072036,
+        -0.322821364,
+        0.037031364,
+        0.030195716,
+        0.945253016
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.297726123,
+        1.425113546,
+        0.496010972,
+        1.710673581,
+        -0.54553785,
+        0.003520397,
+        0.030236343
+      ],
+      "gripper_width": 0.05,
+      "note": "ALIGN_handle → CARRY_home 的第 3/5 个中间点（t=0.60）。IK 求解值，未做碰撞检查。",
+      "src": "ik_subdivision_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated"
+    },
+    "VIA_ALIGN_CARRY_4": {
+      "pose": [
+        0.328640825,
+        -0.219570122,
+        0.805813798,
+        -0.178833431,
+        0.033374214,
+        0.034257898,
+        0.982716217
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.602401435,
+        1.483414815,
+        0.554801338,
+        1.880839846,
+        -0.299931024,
+        0.168094895,
+        0.013490669
+      ],
+      "gripper_width": 0.05,
+      "note": "ALIGN_handle → CARRY_home 的第 4/5 个中间点（t=0.80）。IK 求解值，未做碰撞检查。",
+      "src": "ik_subdivision_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated"
+    }
+  },
+  "skipped": [],
+  "warning": "VIA_* 中间点是离线 IK 求解的**候选**，未做碰撞检查、未在真机上验证。P0/P1/P2 的 joint_positions 是真实 SDK 回读值；ALIGN_handle 的 pose 是实测值。真机使用前必须确认摆位一致，并先跑 --plan 看跨度。"
+}

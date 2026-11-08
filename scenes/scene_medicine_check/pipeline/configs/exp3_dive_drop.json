@@ -1,0 +1,173 @@
+{
+  "name": "drawer.exp3_dive_drop",
+  "description": "实验 3 · 箱内下探 + 投放：回到抽屉口 → 竖直下探 28 cm → 夹药盒 → 回升 → 播报 → 右转 → 投放 → 归位",
+  "version": 1,
+  "experiment": {
+    "layer": 3,
+    "start_point": "P3_dive_ref",
+    "mock_scene": "drawer",
+    "goal": "验证『箱内竖直下探 28 cm 能进去、能夹到、能拿出来』以及『投放 + 归位』这两段，是 YOLO 介入前的最后一段可验证范围",
+    "scope": "右臂 + 夹爪 + 底盘转向；不含视觉识别（YOLO 接入后替换 P3_dive_ref 的来源即可）",
+    "prerequisite": "实验 1、2 必须先通过",
+    "pass_criteria": [
+      "下探 7 段（每段 4 cm）全部 SUCCESS，实际深度 ≥ 26 cm",
+      "夹爪宽度能被读到，且 > close_m + 3 mm（确证夹到东西，不是空合）",
+      "回升到起点 z 高度",
+      "投放后夹爪宽度接近全开",
+      "底盘右转后 yaw 实测与指令一致（±5°）"
+    ],
+    "measured_spans_deg": {
+      "START(P3_dive_ref)->P3_dive_ref": 0.0,
+      "P3_dive_ref->P4_bin_above": "跨构型，见 notes：本配置用 teach_replay_joints 单点回放，不做跨度拦截",
+      "_note": "P3_dive_ref / P4_bin_above / P5_drop 三点全是 IK 推算，无实测"
+    },
+    "failure_taxonomy": {
+      "SAFETY_ABORT": "下探终点会低于桌面 + 安全余量 —— 拒绝执行（z0-28 < 0.74）",
+      "STAGE_FAILED": "某一段 move_line_to 失败 —— 可能撞壁、超时、或规划器拒绝",
+      "NO_TARGET": "下探到底后夹爪空合 —— 竖直偏了或盒不在那",
+      "NOT_VERIFIED": "读不到夹爪宽度 —— 夹没夹到不可判定，不允许当通过"
+    }
+  },
+  "notes": [
+    "0.72 是【桌面】高度，基线药品实验用。抽屉场次的『地面』不是桌面，是抽屉内腔底 —— P3_dive_ref 在 z=1.105，下探 28 cm 到 0.825，仍远高于桌板。若把 table_z 留在 0.72，闸门会算出 0.825 < 0.74 而误拒（--plan 预演已经踩到）。正确做法是现场实测『抽屉内腔底面高度』填进来；没有实测之前先设 0.55 作为**宽松兜底**（＝允许多探 17 cm），宁可让闸门松一档也不要用错参照物把正确动作拦掉。⚠️ 上真机前必须实测内腔底并改这个数。",
+    "⚠️ P3_dive_ref / P4_bin_above / P5_drop 三点**全是 IK 推算、零实测**（见 teach_drawer_real.json 的 provenance）。真机执行前必须现场 teach_record 重采。",
+    "P3_dive_ref = P1_measured 保持姿态抬 8 cm → z=1.1048。下探 28 cm 后 z=0.8248，高于桌面安全线 0.74 ✓，只富余 8.5 cm。这是本实验最紧的约束。",
+    "下探必须走 drawer_dive 的分段笛卡尔步进（4 cm × 7 段），不能用一条 move_line_to：sdk_wrapper 内部把 set_timeout 写死 10 s，28 cm 一次走不完会超时；分段还能中途停。",
+    "夹取判据用『夹爪实测宽度 > close_m + 3mm』。空夹会一路合到 close_m 附近，有物体时停在物体厚度处。**读不到宽度就判 UNDETERMINED/NOT_VERIFIED，绝不猜成夹到。**",
+    "投放段用的是 P5_drop（IK 推算），桶的实际位置/高度现场必须核。投放点判据：夹爪底部离桶沿 5–10 cm。",
+    "本实验是 YOLO 介入前能验证的最深一层。YOLO 接入后，只需把 P3_dive_ref 的来源从「示教点」换成「视觉输出的盒中心 + 固定下探高度」，其余管线不动。"
+  ],
+  "steps": [
+    {
+      "id": "preflight",
+      "stage": "preflight",
+      "non_fatal": true
+    },
+    {
+      "id": "snap_start",
+      "stage": "exp_arm_snapshot",
+      "params": {
+        "label": "START_DIVE_REF",
+        "chain": "right_arm",
+        "gripper_side": "right",
+        "fail_on_tight": false
+      }
+    },
+    {
+      "id": "to_dive_ref",
+      "stage": "exp_replay_chain",
+      "params": {
+        "file": "pipeline/configs/teach_drawer_real.json",
+        "points": [
+          "P3_dive_ref"
+        ],
+        "chain": "right_arm",
+        "speed_rad_s": 0.2,
+        "tolerance_deg": 3.0,
+        "settle_s": 0.6,
+        "gripper_side": "right",
+        "stop_on_fail": true,
+        "block_danger_span": true
+      }
+    },
+    {
+      "id": "dive_and_grasp",
+      "stage": "drawer_dive",
+      "params": {
+        "file": "pipeline/configs/teach_drawer_real.json",
+        "ref_point": "P3_dive_ref",
+        "depth_cm": 28.0,
+        "step_cm": 4.0,
+        "settle_s": 0.6,
+        "close_m": 0.075,
+        "open_m": 0.1,
+        "width_margin_m": 0.003,
+        "hold_s": 0.5,
+        "gripper_side": "right",
+        "ascend": true,
+        "table_z": 0.55,
+        "min_clearance_m": 0.02,
+        "ref_tolerance_m": 0.02,
+        "table_z_src": "assumed_drawer_floor_0.55_not_measured"
+      }
+    },
+    {
+      "id": "verify_dive",
+      "stage": "exp_verify_chain",
+      "params": {
+        "require_points": [],
+        "require_dive": true,
+        "min_dive_cm": 26.0,
+        "require_picked": true,
+        "max_err_deg": 3.0,
+        "min_limit_margin_deg": 2.0
+      }
+    },
+    {
+      "id": "announce",
+      "stage": "announce",
+      "params": {
+        "item_name": "999 感冒灵",
+        "pause_s": 0.0
+      }
+    },
+    {
+      "id": "turn_to_bin",
+      "stage": "turn",
+      "params": {
+        "default_deg": -30.0,
+        "label": "右转对桶"
+      }
+    },
+    {
+      "id": "to_drop",
+      "stage": "exp_replay_chain",
+      "params": {
+        "file": "pipeline/configs/teach_drawer_real.json",
+        "points": [
+          "VIA_D2B_1",
+          "VIA_D2B_2",
+          "VIA_D2B_3",
+          "VIA_D2B_4",
+          "VIA_D2B_5",
+          "P4_bin_above",
+          "P5_drop"
+        ],
+        "chain": "right_arm",
+        "speed_rad_s": 0.15,
+        "tolerance_deg": 3.0,
+        "settle_s": 0.5,
+        "gripper_side": "right",
+        "stop_on_fail": true,
+        "block_danger_span": true
+      }
+    },
+    {
+      "id": "drop",
+      "stage": "teach_drop",
+      "params": {
+        "file": "pipeline/configs/teach_drawer_real.json",
+        "pre_point": "P5_drop",
+        "settle_s": 0.8,
+        "speed_rad_s": 0.2,
+        "gripper_side": "right"
+      }
+    },
+    {
+      "id": "verify_exp3",
+      "stage": "exp_verify_chain",
+      "params": {
+        "require_points": [],
+        "require_drop": true,
+        "max_err_deg": 3.0,
+        "min_limit_margin_deg": 2.0
+      }
+    },
+    {
+      "id": "home",
+      "stage": "return_home",
+      "must_run": true,
+      "non_fatal": true
+    }
+  ]
+}

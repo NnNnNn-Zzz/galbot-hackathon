@@ -1,0 +1,223 @@
+{
+  "name": "drawer.exp1_teach_chain",
+  "description": "实验 1 · 离线全链版（与真机版同路径）：抱持位 → P2 → P1 → P0。方向已纠正，ALIGN/CARRY 返回段不再属于实验 1。",
+  "version": 3,
+  "experiment": {
+    "layer": 1,
+    "start_point": "CARRY_home",
+    "goal": "在 mock 上验证 CARRY→P2→P1→P0 三点四段链路的完整性（点位齐备、跨度合规、验证通过）。",
+    "scope": "关节空间回放；不夹任何东西、不接触任何物体、不下探、不动底盘",
+    "pass_criteria": [
+      "所有点回放后关节偏差 ≤ 3.0°",
+      "任何点的限位余量 ≥ 2.0°（低于则立即 failed，不发下一条指令）",
+      "任何单段关节跨度 < 90° 且合计 < 200°（超过则拒绝发指令，必须拆中间点）",
+      "链条完整跑到 CARRY_home（收臂抱持位），说明能从工作位安全退出",
+      "入口 ramp 12 段全部到位（每段 ≤14.8°），说明开机位能安全摆到 P0"
+    ],
+    "measured_spans_deg": {
+      "P0->P1（直连）": 93.5,
+      "P1->P2（直连）": 170.0,
+      "P2->ALIGN（直连）": 77.8,
+      "ALIGN->CARRY（直连）": 95.3,
+      "_note": "前三段已用 JNT_* 关节插值点拆到 ≤13.6°（见 teach_drawer_real.json）。唯独 P1->P2 拆不开（见 known_impossible_edges）"
+    },
+    "known_impossible_edges": {
+      "P1_measured -> P2_measured": "170.0° @ joint3。末端直线距离只有 19.1 cm，但姿态夹角 70.2°；从 P1 连续插值到 P2 的末端位姿，解出的 joint3 = -96.4°，而实测 P2 的 joint3 = +74.8°，差 171.3°，两者末端位姿误差仅 0.1 mm / 0.01°。逐 t 扫 20 步，joint3 从 -95.9° 平滑走到 -92.1°，**完全不向 +74.8° 收敛** → 这两点属于**两支不同的 IK 解**，不是同一条轨迹上的两个路点。真机上绝不能走这条边。"
+    },
+    "recovery_semantics": {
+      "P1->P2 取证步被拦之后怎么办": "手臂停在 P1。后续 leg3 的目标链以 P2 关节角为起点，直接被拦时这一段不会被执行（non_fatal 步失败后 trace 里 prev 仍是 P1），leg3 会从 P1 直接跳到 JNT_P2_ALIGN_1 —— 跨度仍是 170° 级别，同样会被拦。**因此 leg3 也标 non_fatal，最终 verify 会因链条不完整而 failed**。这是设计意图：实验 1 在真机上的正确结局是『跑到 P1 为止、证明 P0→P1 可行、并现场取证 P1→P2 不可行』，而不是『全程走通』。要全程走通，必须先在真机上把手臂从 P1 手动摆到 P2 附近（或从 P2 起步）。"
+    },
+    "failure_taxonomy": {
+      "NOT_VERIFIED": "回放后偏差超容差 —— 该构型可能不可达，或被碰撞检查拦下",
+      "SAFETY_ABORT": "某关节距限位 < 2°，或某段跨度超门槛 —— 拒绝发指令",
+      "UNDETERMINED": "回放后读不到关节角 —— 无法确证到位，必须全停",
+      "DEP_MISSING": "示教文件缺点位或关节角不完整 —— 需要重采"
+    },
+    "entry_ramp": {
+      "from": "INIT_POSE（真机开机姿态实测）",
+      "to": "P0_measured",
+      "为什么需要": "开机位到 P0 单关节 j1 差 178.2°、合计 519.6°；set_joints 默认 0.2 rad/s、timeout 15 s，一步走完要 15.6 s → 必然超时。",
+      "怎么解决": "关节空间线性插值切 12 段（JNT_ENTRY_1..11），每段 ≤14.8°、约 1.3 s。",
+      "离线校验": "末端 z 0.804→1.245 m 单调上升，全程高于桌面安全线 0.74；路径最小限位余量 4.5°@joint7（即 P0 自己）。",
+      "⚠️风险": "末端 y 在 t≈0.5 峰值 +0.031 m，扫过身体中线；未做碰撞检查，真机必须低速、手放急停。"
+    }
+  },
+  "notes": [
+    "⚠️ 本配置与 exp1_real_carry_p2_p1_p0.json 走同一条路径，区别只是可以跑 mock、且不含真机 TTY 闸门。",
+    "⚠️ 原 chain 里的 ALIGN_handle / JNT_P2_ALIGN_* / JNT_ALIGN_CARRY_* 属实验 3 的下探-投放段，不再挂在实验 1 上。",
+    "所有 VIA_* 中间点都是离线 IK / 关节插值候选，未做连杆级碰撞检测。"
+  ],
+  "steps": [
+    {
+      "id": "preflight",
+      "stage": "preflight",
+      "non_fatal": true
+    },
+    {
+      "id": "snap_start",
+      "stage": "exp_arm_snapshot",
+      "params": {
+        "label": "START",
+        "chain": "right_arm",
+        "gripper_side": "right",
+        "fail_on_tight": false
+      }
+    },
+    {
+      "id": "leg1_carry_to_p2",
+      "stage": "exp_replay_chain",
+      "params": {
+        "file": "pipeline/configs/teach_drawer_real.json",
+        "points": [
+          "VIA_CARRY_P2_1",
+          "VIA_CARRY_P2_2",
+          "VIA_CARRY_P2_3",
+          "VIA_CARRY_P2_4",
+          "VIA_CARRY_P2_5",
+          "VIA_CARRY_P2_6",
+          "VIA_CARRY_P2_7",
+          "VIA_CARRY_P2_8",
+          "VIA_CARRY_P2_9",
+          "VIA_CARRY_P2_10",
+          "VIA_CARRY_P2_11",
+          "VIA_CARRY_P2_12",
+          "VIA_CARRY_P2_13",
+          "VIA_CARRY_P2_14",
+          "VIA_CARRY_P2_15",
+          "VIA_CARRY_P2_16",
+          "VIA_CARRY_P2_17",
+          "P2_measured"
+        ],
+        "chain": "right_arm",
+        "speed_rad_s": 0.15,
+        "tolerance_deg": 3.0,
+        "settle_s": 0.4,
+        "gripper_side": "right",
+        "stop_on_fail": true,
+        "block_danger_span": true,
+        "require_fresh_joints": false,
+        "_comment": "抱持位 → P2：末端直线 + 姿态 slerp，18 段 ×3.1°，末端 z 0.801→1.008 单调升，y −0.215→−0.654 向右退出，全程 x≤0.350（不进抽屉正面 x≥0.42）。",
+        "start_point": "CARRY_home",
+        "_start_point_note": "名义上一点；链实际从运行时读到的当前关节角出发，回正到位后应与该点吻合（trace 第 0 行标 from_measured=false）"
+      }
+    },
+    {
+      "id": "snap_at_p2",
+      "stage": "exp_arm_snapshot",
+      "params": {
+        "label": "AT_P2",
+        "chain": "right_arm",
+        "gripper_side": "right",
+        "fail_on_tight": false
+      }
+    },
+    {
+      "id": "leg2_p2_to_p1",
+      "stage": "exp_replay_chain",
+      "params": {
+        "file": "pipeline/configs/teach_drawer_real.json",
+        "points": [
+          "VIA_P2_P1_1",
+          "VIA_P2_P1_2",
+          "VIA_P2_P1_3",
+          "VIA_P2_P1_4",
+          "VIA_P2_P1_5",
+          "VIA_P2_P1_6",
+          "VIA_P2_P1_7",
+          "VIA_P2_P1_8",
+          "VIA_P2_P1_9",
+          "VIA_P2_P1_10",
+          "VIA_P2_P1_11",
+          "P1_measured"
+        ],
+        "chain": "right_arm",
+        "speed_rad_s": 0.15,
+        "tolerance_deg": 3.0,
+        "settle_s": 0.4,
+        "gripper_side": "right",
+        "stop_on_fail": true,
+        "block_danger_span": true,
+        "require_fresh_joints": false,
+        "_comment": "P2 → P1：端点 j3 差 170°（两支 IK 解），末端直线过肘奇异解不出，只能关节 lerp 12 段 ×14.2°。末端轨迹为高位弧（最低 z 0.950），y 全程 ≤ −0.524（在抽屉占位盒之外）。",
+        "start_point": "P2_measured",
+        "_start_point_note": "名义上一点；链实际从运行时读到的当前关节角出发，回正到位后应与该点吻合（trace 第 0 行标 from_measured=false）"
+      }
+    },
+    {
+      "id": "snap_at_p1",
+      "stage": "exp_arm_snapshot",
+      "params": {
+        "label": "AT_P1",
+        "chain": "right_arm",
+        "gripper_side": "right",
+        "fail_on_tight": false
+      }
+    },
+    {
+      "id": "leg3_p1_to_p0",
+      "stage": "exp_replay_chain",
+      "params": {
+        "file": "pipeline/configs/teach_drawer_real.json",
+        "points": [
+          "VIA_P1_P0_1",
+          "VIA_P1_P0_2",
+          "VIA_P1_P0_3",
+          "VIA_P1_P0_4",
+          "VIA_P1_P0_5",
+          "VIA_P1_P0_6",
+          "P0_measured"
+        ],
+        "chain": "right_arm",
+        "speed_rad_s": 0.15,
+        "tolerance_deg": 3.0,
+        "settle_s": 0.4,
+        "gripper_side": "right",
+        "stop_on_fail": true,
+        "block_danger_span": true,
+        "require_fresh_joints": false,
+        "_comment": "P1 → P0：以右侧远处摆回最高点，y −0.795→−0.216 同时 z 1.025→1.245。7 段 ×13.4°。用关节 lerp 而非末端直线 —— 后者会把 j6 压到 −41.0°（限位 −42.1°）。",
+        "start_point": "P1_measured",
+        "_start_point_note": "名义上一点；链实际从运行时读到的当前关节角出发，回正到位后应与该点吻合（trace 第 0 行标 from_measured=false）"
+      }
+    },
+    {
+      "id": "snap_at_p0",
+      "stage": "exp_arm_snapshot",
+      "params": {
+        "label": "AT_P0",
+        "chain": "right_arm",
+        "gripper_side": "right",
+        "fail_on_tight": false
+      }
+    },
+    {
+      "id": "verify_exp1",
+      "stage": "exp_verify_chain",
+      "params": {
+        "require_points": [
+          "P2_measured",
+          "P1_measured",
+          "P0_measured"
+        ],
+        "max_err_deg": 3.0,
+        "min_limit_margin_deg": 2.0,
+        "max_span_deg": 90.0,
+        "allow_wide_edges": [],
+        "require_keys": [
+          "exp.chain_done_all"
+        ],
+        "_comment": "三个端点都必须到位、偏差 ≤3°；且不允许任何 ≥90° 的宽边（本次链路已全部拆到 ≤15°）。"
+      }
+    },
+    {
+      "id": "snap_end",
+      "stage": "exp_arm_snapshot",
+      "params": {
+        "label": "END_AT_P0",
+        "chain": "right_arm",
+        "gripper_side": "right",
+        "fail_on_tight": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "name": "medicine.drawer",
+  "description": "抽屉场景 v1：回初始位 → 咬住把手 → 拉抽屉 → 张爪退开 → 下探 28cm 夹药盒 → 回升 → 回初始位 → 播报 → 静默 5s → 投放 → 归位",
+  "version": 1,
+  "notes": [
+    "所有位姿来自 teach_drawer.json（现场示教），本配置不带任何硬编码坐标。",
+    "顺序严格按预算：P1 → P2 → 拉 → 张爪再拉 → P3(下探) → P1 → P4(投放) → P1。",
+    "下探段必须前面先跑过 replay_joints 回到 P3_dive_ref，否则 draw_dive 会以当前实测位姿为起点，可能已经偏了。"
+  ],
+  "steps": [
+    {
+      "id": "preflight",
+      "stage": "preflight",
+      "non_fatal": true
+    },
+    {
+      "id": "attach",
+      "stage": "attach_and_init",
+      "params": {
+        "chain": "right_arm",
+        "tool": "galbot_gripper",
+        "teach_file": "pipeline/configs/teach_drawer.json",
+        "init_point": "P1_init"
+      }
+    },
+    {
+      "id": "pull_drawer",
+      "stage": "drawer_pull",
+      "params": {
+        "file": "pipeline/configs/teach_drawer.json",
+        "bite_point": "P2_grasp",
+        "pull_cm": 30.0,
+        "step_cm": 5.0,
+        "close_here": true,
+        "gripper_side": "right"
+      }
+    },
+    {
+      "id": "release_pull",
+      "stage": "drawer_release_pull",
+      "params": {
+        "extra_cm": 8.0,
+        "step_cm": 4.0,
+        "gripper_side": "right"
+      }
+    },
+    {
+      "id": "to_dive_ref",
+      "stage": "teach_replay_joints",
+      "params": {
+        "file": "pipeline/configs/teach_drawer.json",
+        "point": "P3_dive_ref",
+        "speed_rad_s": 0.2
+      }
+    },
+    {
+      "id": "dive_and_grasp",
+      "stage": "drawer_dive",
+      "params": {
+        "file": "pipeline/configs/teach_drawer.json",
+        "ref_point": "P3_dive_ref",
+        "depth_cm": 28.0,
+        "step_cm": 4.0,
+        "close_m": 0.075,
+        "gripper_side": "right",
+        "ascend": true,
+        "table_z": 0.72,
+        "min_clearance_m": 0.02
+      }
+    },
+    {
+      "id": "home_arm",
+      "stage": "teach_replay_joints",
+      "params": {
+        "file": "pipeline/configs/teach_drawer.json",
+        "point": "P1_init",
+        "speed_rad_s": 0.2
+      }
+    },
+    {
+      "id": "announce",
+      "stage": "announce"
+    },
+    {
+      "id": "turn_bin",
+      "stage": "turn",
+      "params": {
+        "deg_key": "bin_turn_deg",
+        "default_deg": -30.0,
+        "label": "右转"
+      }
+    },
+    {
+      "id": "drop",
+      "stage": "teach_drop",
+      "params": {
+        "file": "pipeline/configs/teach_drawer.json",
+        "pre_point": "P4_drop",
+        "settle_s": 0.8
+      }
+    },
+    {
+      "id": "home",
+      "stage": "return_home",
+      "must_run": true,
+      "non_fatal": true
+    }
+  ]
+}

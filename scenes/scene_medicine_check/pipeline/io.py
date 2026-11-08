@@ -45,6 +45,10 @@ IO_METHODS: Tuple[str, ...] = (
     "capture_image",
     "is_holding",
     "fixture",
+    # --- 2026-11-07 抽屉场景新增：三个**只读**示教接口 ---
+    "get_ee_pose",
+    "get_joint_positions",
+    "get_gripper_width",
 )
 
 
@@ -115,7 +119,30 @@ class RobotIO:
     def speak(self, text: str) -> Dict[str, Any]:
         raise NotImplementedError
 
-    def capture_image(self, tag: str = "") -> Dict[str, Any]:
+    def capture_image(self, tag: str = "", camera: str = "head_left") -> Dict[str, Any]:
+        """拍一帧 RGB。camera: "head_left"/"head_right"（头部双目）/"left_arm"/"right_arm"。"""
+        raise NotImplementedError
+
+    # ------------------------------------------------- 只读：示教采点用（不发动作）
+    def get_ee_pose(self, chain: str = "right_arm") -> Dict[str, Any]:
+        """读末端在 base_link 下的当前位姿。
+
+        返回 pose 为 [x, y, z, qx, qy, qz, qw]，单位 m。
+        这是**只读**接口，示教时把手臂摆到位后调用即可，不会让任何关节动。
+        """
+        raise NotImplementedError
+
+    def get_joint_positions(self, joint_groups: Optional[List[str]] = None,
+                            joint_names: Optional[List[str]] = None) -> Dict[str, Any]:
+        """读指定关节组的当前角度（弧度）。
+
+        joint_groups 例：["right_arm"]。joint_names 传 [] 表示"整组都要"。
+        ⚠️ 一定带上 joint_groups 且带 joint_names=[]，无参调用会返回 25 个错位数据（已踩过）。
+        """
+        raise NotImplementedError
+
+    def get_gripper_width(self, side: str = "right") -> Dict[str, Any]:
+        """读夹爪当前开度（米）。宽=张着，窄≈闭合，用于判断是否夹到东西。"""
         raise NotImplementedError
 
     def is_holding(self) -> Optional[bool]:
@@ -204,8 +231,24 @@ class WrapperIO(RobotIO):
     def speak(self, text: str) -> Dict[str, Any]:
         return self._call("speak", text)
 
-    def capture_image(self, tag: str = "") -> Dict[str, Any]:
-        return self._call("capture_image", tag)
+    def capture_image(self, tag: str = "", camera: str = "head_left") -> Dict[str, Any]:
+        return self._call("capture_image", tag, camera=camera)
+
+    # ------------------------------------------------- 只读：示教采点
+    def get_ee_pose(self, chain: str = "right_arm") -> Dict[str, Any]:
+        # sdk_wrapper.get_ee_pose(chain) → {"pose": [7], "frame", "unit"}
+        return self._call("get_ee_pose", chain=chain)
+
+    def get_joint_positions(self, joint_groups: Optional[List[str]] = None,
+                            joint_names: Optional[List[str]] = None) -> Dict[str, Any]:
+        """转 sdk_wrapper.get_joint_positions（2026-11-07 补齐，返回 joint_names/joint_positions）。"""
+        return self._call("get_joint_positions",
+                          joint_groups=list(joint_groups or ["right_arm"]),
+                          joint_names=list(joint_names or []))
+
+    def get_gripper_width(self, side: str = "right") -> Dict[str, Any]:
+        """转 sdk_wrapper.get_gripper_width（2026-11-07 补齐，返回 width）。"""
+        return self._call("get_gripper_width", side=side)
 
 
 # ===========================================================================
@@ -226,13 +269,28 @@ class MockIO(RobotIO):
 
     REACH_RADIUS_M = 0.09   # 夹爪闭合时能夹到的半径
 
-    def __init__(self, objects: Optional[List[Dict[str, Any]]] = None) -> None:
+    def __init__(self, objects: Optional[List[Dict[str, Any]]] = None,
+                 start_joints: Optional[List[float]] = None,
+                 start_pose: Optional[List[float]] = None,
+                 teach_file: str = "teach_drawer.json") -> None:
         self.x = 0.0
         self.y = 0.0
         self.yaw = 0.0
-        self.ee_pose: List[float] = [0.35, 0.0, 0.7, 0.0, 0.0, 0.0, 1.0]
+        self.ee_pose: List[float] = (list(start_pose) if start_pose and len(start_pose) == 7
+                                     else [0.35, 0.0, 0.7, 0.0, 0.0, 0.0, 1.0])
         self.gripper_width = 0.10
-        self.joints: List[float] = []
+        #: 起始关节角。None = 用构造值（下面的 get_joint_positions 默认值）。
+        #: 这不是"真机数据"，只是让 mock 的初始态可以对齐某个示教点，
+        #: 便于离线验证"从 A 回放到 B"这条链。
+        self.joints: List[float] = [float(v) for v in (start_joints or [])]
+        #: 分臂存关节角。原来只有一条 self.joints，导致 mock 下"读左臂"也会拿到右臂的值 ——
+        #: home_to_carry.py 会把左臂误判成偏离 224°，真机上则是正常读数，这种差异
+        #: 会让离线验证完全失去意义。键 = "right_arm" / "left_arm"。
+        self.arm_joints: Dict[str, List[float]] = {}
+        if self.joints:
+            self.arm_joints["right_arm"] = list(self.joints)
+        #: mock 的示教点查表文件（默认 teach_drawer.json，可由 build_io 覆盖）
+        self.teach_file = str(teach_file)
         self.tool = None
         self.holding: Optional[Dict[str, Any]] = None
         self.dropped: List[Dict[str, Any]] = []
@@ -336,8 +394,45 @@ class MockIO(RobotIO):
             return {"success": False, "message": f"位姿应为 7 维，收到 {len(pose)} 维",
                     "code": Code.STAGE_FAILED.value}
         self.ee_pose = [float(v) for v in pose]
+        # ⚠️ 关节角也要跟着变。旧版只改 ee_pose 不改 joints，导致
+        # 「拉完抽屉 → 读关节角」拿到的还是拉之前的值，下游的跨度检查会拿到
+        # 一个 316° 的假差值。真机上 move_line 一定伴随关节运动。
+        # mock 不做真 IK，用示教文件里最近的构型近似（带距离上限，够不着就保留原值）。
+        approx = self._lookup_teach_pose_from_pose(self.ee_pose)
+        if approx is not None:
+            self.joints = approx
         return {"success": True, "message": "ok", "pose": list(self.ee_pose),
                 "completion": "completed"}
+
+    def _lookup_teach_pose_from_pose(self, pose: List[float]) -> Optional[List[float]]:
+        """mock 专用：按末端位置在示教文件里找最近的点，返回它的关节角。
+
+        只用**位置**（不用姿态），阈值 POS_MATCH_M。够不着就返回 None —— 
+        宁可让 joints 保持不变（下游会看到"没动"），也不要硬套一个不相干的构型。
+        """
+        import json
+        import os
+        try:
+            here = os.path.dirname(os.path.abspath(__file__))
+            path = os.path.join(here, "configs", self.teach_file)
+            if not os.path.exists(path):
+                return None
+            with open(path, "r", encoding="utf-8") as fh:
+                pts = (json.load(fh).get("points") or {})
+        except Exception:  # noqa: BLE001
+            return None
+        best, best_d = None, 1e9
+        for rec in pts.values():
+            p = rec.get("pose")
+            jp = rec.get("joint_positions")
+            if not p or len(p) != 7 or not jp or len(jp) != len(self.joints):
+                continue
+            d = math.dist(list(p[:3]), list(pose[:3]))
+            if d < best_d:
+                best, best_d = jp, d
+        if best is None or best_d > float(getattr(self, "POS_MATCH_M", 0.03)):
+            return None
+        return [float(v) for v in best]
 
     def set_joints(self, positions: List[float], names: List[str],
                    speed_rad_s: float = 0.2) -> Dict[str, Any]:
@@ -350,25 +445,93 @@ class MockIO(RobotIO):
                     "message": f"关节名 {len(names)} 个、位置 {len(positions)} 个，数量不一致",
                     "code": Code.STAGE_FAILED.value}
         self.joints = [float(v) for v in positions]
+        _grp = MockIO._group_from_names(names) or "right_arm"
+        self.arm_joints[_grp] = [float(v) for v in positions]
+        # mock 的"到位"语义：不做真 FK，但要让后续 get_ee_pose 读得到**合理**的结果，
+        # 否则"回放到示教点 → 以当前位姿为起点下探"这条链路在 mock 上走不通
+        # （起点会被误判成初始位，安全闸门立即拦截，掩盖真正的逻辑问题）。
+        # 做法：拿当前角去比对示教文件里的点位，最近的那个就直接取它的 pose。
+        pose = self._lookup_teach_pose(positions)
+        if pose is not None:
+            self.ee_pose = list(pose)
         return {"success": True, "message": "ok", "n": len(self.joints),
                 "completion": "completed"}
 
+    def _lookup_teach_pose(self, positions: List[float]) -> Optional[List[float]]:
+        """mock 专用：在示教文件里找最接近当前关节角的点，返回它的 pose。
+
+        ⚠️ 这是**测试脚手架**，不是运动学。真机上永远走不到这条路。
+
+        加了**距离上限** `max_dist`：关节角平方距离超过 1.0 rad²（≈ 单关节 57°）
+        就当成"文件里没有这个姿态"，返回 None 而不是硬套一个不相干的 pose。
+        否则下游会出现"回放到了 A 点，读出来的却是 B 点的位姿"这种假数据，
+        比返回 None 更危险。
+        """
+        import json
+        import os
+        try:
+            here = os.path.dirname(os.path.abspath(__file__))
+            path = os.path.join(here, "configs", self.teach_file)
+            if not os.path.exists(path):
+                return None
+            with open(path, "r", encoding="utf-8") as fh:
+                pts = (json.load(fh).get("points") or {})
+        except Exception:  # noqa: BLE001 - mock 助手出错不该影响主流程
+            return None
+        best, best_d = None, 1e9
+        for rec in pts.values():
+            jp = rec.get("joint_positions")
+            if not jp or len(jp) != len(positions):
+                continue
+            d = sum((float(a) - float(b)) ** 2 for a, b in zip(jp, positions))
+            if d < best_d:
+                best, best_d = rec.get("pose"), d
+        if best_d > 1.0:
+            return None
+        return [float(v) for v in best] if best and len(best) == 7 else None
+
     def set_gripper(self, width_m: float, side: str = "left",
                     velocity_mps: float = 0.05, effort: float = 10.0) -> Dict[str, Any]:
+        """mock 夹爪语义（2026-11-08 修正）：
+
+        旧版用 `width_m < 0.05` 判"闭爪"，结果 close_m=0.075（药盒 7.5 cm）时
+        根本不进抓取分支 → 实验 3 在 mock 上永远空合，看起来像"没夹到"。
+        这是 mock 的 bug，不是实验逻辑的问题。
+
+        新语义贴近真机：
+          · 指令宽度 < 全开值（GRIPPER_OPEN 0.10）→ 视为"在合爪"
+          · 合爪时如果**末端附近有物体**，夹爪停在物体厚度处（宽度 = 物体厚度），
+            并把物体记为已夹持；
+          · 合爪时附近没东西 → 宽度 = 指令值（空合）；
+          · 指令宽度 ≥ 全开值且手里有东西 → 松手，物体落到 dropped。
+        """
         self.calls.append("set_gripper")
         bad = self._guard("set_gripper")
         if bad:
             return bad
-        self.gripper_width = float(width_m)
-        if width_m < 0.05 and self.holding is None:
+        cmd = float(width_m)
+        full_open = 0.10          # 与 tuning.GRIPPER_OPEN_M 一致；mock 内部常量，避免循环 import
+        closed_cmd = cmd < full_open - 1e-6
+
+        if closed_cmd and self.holding is None:
             grab = self._nearest_object()
             if grab is not None:
                 self.holding = grab
                 self.table = [o for o in self.table if o is not grab]
-        elif width_m >= 0.05 and self.holding is not None:
+                # 夹住物体：宽度停在物体厚度，而不是指令值
+                thickness = float(grab.get("width_m") or grab.get("thickness_m") or 0.0)
+                self.gripper_width = thickness if thickness > 0 else cmd
+            else:
+                self.gripper_width = cmd
+        elif (not closed_cmd) and self.holding is not None:
             self.dropped.append(self.holding)
             self.holding = None
+            self.gripper_width = cmd
+        else:
+            self.gripper_width = cmd
+
         return {"success": True, "message": "ok", "width_m": self.gripper_width,
+                "commanded_m": cmd,
                 "holding": (self.holding or {}).get("id"), "completion": "completed"}
 
     def _nearest_object(self) -> Optional[Dict[str, Any]]:
@@ -444,17 +607,90 @@ class MockIO(RobotIO):
         return {"success": True, "message": "ok", "played": True,
                 "bytes": len(str(text).encode("utf-8")), "completion": "completed"}
 
-    def capture_image(self, tag: str = "") -> Dict[str, Any]:
+    def capture_image(self, tag: str = "", camera: str = "head_left") -> Dict[str, Any]:
         self.calls.append("capture_image")
         bad = self._guard("capture_image")
         if bad:
             return bad
         return {"success": True, "message": "ok",
-                "path": f"/tmp/mock_{tag or 'frame'}.jpg", "mock": True,
-                "frame_id": "mock_frame_0", "completion": "completed"}
+                "path": f"/tmp/mock_{camera}_{tag or 'frame'}.jpg", "mock": True,
+                "camera": camera,
+                "frame_id": f"mock_frame_{camera}_{tag or '0'}", "completion": "completed"}
 
     def is_holding(self) -> Optional[bool]:
+        # ⚠️ 这个接口在真机 wrapper 上可能整个缺失（sdk_wrapper 目前就没有）。
+        # 下游 s10_teach_drop 用 try/except 兜住，拿到 None 就报"不可判定"。
+        # mock 这里也要能注入故障：raise → 下游 except 吃掉变 None；unknown → None。
+        fault = self._take_fault("is_holding")
+        if fault is not None:
+            behavior = str(fault.get("behavior") or "")
+            msg = fault.get("message") or f"mock 注入：is_holding {behavior}"
+            if behavior == "raise":
+                raise RuntimeError(msg)
+            return None
         return self.holding is not None
+
+    # ------------------------------------------------- 只读：示教采点
+    def get_ee_pose(self, chain: str = "right_arm") -> Dict[str, Any]:
+        self.calls.append("get_ee_pose")
+        bad = self._guard("get_ee_pose")
+        if bad:
+            return bad
+        return {"success": True, "message": "ok", "pose": list(self.ee_pose),
+                "frame": "base_link", "unit": "m", "chain": chain}
+
+    @staticmethod
+    def _group_from_names(names: Optional[List[str]]) -> Optional[str]:
+        """从 joint_names 里认出是哪条臂（'right_arm_joint3' → 'right_arm'）。"""
+        for n in (names or []):
+            for g in ("right_arm", "left_arm"):
+                if str(n).startswith(g):
+                    return g
+        return None
+
+    @staticmethod
+    def _default_arm(group: str) -> List[float]:
+        """构造用的默认关节角：右臂 = tuning.CARRY，左臂 = 其镜像。"""
+        from . import tuning
+        if group == "left_arm":
+            return [float(v) for v in tuning.UPPER_JOINT_POSITIONS[2:9]]
+        return [float(v) for v in tuning.CARRY_JOINT_POSITIONS]
+
+    def get_joint_positions(self, joint_groups: Optional[List[str]] = None,
+                            joint_names: Optional[List[str]] = None) -> Dict[str, Any]:
+        """mock 下返回当前关节角；没有设置过就是一组构造值。
+
+        ⚠️ 构造值（tuning.CARRY 及其左臂镜像）**不是真机示教值**，
+        任何报告里都不许当成实测数据。要跑"从某个已知位出发"的链路，
+        必须用 `build_io(..., start_joints=[...])` 显式给初值。
+        ⚠️ 按臂分别返回：读左臂不会拿到右臂的值（2026-11-08 修）。
+        """
+        self.calls.append("get_joint_positions")
+        bad = self._guard("get_joint_positions")
+        if bad:
+            return bad
+        names = list(joint_names or [])
+        group = self._group_from_names(names) or (list(joint_groups or ["right_arm"]))[0]
+        if not names or len(names) != 7:
+            names = [f"{group}_joint{i}" for i in range(1, 8)]
+        # 优先用分臂存的；再退回 self.joints（右臂兼容）；最后退回构造值
+        pos = self.arm_joints.get(group)
+        if pos is None and group == "right_arm" and len(self.joints) == len(names):
+            pos = self.joints
+        if pos is None or len(pos) != len(names):
+            pos = self._default_arm(group)
+        return {"success": True, "message": "ok", "names": names,
+                "joint_names": names,
+                "joint_positions": [float(v) for v in pos], "mock": True}
+
+
+    def get_gripper_width(self, side: str = "right") -> Dict[str, Any]:
+        self.calls.append("get_gripper_width")
+        bad = self._guard("get_gripper_width")
+        if bad:
+            return bad
+        return {"success": True, "message": "ok", "width": float(self.gripper_width),
+                "side": side, "holding": self.holding is not None}
 
     # ------------------------------------------------------------ 自检辅助
     def stop_base(self) -> Dict[str, Any]:
@@ -471,6 +707,9 @@ class MockIO(RobotIO):
 def default_table() -> List[Dict[str, Any]]:
     """默认桌面：三盒药，按 base 系 y 从大到小 = 从左到右。
 
+    右臂作业区（2026-11-07 起全程右臂）：y 均为负值——base_link 的 y 轴
+    指向机器人左侧。左起第一盒 box_left 位于 y=-0.10，与 tuning.GRASP_POSE 对齐。
+
     expiry_date 是给队友的过期判定用的**离线固定数据**，
     真机上日期要靠 OCR/VLM 自己读，不是 io 提供的。
 
@@ -483,34 +722,77 @@ def default_table() -> List[Dict[str, Any]]:
       expiry_date —— 仅 mock 固定数据；真机无此字段，读不到就是 None
     """
     return [
-        {"id": "box_left", "label": "white", "ee_pose": [0.40, 0.30, 0.65],
-         "position_m": [0.40, 0.30, 0.65], "frame": "base_link", "unit": "m",
+        {"id": "box_left", "label": "white", "ee_pose": [0.40, -0.10, 0.75],
+         "position_m": [0.40, -0.10, 0.75], "frame": "base_link", "unit": "m",
          "image_ref": "mock_frame_0",
          "bbox": [0, 0, 60, 40], "score": 0.9, "expiry_date": "2026-08-01"},
-        {"id": "box_mid", "label": "white", "ee_pose": [0.40, 0.10, 0.65],
-         "position_m": [0.40, 0.10, 0.65], "frame": "base_link", "unit": "m",
+        {"id": "box_mid", "label": "white", "ee_pose": [0.40, -0.20, 0.75],
+         "position_m": [0.40, -0.20, 0.75], "frame": "base_link", "unit": "m",
          "image_ref": "mock_frame_0",
          "bbox": [80, 0, 60, 40], "score": 0.9, "expiry_date": "2027-12-01"},
-        {"id": "box_right", "label": "white", "ee_pose": [0.40, -0.10, 0.65],
-         "position_m": [0.40, -0.10, 0.65], "frame": "base_link", "unit": "m",
+        {"id": "box_right", "label": "white", "ee_pose": [0.40, -0.30, 0.75],
+         "position_m": [0.40, -0.30, 0.75], "frame": "base_link", "unit": "m",
          "image_ref": "mock_frame_0",
          "bbox": [160, 0, 60, 40], "score": 0.9, "expiry_date": "2028-05-01"},
     ]
 
 
+def drawer_table() -> List[Dict[str, Any]]:
+    """抽屉场景的 mock 桌面：一盒药**躺在抽屉里**，位置对齐 P3_dive_ref 的下探落点。
+
+    ⚠️ 这是**离线仿真用的假数据**，不是实测。它存在的唯一理由是：
+      实验 3 的 drawer_dive 从 P3_dive_ref（base 系 x=0.4785, y=-0.7949）竖直下探，
+      落到 z≈0.825。如果 mock 桌面上没有东西恰好在那儿，
+      `set_gripper` 就夹不到任何物体 → 如实报 NO_TARGET → 实验 3 在 mock 上永远跑不绿。
+      为了能验证**管线**而不掩盖判据，这里放一个位置精确对齐的盒子。
+
+    真机上这个位置来自视觉（YOLO 输出的盒中心）或示教点，绝不来自这张表。
+    """
+    return [
+        {"id": "box_in_drawer", "label": "white",
+         "ee_pose": [0.4785, -0.7949, 0.825],
+         "position_m": [0.4785, -0.7949, 0.825],
+         #: 药盒夹持方向厚度 8.2 cm —— 夹爪合到 7.5 cm 会停在这里，
+         #: 于是 get_gripper_width 返回 0.082 > close_m(0.075)+3mm，判"夹到"。
+         #: 没有这个字段时 mock 直接返回指令值，永远等于 close_m，会被判空合。
+         "width_m": 0.082, "size_m": [0.082, 0.055, 0.022],
+         "frame": "base_link", "unit": "m",
+         "image_ref": "mock_frame_0",
+         "bbox": [100, 80, 70, 45], "score": 0.92,
+         "expiry_date": "2026-08-01"},
+    ]
+
+
+#: mock 场景名 → 桌面构造函数。用 --objects 选。
+SCENES = {
+    "default": default_table,
+    "drawer": drawer_table,
+}
+
+
 def build_io(backend: str = "", objects: Optional[List[Dict[str, Any]]] = None,
-             faults: Optional[List[Dict[str, Any]]] = None) -> RobotIO:
+             faults: Optional[List[Dict[str, Any]]] = None,
+             start_joints: Optional[List[float]] = None,
+             start_pose: Optional[List[float]] = None,
+             teach_file: str = "teach_drawer.json") -> RobotIO:
     """唯一的后端选择点。上真机只改这里的默认值/参数，不动任何 stage。
 
     faults 仅对 mock 生效，格式：
         [{"method": "set_gripper", "behavior": "fail_once"},
          {"method": "move_forward", "behavior": "timeout", "delay_s": 0.2}]
     真机后端会忽略 faults（并在日志里提示），避免测试开关被误带进现场。
+
+    start_joints / start_pose / teach_file 同样仅对 mock 生效：
+      - start_joints：mock 的初始关节角（不设就用构造值）
+      - start_pose：mock 的初始末端位姿
+      - teach_file：mock 的 `_lookup_teach_pose()` 去哪个示教文件里找 pose
+    真机后端会忽略它们（真机必须自己读，不允许用假初值）。
     """
     name = (backend or os.environ.get("MED_IO") or "wrapper").strip().lower()
     if name == "mock":
         logger.info("IO 后端 = mock（纯内存仿真，不接硬件）")
-        io = MockIO(objects=objects)
+        io = MockIO(objects=objects, start_joints=start_joints,
+                    start_pose=start_pose, teach_file=teach_file)
         for spec in faults or []:
             io.inject(str(spec["method"]), str(spec.get("behavior", "fail_once")),
                       times=int(spec.get("times", 1)),
@@ -522,6 +804,9 @@ def build_io(backend: str = "", objects: Optional[List[Dict[str, Any]]] = None,
         return io
     if name != "wrapper":
         raise ValueError(f"未知 io 后端：{name}（只支持 wrapper | mock）")
+    for k, v in (("start_joints", start_joints), ("start_pose", start_pose)):
+        if v is not None:
+            logger.warning("wrapper 后端忽略 %s（真机初值必须自己读，不许用假值）", k)
     if faults:
         logger.warning("wrapper 后端忽略 mock_faults（%d 条），真机上不允许注入假故障", len(faults))
     logger.info("IO 后端 = wrapper（转发 sdk_wrapper）")

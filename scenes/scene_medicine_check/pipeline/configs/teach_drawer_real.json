@@ -1,0 +1,2215 @@
+{
+  "version": 2,
+  "created": "2026-11-08 06:55",
+  "chain": "right_arm",
+  "gripper_side": "right",
+  "frame": "base_link",
+  "unit": "m / rad",
+  "provenance": {
+    "P0_measured": "WAYPOINTS.json P0, 50 帧, grasp_capture_20261107_194545",
+    "P1_measured": "WAYPOINTS.json P1, 20 帧, pregrasp_to_initial_..._P1",
+    "P2_measured": "WAYPOINTS.json P2, 20 帧, pregrasp_to_initial_..._P2",
+    "ALIGN_handle": "sdk_snapshot.json (drawer_final_20261107_121006), 实测 TCP",
+    "CARRY_home": "tuning.CARRY_JOINT_POSITIONS, FK 估计，无实测",
+    "P3_dive_ref": "IK 推算：P1_measured +z 0.08 m（无实测）",
+    "P4_bin_above": "IK 推算，种子取 P3_dive_ref：(0.34,-0.31,0.95) + CARRY 姿态（无实测）",
+    "P5_drop": "IK 推算，种子取 P4_bin_above：(0.34,-0.31,0.85)（无实测）",
+    "VIA_D2B_*": "P3_dive_ref → P4_bin_above 的 IK 插值中间点，6 步（每步 ≤ 32.1°），离线求解，未做碰撞检查",
+    "JNT_P0_P1_*": "P0_measured → P1_measured 的**关节空间线性插值**中间点（7 步，每步 ≤15°）；路径最小限位余量 4.5° @ joint7",
+    "JNT_P2_ALIGN_*": "P2_measured → ALIGN_handle 的**关节空间线性插值**中间点（6 步，每步 ≤15°）；路径最小限位余量 7.9° @ joint4",
+    "JNT_ALIGN_CARRY_*": "ALIGN_handle → CARRY_home 的**关节空间线性插值**中间点（7 步，每步 ≤15°）；路径最小限位余量 7.9° @ joint4",
+    "_deprecated_VIA": "已废弃：VIA_P0_P1_* / VIA_P2_ALIGN_* / VIA_ALIGN_CARRY_* 是**末端直线插值**产物，在 P0→P1 上把 joint6 压到离限位只剩 1.13°（扫抬升 z 0–20 cm 最好也只有 1.99°），几何上被夹死。已由 JNT_* 关节线性插值取代并删除。历史版本见同目录 teach_drawer_via.json。",
+    "JNT_ENTRY_*": "入口 ramp：CARRY_home（tuning.CARRY_JOINT_POSITIONS（= 示教点 CARRY_home = SDK init_deg））→ P0_measured，关节空间线性插值 12 段（每段 ≤15°），路径最小限位余量 4.5° @ joint7。⚠️ 起点是抱持位定值（非某次实测），不受『有人拖过手臂』影响；但执行前仍须先回正到 CARRY_home。⚠️ 未做碰撞检查；末端 y 峰值 +0.055 m，可能扫过身体中线。",
+    "INIT_POSE": "已废弃（值已对齐 CARRY_home）。原记录 j2=76.8° 与 tuning.CARRY / SDK init_deg 的 83.65° 差 6.9°，以后者为准。抱持位唯一基准是 CARRY_home。",
+    "VIA_CARRY_P2/P2_P1/P1_P0": "实验 1 上段按【正确方向】CARRY_home → P2 → P1 → P0 重排（用户 2026-11-08 09:16 澄清：拉开抽屉后是先退开错位、经 P1 到最高点 P0）。三段各自在【末端直线+slerp+种子继承】与【关节 lerp】间按抽屉占位命中数自动选优，相邻构型最大关节差 ≤ 15°。抽屉占位盒 x(0.42, 0.8) y(-0.46, 0.0)，z 顶做 1.05/1.20 m 两套敏感性；只判 TCP（该段腕心 FK 不可信）。⚠️ 离线近似：无碰撞体、无奇异检测，真机须低速并现场盯。",
+    "P0_P1_P2_direction": "方向纠正：P2 = 拉完抽屉的终点，P0 = 准备下探的最高点，正确回收顺序 P2→P1→P0。原 JNT_ENTRY_*/JNT_P0_P1_* 按反方向生成，其中 CARRY→P0 的末端路径 y 几乎不变、t≈0.3 即进入抽屉占位区，会刮到桌上的抽屉；真机 2026-11-08 09:04 亦在 JNT_P0_P1_3 返回 ControlStatus.FAULT。该批点已删除。"
+  },
+  "calibration": {
+    "method": "R_corr = R_meas @ R_fk.T + off = p_meas - p_fk，在 ALIGN_handle 单点反解",
+    "raw_orientation_error_deg": 1.72,
+    "fk_position_residual_mm": 17.4,
+    "position_policy": "FK + 常量平移 off；单点标定，3 点之间一致性已验证"
+  },
+  "points": {
+    "P0_measured": {
+      "pose": [
+        0.524537875,
+        -0.21621028,
+        1.24604399,
+        -0.523283599,
+        0.416793066,
+        0.533307038,
+        0.517727166
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        1.210147703,
+        0.731030414,
+        -1.541503417,
+        1.631141517,
+        0.517174339,
+        -0.562479734,
+        -1.459487524
+      ],
+      "gripper_width": 0.05,
+      "note": "实测示教点 P0（50 帧均值，抖动 <0.04 mrad）。关节角为真实 SDK 回读；pose 为已标定 URDF FK（单点标定 + 常量平移）。",
+      "src": "handoff_WAYPOINTS",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": true,
+      "position_source": "urdf_fk_calibrated"
+    },
+    "P1_measured": {
+      "pose": [
+        0.478661309,
+        -0.794433137,
+        1.02489989,
+        -0.495510229,
+        0.448525489,
+        -0.272349587,
+        0.692185091
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        0.569245872,
+        0.26886019,
+        -1.660486865,
+        0.840237242,
+        0.745443493,
+        -0.470323366,
+        0.172741596
+      ],
+      "gripper_width": 0.05,
+      "note": "实测示教点 P1（20 帧均值，抖动 <0.04 mrad）。关节角为真实 SDK 回读；pose 为已标定 URDF FK（单点标定 + 常量平移）。",
+      "src": "handoff_WAYPOINTS",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": true,
+      "position_source": "urdf_fk_calibrated"
+    },
+    "P2_measured": {
+      "pose": [
+        0.350284102,
+        -0.653743014,
+        1.008039663,
+        -0.85323663,
+        0.08310342,
+        -0.00662215,
+        0.514817658
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.593401921,
+        0.732880965,
+        1.306081784,
+        1.517073023,
+        -1.155238962,
+        0.389880896,
+        0.08773726
+      ],
+      "gripper_width": 0.05,
+      "note": "实测示教点 P2（20 帧均值，抖动 <0.04 mrad）。关节角为真实 SDK 回读；pose 为已标定 URDF FK（单点标定 + 常量平移）。",
+      "src": "handoff_WAYPOINTS",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": true,
+      "position_source": "urdf_fk_calibrated"
+    },
+    "ALIGN_handle": {
+      "pose": [
+        0.751721747,
+        -0.238316443,
+        0.822836383,
+        -0.699969386,
+        0.042835595,
+        0.014368136,
+        0.712742258
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -0.2359685,
+        1.427297115,
+        0.137818173,
+        0.438260883,
+        -1.154680014,
+        -0.074782118,
+        0.271609873
+      ],
+      "gripper_width": 0.05,
+      "note": "对位把手：唯一同时有【实测 TCP】+ operator 确认「夹爪正确围住把手」的数据。位置直接用 SDK 实测 pose，姿态由同一组关节角的已标定 FK 给出。",
+      "src": "handoff_sdk_snapshot",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": true,
+      "pose_position_measured": true
+    },
+    "CARRY_home": {
+      "pose": [
+        0.222882705,
+        -0.214920814,
+        0.801489171,
+        -0.030841369,
+        0.028893653,
+        0.037609451,
+        0.998398466
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.9,
+        1.46,
+        0.54,
+        1.96,
+        0.0,
+        0.4,
+        0.0
+      ],
+      "gripper_width": 0.1,
+      "note": "初始抱持位（官方 example6 右臂段）：关节角取自 tuning.CARRY_JOINT_POSITIONS。⚠️ 无实测 TCP，pose 为 FK 估计值（±17mm），仅作 mock / 预览参考，不作真机判据。",
+      "src": "fk_estimate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_estimate"
+    },
+    "P3_dive_ref": {
+      "pose": [
+        0.478529095,
+        -0.79490191,
+        1.104767498,
+        -0.496206108,
+        0.448972203,
+        -0.27272248,
+        0.691249526
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        0.827518418,
+        0.198285824,
+        -1.669181284,
+        0.920211515,
+        0.502941343,
+        -0.572906082,
+        -0.014982073
+      ],
+      "gripper_width": 0.1,
+      "note": "⚠️ FK/IK 推算，非实测。P1_measured 保持姿态沿 +z 抬 8 cm，使 z0-0.28=0.8248 > 桌面安全线 0.74。最紧限位余量 9.3° @ joint6。真机必须现场重采。",
+      "src": "ik_estimate_no_measurement",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "P4_bin_above": {
+      "pose": [
+        0.339924994,
+        -0.310058041,
+        0.950084545,
+        -0.030812502,
+        0.028934138,
+        0.037657158,
+        0.998396386
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        1.419176015,
+        -0.883930351,
+        -2.457074719,
+        2.196529728,
+        0.562051621,
+        0.000559642,
+        0.208177659
+      ],
+      "gripper_width": 0.1,
+      "note": "⚠️ FK/IK 推算，非实测。目标 (0.34,-0.31,0.95)，姿态沿用 CARRY_home，但**以 P3_dive_ref 作 IK 种子**选同一支解（否则与 P3 差 142°）。与上一点最大差 73.1° @ right_arm_joint4，最紧余量 21.2° @ joint4。真机必须现场重采。",
+      "src": "ik_estimate_seeded_from_P3",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "P5_drop": {
+      "pose": [
+        0.339978588,
+        -0.310001924,
+        0.850038743,
+        -0.030835502,
+        0.028900425,
+        0.037618457,
+        0.998398111
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        1.50372646,
+        -0.955857459,
+        -2.633426566,
+        1.932748599,
+        0.438014153,
+        0.212627307,
+        0.176392539
+      ],
+      "gripper_width": 0.082,
+      "note": "⚠️ FK/IK 推算，非实测。目标 (0.34,-0.31,0.85)，姿态沿用 CARRY_home，但**以 P3_dive_ref 作 IK 种子**选同一支解（否则与 P3 差 142°）。与上一点最大差 15.1° @ right_arm_joint4，最紧余量 16.2° @ joint3。真机必须现场重采。",
+      "src": "ik_estimate_seeded_from_P3",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_D2B_1": {
+      "pose": [
+        0.455428411,
+        -0.714094598,
+        1.078987006,
+        -0.43282436,
+        0.391818379,
+        -0.227813582,
+        0.779257597
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        0.879163981,
+        -0.010393183,
+        -1.617397101,
+        1.315308867,
+        0.602892069,
+        -0.608575167,
+        0.076932235
+      ],
+      "gripper_width": 0.082,
+      "note": "P3_dive_ref → P4_bin_above 的第 1/5 个中间点（t=0.167）。IK 求解值，未做碰撞检查、未在真机验证。最紧余量 7.2° @ joint6。",
+      "src": "ik_subdivision_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_D2B_2": {
+      "pose": [
+        0.432327728,
+        -0.633287287,
+        1.053206514,
+        -0.362064673,
+        0.327985605,
+        -0.179021365,
+        0.853982416
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        0.888891305,
+        -0.156403756,
+        -1.634191962,
+        1.606966898,
+        0.76996652,
+        -0.539324509,
+        0.20152695
+      ],
+      "gripper_width": 0.082,
+      "note": "P3_dive_ref → P4_bin_above 的第 2/5 个中间点（t=0.333）。IK 求解值，未做碰撞检查、未在真机验证。最紧余量 11.2° @ joint6。",
+      "src": "ik_subdivision_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_D2B_3": {
+      "pose": [
+        0.409227044,
+        -0.552479975,
+        1.027426021,
+        -0.285133219,
+        0.258561977,
+        -0.127177543,
+        0.91415022
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        0.897222976,
+        -0.259096687,
+        -1.714581547,
+        1.837354076,
+        0.905055348,
+        -0.385492352,
+        0.319990669
+      ],
+      "gripper_width": 0.082,
+      "note": "P3_dive_ref → P4_bin_above 的第 3/5 个中间点（t=0.500）。IK 求解值，未做碰撞检查、未在真机验证。最紧余量 20.0° @ joint6。",
+      "src": "ik_subdivision_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_D2B_4": {
+      "pose": [
+        0.386126361,
+        -0.471672664,
+        1.001645529,
+        -0.203341374,
+        0.184730892,
+        -0.073165849,
+        0.958735387
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        0.901138819,
+        -0.308679141,
+        -1.854816908,
+        2.016280903,
+        0.973525167,
+        -0.157119902,
+        0.42693479
+      ],
+      "gripper_width": 0.082,
+      "note": "P3_dive_ref → P4_bin_above 的第 4/5 个中间点（t=0.667）。IK 求解值，未做碰撞检查、未在真机验证。最紧余量 31.6° @ joint4。",
+      "src": "ik_subdivision_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_D2B_5": {
+      "pose": [
+        0.363025678,
+        -0.390865352,
+        0.975865037,
+        -0.118083365,
+        0.107750878,
+        -0.017906967,
+        0.986977917
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        0.921573283,
+        -0.259338652,
+        -2.08738187,
+        2.139551165,
+        0.968473977,
+        0.151819369,
+        0.562416245
+      ],
+      "gripper_width": 0.082,
+      "note": "P3_dive_ref → P4_bin_above 的第 5/5 个中间点（t=0.833）。IK 求解值，未做碰撞检查、未在真机验证。最紧余量 24.5° @ joint4。",
+      "src": "ik_subdivision_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "JNT_P2_ALIGN_1": {
+      "pose": [
+        0.374727067,
+        -0.653212313,
+        0.912178255,
+        -0.791209738,
+        0.123526314,
+        -0.045239806,
+        0.597228398
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.367163018,
+        0.84861699,
+        1.111371182,
+        1.337271,
+        -1.155145804,
+        0.31243706,
+        0.118382695
+      ],
+      "gripper_width": 0.05,
+      "note": "P2_measured → ALIGN_handle 的第 1/5 个中间点（**关节空间线性插值**，t=0.167）。不是末端直线路径 —— 实验 1 不接触物体，末端无需走直线。与上一点最大差 13.0°，最紧余量 29.2° @ joint6。未做碰撞检查、未在真机验证。",
+      "src": "joint_lerp_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "JNT_P2_ALIGN_2": {
+      "pose": [
+        0.42998156,
+        -0.610901069,
+        0.825636407,
+        -0.730779433,
+        0.142771908,
+        -0.057617124,
+        0.665024713
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.140924114,
+        0.964353015,
+        0.91666058,
+        1.157468976,
+        -1.155052646,
+        0.234993225,
+        0.149028131
+      ],
+      "gripper_width": 0.05,
+      "note": "P2_measured → ALIGN_handle 的第 2/5 个中间点（**关节空间线性插值**，t=0.333）。不是末端直线路径 —— 实验 1 不接触物体，末端无需走直线。与上一点最大差 13.0°，最紧余量 33.6° @ joint6。未做碰撞检查、未在真机验证。",
+      "src": "joint_lerp_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "JNT_P2_ALIGN_3": {
+      "pose": [
+        0.508744068,
+        -0.534596557,
+        0.767160752,
+        -0.684577148,
+        0.142028329,
+        -0.047314327,
+        0.713402717
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -0.914685211,
+        1.08008904,
+        0.721949979,
+        0.977666953,
+        -1.154959488,
+        0.157549389,
+        0.179673566
+      ],
+      "gripper_width": 0.05,
+      "note": "P2_measured → ALIGN_handle 的第 3/5 个中间点（**关节空间线性插值**，t=0.500）。不是末端直线路径 —— 实验 1 不接触物体，末端无需走直线。与上一点最大差 13.0°，最紧余量 30.2° @ joint2。未做碰撞检查、未在真机验证。",
+      "src": "joint_lerp_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "JNT_P2_ALIGN_4": {
+      "pose": [
+        0.597185101,
+        -0.437134355,
+        0.747494354,
+        -0.661934837,
+        0.122961619,
+        -0.023310605,
+        0.739039463
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -0.688446307,
+        1.195825065,
+        0.527239377,
+        0.79786493,
+        -1.15486633,
+        0.080105553,
+        0.210319002
+      ],
+      "gripper_width": 0.05,
+      "note": "P2_measured → ALIGN_handle 的第 4/5 个中间点（**关节空间线性插值**，t=0.667）。不是末端直线路径 —— 实验 1 不接触物体，末端无需走直线。与上一点最大差 13.0°，最紧余量 23.6° @ joint2。未做碰撞检查、未在真机验证。",
+      "src": "joint_lerp_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "JNT_P2_ALIGN_5": {
+      "pose": [
+        0.681233086,
+        -0.333677228,
+        0.767789797,
+        -0.667475372,
+        0.088503149,
+        0.001880155,
+        0.73935126
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -0.462207403,
+        1.31156109,
+        0.332528775,
+        0.618062906,
+        -1.154773172,
+        0.002661718,
+        0.240964438
+      ],
+      "gripper_width": 0.05,
+      "note": "P2_measured → ALIGN_handle 的第 5/5 个中间点（**关节空间线性插值**，t=0.833）。不是末端直线路径 —— 实验 1 不接触物体，末端无需走直线。与上一点最大差 13.0°，最紧余量 17.0° @ joint2。未做碰撞检查、未在真机验证。",
+      "src": "joint_lerp_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "JNT_ALIGN_CARRY_1": {
+      "pose": [
+        0.683209284,
+        -0.208940561,
+        0.755124076,
+        -0.602027024,
+        0.050465842,
+        0.057811632,
+        0.794779514
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -0.473687286,
+        1.431968956,
+        0.19527272,
+        0.655652185,
+        -0.989725726,
+        -0.006956101,
+        0.232808463
+      ],
+      "gripper_width": 0.05,
+      "note": "ALIGN_handle → CARRY_home 的第 1/6 个中间点（**关节空间线性插值**，t=0.143）。不是末端直线路径 —— 实验 1 不接触物体，末端无需走直线。与上一点最大差 13.6°，最紧余量 10.1° @ joint2。未做碰撞检查、未在真机验证。",
+      "src": "joint_lerp_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "JNT_ALIGN_CARRY_2": {
+      "pose": [
+        0.604650579,
+        -0.189318002,
+        0.709613272,
+        -0.495710706,
+        0.059128109,
+        0.086784993,
+        0.862115496
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -0.711406071,
+        1.436640796,
+        0.252727266,
+        0.873043488,
+        -0.824771439,
+        0.060869916,
+        0.194007052
+      ],
+      "gripper_width": 0.05,
+      "note": "ALIGN_handle → CARRY_home 的第 2/6 个中间点（**关节空间线性插值**，t=0.286）。不是末端直线路径 —— 实验 1 不接触物体，末端无需走直线。与上一点最大差 13.6°，最紧余量 9.8° @ joint2。未做碰撞检查、未在真机验证。",
+      "src": "joint_lerp_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "JNT_ALIGN_CARRY_3": {
+      "pose": [
+        0.521302556,
+        -0.179875753,
+        0.686866786,
+        -0.387216477,
+        0.065491544,
+        0.099949034,
+        0.914212474
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -0.949124857,
+        1.441312637,
+        0.310181813,
+        1.09043479,
+        -0.659817151,
+        0.128695933,
+        0.155205642
+      ],
+      "gripper_width": 0.05,
+      "note": "ALIGN_handle → CARRY_home 的第 3/6 个中间点（**关节空间线性插值**，t=0.429）。不是末端直线路径 —— 实验 1 不接触物体，末端无需走直线。与上一点最大差 13.6°，最紧余量 9.5° @ joint2。未做碰撞检查、未在真机验证。",
+      "src": "joint_lerp_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "JNT_ALIGN_CARRY_4": {
+      "pose": [
+        0.437706036,
+        -0.179939974,
+        0.686264379,
+        -0.282523539,
+        0.066838808,
+        0.098191448,
+        0.951877862
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.186843643,
+        1.445984478,
+        0.36763636,
+        1.307826093,
+        -0.494862863,
+        0.196521949,
+        0.116404231
+      ],
+      "gripper_width": 0.05,
+      "note": "ALIGN_handle → CARRY_home 的第 4/6 个中间点（**关节空间线性插值**，t=0.571）。不是末端直线路径 —— 实验 1 不接触物体，末端无需走直线。与上一点最大差 13.6°，最紧余量 9.3° @ joint2。未做碰撞检查、未在真机验证。",
+      "src": "joint_lerp_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "JNT_ALIGN_CARRY_5": {
+      "pose": [
+        0.357766273,
+        -0.187720383,
+        0.706482137,
+        -0.186515421,
+        0.061412093,
+        0.084345043,
+        0.976896344
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.424562429,
+        1.450656319,
+        0.425090907,
+        1.525217395,
+        -0.329908575,
+        0.264347966,
+        0.077602821
+      ],
+      "gripper_width": 0.05,
+      "note": "ALIGN_handle → CARRY_home 的第 5/6 个中间点（**关节空间线性插值**，t=0.714）。不是末端直线路径 —— 实验 1 不接触物体，末端无需走直线。与上一点最大差 13.6°，最紧余量 9.0° @ joint2。未做碰撞检查、未在真机验证。",
+      "src": "joint_lerp_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "JNT_ALIGN_CARRY_6": {
+      "pose": [
+        0.285025501,
+        -0.20048594,
+        0.745695874,
+        -0.10230058,
+        0.048589733,
+        0.062584731,
+        0.991593052
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.662281214,
+        1.455328159,
+        0.482545453,
+        1.742608698,
+        -0.164954288,
+        0.332173983,
+        0.03880141
+      ],
+      "gripper_width": 0.05,
+      "note": "ALIGN_handle → CARRY_home 的第 6/6 个中间点（**关节空间线性插值**，t=0.857）。不是末端直线路径 —— 实验 1 不接触物体，末端无需走直线。与上一点最大差 13.6°，最紧余量 8.7° @ joint2。未做碰撞检查、未在真机验证。",
+      "src": "joint_lerp_candidate",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "INIT_POSE": {
+      "pose": [
+        0.222882705,
+        -0.214920814,
+        0.801489171,
+        -0.030841369,
+        0.028893653,
+        0.037609451,
+        0.998398466
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.9,
+        1.46,
+        0.54,
+        1.96,
+        0.0,
+        0.4,
+        0.0
+      ],
+      "gripper_width": 0.05,
+      "note": "**已废弃，请用 CARRY_home**。原名『真机开机姿态实测』，但 2026-11-08 08:40 复核发现 该记录 j2 为 76.8°，而 tuning.CARRY_JOINT_POSITIONS 与 SDK 自报 init_deg 都是 83.65°（差 6.9°）。现关节角已改为 CARRY_home 同值以消除歧义；本点是抱持位定值，不是某次实测快照。",
+      "src": "corrected_20261108_0845",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_CARRY_P2_1": {
+      "pose": [
+        0.22991797,
+        -0.239298654,
+        0.812944728,
+        -0.086010719,
+        0.033298032,
+        0.035770084,
+        0.995094919
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.899798334,
+        1.424066866,
+        0.593715814,
+        1.990197446,
+        -0.049795728,
+        0.355018993,
+        0.011119849
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_CARRY_P2 第 1/17 点（末端直线，t=0.056）。最紧余量 10.5° @ joint2。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_CARRY_P2_2": {
+      "pose": [
+        0.236989851,
+        -0.263690194,
+        0.824421736,
+        -0.140901822,
+        0.037662139,
+        0.033845559,
+        0.988727828
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.897761831,
+        1.385289059,
+        0.648487828,
+        2.01390652,
+        -0.095542089,
+        0.313103797,
+        0.017324711
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_CARRY_P2 第 2/17 点（末端直线，t=0.111）。最紧余量 12.7° @ joint2。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_CARRY_P2_3": {
+      "pose": [
+        0.244062292,
+        -0.288081795,
+        0.835898454,
+        -0.195358973,
+        0.041911094,
+        0.031817301,
+        0.979319147
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.894414879,
+        1.343936908,
+        0.703967559,
+        2.030888254,
+        -0.138481497,
+        0.275185881,
+        0.019445439
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_CARRY_P2 第 3/17 点（末端直线，t=0.167）。最紧余量 15.1° @ joint2。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_CARRY_P2_4": {
+      "pose": [
+        0.251135029,
+        -0.312475663,
+        0.847375758,
+        -0.249211003,
+        0.046031345,
+        0.029694288,
+        0.966898775
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.890209934,
+        1.300277998,
+        0.759718405,
+        2.041045155,
+        -0.179714733,
+        0.241889033,
+        0.018276248
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_CARRY_P2 第 4/17 点（末端直线，t=0.222）。最紧余量 17.6° @ joint2。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_CARRY_P2_5": {
+      "pose": [
+        0.258207591,
+        -0.336869961,
+        0.858853639,
+        -0.30229499,
+        0.050010663,
+        0.027481294,
+        0.951504835
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.885546741,
+        1.254626389,
+        0.815194553,
+        2.044336853,
+        -0.220319323,
+        0.21373018,
+        0.014702755
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_CARRY_P2 第 5/17 点（末端直线，t=0.278）。最紧余量 20.2° @ joint2。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_CARRY_P2_6": {
+      "pose": [
+        0.2652796,
+        -0.361263945,
+        0.870332128,
+        -0.354448393,
+        0.053836206,
+        0.025184805,
+        0.933184722
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.880755987,
+        1.207320643,
+        0.869799958,
+        2.040785873,
+        -0.261287384,
+        0.191088602,
+        0.009673646
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_CARRY_P2 第 6/17 点（末端直线，t=0.333）。最紧余量 22.9° @ joint2。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_CARRY_P2_7": {
+      "pose": [
+        0.272350656,
+        -0.385657859,
+        0.881811496,
+        -0.405510012,
+        0.057496361,
+        0.022813077,
+        0.911995264
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.876084201,
+        1.158709527,
+        0.922934777,
+        2.030478951,
+        -0.303501069,
+        0.174170356,
+        0.004184235
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_CARRY_P2 第 7/17 点（末端直线，t=0.389）。最紧余量 25.7° @ joint2。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_CARRY_P2_8": {
+      "pose": [
+        0.279420319,
+        -0.410049923,
+        0.89329068,
+        -0.455324809,
+        0.060979078,
+        0.020370496,
+        0.888001077
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.871685498,
+        1.109127524,
+        0.97401724,
+        2.013559813,
+        -0.3477285,
+        0.162977938,
+        -0.000715005
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_CARRY_P2 第 8/17 点（末端直线，t=0.444）。最紧余量 28.6° @ joint2。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_CARRY_P2_9": {
+      "pose": [
+        0.28648837,
+        -0.434441428,
+        0.904770549,
+        -0.503738024,
+        0.064273911,
+        0.017867537,
+        0.861276738
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.867621039,
+        1.058868104,
+        1.022534262,
+        1.990215451,
+        -0.394583665,
+        0.157305936,
+        -0.00398556
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_CARRY_P2 第 9/17 点（末端直线，t=0.500）。最紧余量 31.4° @ joint2。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_CARRY_P2_10": {
+      "pose": [
+        0.293554598,
+        -0.458831442,
+        0.91625063,
+        -0.550602134,
+        0.067371097,
+        0.015310958,
+        0.831903841
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.863864335,
+        1.008167144,
+        1.068030066,
+        1.960658629,
+        -0.444557772,
+        0.156724639,
+        -0.004587457
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_CARRY_P2 第 10/17 点（末端直线，t=0.556）。最紧余量 34.3° @ joint2。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_CARRY_P2_11": {
+      "pose": [
+        0.300618819,
+        -0.483219592,
+        0.927730804,
+        -0.595773156,
+        0.070260647,
+        0.012707373,
+        0.799972694
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.860319066,
+        0.957178868,
+        1.110114804,
+        1.925106043,
+        -0.498005596,
+        0.16058868,
+        -0.001514821
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_CARRY_P2 第 11/17 点（末端直线，t=0.611）。最紧余量 36.8° @ joint4。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_CARRY_P2_12": {
+      "pose": [
+        0.307680847,
+        -0.507606057,
+        0.939211644,
+        -0.63911121,
+        0.072934717,
+        0.010066592,
+        0.765582165
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.856849446,
+        0.905953442,
+        1.148452157,
+        1.883758551,
+        -0.555142755,
+        0.168036951,
+        0.006182283
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_CARRY_P2 第 12/17 点（末端直线，t=0.667）。最紧余量 37.5° @ joint6。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_CARRY_P2_13": {
+      "pose": [
+        0.314740387,
+        -0.531990099,
+        0.950692794,
+        -0.680484307,
+        0.075384104,
+        0.007395639,
+        0.72883719
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.853286286,
+        0.854453755,
+        1.182735935,
+        1.836779804,
+        -0.616070765,
+        0.17800604,
+        0.019377375
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_CARRY_P2 第 13/17 点（末端直线，t=0.722）。最紧余量 36.9° @ joint6。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_CARRY_P2_14": {
+      "pose": [
+        0.321797302,
+        -0.556371031,
+        0.962175111,
+        -0.71976551,
+        0.077603152,
+        0.004702734,
+        0.689850162
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.849475041,
+        0.802524975,
+        1.212663799,
+        1.784282194,
+        -0.680724294,
+        0.189215424,
+        0.038845028
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_CARRY_P2 第 14/17 点（末端直线，t=0.778）。最紧余量 36.3° @ joint6。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_CARRY_P2_15": {
+      "pose": [
+        0.328850473,
+        -0.580748466,
+        0.973658773,
+        -0.756834018,
+        0.079585223,
+        0.001997161,
+        0.648740682
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.845262665,
+        0.749929171,
+        1.237907493,
+        1.726302349,
+        -0.748857324,
+        0.200207691,
+        0.065206991
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_CARRY_P2 第 15/17 点（末端直线，t=0.833）。最紧余量 35.6° @ joint6。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_CARRY_P2_16": {
+      "pose": [
+        0.335965953,
+        -0.605221337,
+        0.98500797,
+        -0.791629435,
+        0.081178127,
+        -0.000777868,
+        0.6055843
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.840083294,
+        0.696119951,
+        1.257487207,
+        1.662061738,
+        -0.820249118,
+        0.209478964,
+        0.099698162
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_CARRY_P2 第 16/17 点（末端直线，t=0.889）。最紧余量 35.1° @ joint6。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_CARRY_P2_17": {
+      "pose": [
+        0.343029936,
+        -0.629611358,
+        0.996480121,
+        -0.823937184,
+        0.082654092,
+        -0.003498722,
+        0.560610003
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.834486259,
+        0.64103679,
+        1.27181628,
+        1.592687823,
+        -0.893485891,
+        0.214920153,
+        0.141027829
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_CARRY_P2 第 17/17 点（末端直线，t=0.944）。最紧余量 34.8° @ joint6。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_P2_P1_1": {
+      "pose": [
+        0.412227349,
+        -0.618975317,
+        0.98357212,
+        -0.805477188,
+        0.041475069,
+        -0.015030591,
+        0.590982571
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.413181272,
+        0.694212567,
+        1.05886773,
+        1.460670041,
+        -0.996848757,
+        0.318197207,
+        0.094820955
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_P2_P1 第 1/11 点（关节lerp，t=0.083）。最紧余量 28.9° @ joint6。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_P2_P1_2": {
+      "pose": [
+        0.4673085,
+        -0.584365674,
+        0.968077083,
+        -0.757868233,
+        0.015486006,
+        -0.014119533,
+        0.652070981
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.232960622,
+        0.655544169,
+        0.811653676,
+        1.404267059,
+        -0.838458553,
+        0.246513519,
+        0.101904649
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_P2_P1 第 2/11 点（关节lerp，t=0.167）。最紧余量 33.0° @ joint6。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_P2_P1_3": {
+      "pose": [
+        0.51366153,
+        -0.554503514,
+        0.958580045,
+        -0.715677129,
+        0.007053725,
+        -0.007158285,
+        0.69835897
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.052739973,
+        0.616875771,
+        0.564439622,
+        1.347864078,
+        -0.680068348,
+        0.17482983,
+        0.108988344
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_P2_P1 第 3/11 点（关节lerp，t=0.250）。最紧余量 37.1° @ joint6。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_P2_P1_4": {
+      "pose": [
+        0.550656964,
+        -0.53341798,
+        0.952912823,
+        -0.681741894,
+        0.016138063,
+        0.0010443,
+        0.731414015
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -0.872519323,
+        0.578207373,
+        0.317225568,
+        1.291461096,
+        -0.521678144,
+        0.103146142,
+        0.116072039
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_P2_P1 第 4/11 点（关节lerp，t=0.333）。最紧余量 41.2° @ joint6。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_P2_P1_5": {
+      "pose": [
+        0.578298852,
+        -0.524457912,
+        0.949957076,
+        -0.656749061,
+        0.041590349,
+        0.005382293,
+        0.752942192
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -0.692298674,
+        0.539538975,
+        0.070011514,
+        1.235058114,
+        -0.363287939,
+        0.031462453,
+        0.123155733
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_P2_P1 第 5/11 点（关节lerp，t=0.417）。最紧余量 43.9° @ joint6。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_P2_P1_6": {
+      "pose": [
+        0.596704665,
+        -0.529847123,
+        0.949668739,
+        -0.639358949,
+        0.081333755,
+        0.001269131,
+        0.764593581
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -0.512078025,
+        0.500870577,
+        -0.17720254,
+        1.178655133,
+        -0.204897735,
+        -0.040221235,
+        0.130239428
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_P2_P1 第 6/11 点（关节lerp，t=0.500）。最紧余量 39.8° @ joint6。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_P2_P1_7": {
+      "pose": [
+        0.60566071,
+        -0.550305622,
+        0.952753887,
+        -0.626612537,
+        0.132598081,
+        -0.014685252,
+        0.767827338
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -0.331857375,
+        0.46220218,
+        -0.424416595,
+        1.122252151,
+        -0.04650753,
+        -0.111904924,
+        0.137323123
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_P2_P1 第 7/11 点（关节lerp，t=0.583）。最紧余量 35.7° @ joint6。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_P2_P1_8": {
+      "pose": [
+        0.604417469,
+        -0.58484874,
+        0.960088016,
+        -0.614538053,
+        0.192183347,
+        -0.044222555,
+        0.763840892
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -0.151636726,
+        0.423533782,
+        -0.671630649,
+        1.065849169,
+        0.111882675,
+        -0.183588612,
+        0.144406817
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_P2_P1 第 8/11 点（关节lerp，t=0.667）。最紧余量 31.6° @ joint6。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_P2_P1_9": {
+      "pose": [
+        0.591820185,
+        -0.630841717,
+        0.972068674,
+        -0.598853121,
+        0.256727179,
+        -0.087256343,
+        0.753559836
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        0.028583924,
+        0.384865384,
+        -0.918844703,
+        1.009446187,
+        0.270272879,
+        -0.255272301,
+        0.151490512
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_P2_P1 第 9/11 点（关节lerp，t=0.750）。最紧余量 27.5° @ joint6。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_P2_P1_10": {
+      "pose": [
+        0.566748355,
+        -0.684327829,
+        0.988127697,
+        -0.575652704,
+        0.32295374,
+        -0.14196801,
+        0.737678744
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        0.208804573,
+        0.346196986,
+        -1.166058757,
+        0.953043205,
+        0.428663084,
+        -0.326955989,
+        0.158574207
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_P2_P1 第 10/11 点（关节lerp，t=0.833）。最紧余量 23.4° @ joint6。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_P2_P1_11": {
+      "pose": [
+        0.528714531,
+        -0.740581717,
+        1.006579197,
+        -0.541983989,
+        0.387886321,
+        -0.205141437,
+        0.716738828
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        0.389025223,
+        0.307528588,
+        -1.413272811,
+        0.896640224,
+        0.587053288,
+        -0.398639677,
+        0.165657901
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_P2_P1 第 11/11 点（关节lerp，t=0.917）。最紧余量 19.3° @ joint6。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_P1_P0_1": {
+      "pose": [
+        0.548579098,
+        -0.710592071,
+        1.03414827,
+        -0.465039553,
+        0.441574785,
+        -0.141658819,
+        0.754110537
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        0.660803276,
+        0.334884508,
+        -1.64348923,
+        0.953223567,
+        0.712833614,
+        -0.483488561,
+        -0.060433993
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_P1_P0 第 1/6 点（关节lerp，t=0.143）。最紧余量 14.4° @ joint6。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_P1_P0_2": {
+      "pose": [
+        0.59900937,
+        -0.617271884,
+        1.058541591,
+        -0.446906199,
+        0.428021959,
+        -0.004325836,
+        0.785527427
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        0.752360681,
+        0.400908825,
+        -1.626491594,
+        1.066209892,
+        0.680223735,
+        -0.496653757,
+        -0.293609581
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_P1_P0 第 2/6 点（关节lerp，t=0.286）。最紧余量 13.6° @ joint6。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_P1_P0_3": {
+      "pose": [
+        0.626212564,
+        -0.521170168,
+        1.093444724,
+        -0.442228587,
+        0.412981962,
+        0.131884904,
+        0.785166319
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        0.843918085,
+        0.466933143,
+        -1.609493959,
+        1.179196217,
+        0.647613856,
+        -0.509818952,
+        -0.52678517
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_P1_P0 第 3/6 点（关节lerp，t=0.429）。最紧余量 12.9° @ joint6。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_P1_P0_4": {
+      "pose": [
+        0.629549916,
+        -0.428475014,
+        1.133695069,
+        -0.450096085,
+        0.40091446,
+        0.25977113,
+        0.754453491
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        0.93547549,
+        0.532957461,
+        -1.592496323,
+        1.292182542,
+        0.615003976,
+        -0.522984148,
+        -0.759960758
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_P1_P0 第 4/6 点（关节lerp，t=0.571）。最紧余量 12.1° @ joint6。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_P1_P0_5": {
+      "pose": [
+        0.611008143,
+        -0.34448096,
+        1.17452225,
+        -0.468405874,
+        0.395776436,
+        0.372773156,
+        0.696417349
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        1.027032894,
+        0.598981779,
+        -1.575498688,
+        1.405168867,
+        0.582394097,
+        -0.536149343,
+        -0.993136347
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_P1_P0 第 5/6 点（关节lerp，t=0.714）。最紧余量 11.4° @ joint6。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    },
+    "VIA_P1_P0_6": {
+      "pose": [
+        0.574533679,
+        -0.273024204,
+        1.212277021,
+        -0.494055393,
+        0.400734995,
+        0.465321015,
+        0.615464935
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        1.118590299,
+        0.665006096,
+        -1.558501052,
+        1.518155192,
+        0.549784218,
+        -0.549314539,
+        -1.226311935
+      ],
+      "gripper_width": 0.05,
+      "note": "实验1上段中间点（方向 CARRY→P2→P1→P0，与真实作业轨迹同向）。VIA_P1_P0 第 6/6 点（关节lerp，t=0.857）。最紧余量 10.6° @ joint6。**离线候选，未做碰撞检查、未上真机**。",
+      "src": "ik_subdivision_carry_p2_p1_p0",
+      "ee_pose_ok": true,
+      "joints_ok": true,
+      "fk_position_trusted": false,
+      "position_source": "urdf_fk_calibrated",
+      "measured": false
+    }
+  },
+  "skipped": [],
+  "warning": "P0/P1/P2 的 joint_positions 是真实 SDK 回读值；pose 是已标定 FK 推算（位置误差 ±17mm）。ALIGN_handle 的 pose 是实测值。CARRY_home 完全没实测，是 FK 估计。真机使用前必须确认桌面/抽屉/机器人摆位与本批数据采集时一致。 ⚠️ P3_dive_ref / P4_bin_above / P5_drop 三点**全为 IK 推算、零实测**，只用于让实验 2/3 在 mock 上跑通与提示现场摆位；真机执行前必须 teach_record 重采。"
+}
