@@ -133,6 +133,32 @@ def quat_to_rpy_deg(q):
         return None
 
 
+def read_waist(robot):
+    """记录腰姿：leg_joint4(偏航) / leg_joint5(侧倾) / 腰高 / 躯干 rpy。
+
+    同一末端位置在腰扭了的姿态下对应完全不同的臂关节角，
+    所以每个采样点必须自带腰姿，否则拼轨迹时会混用两组数据。
+    """
+    out = {}
+    try:
+        states = list(robot.get_joint_states(["leg"], []))
+        for st in states:
+            if st.joint_name in ("leg_joint4", "leg_joint5"):
+                out[st.joint_name + "_deg"] = math.degrees(float(st.position))
+    except Exception as exc:  # noqa: BLE001
+        out["leg_error"] = "%s: %s" % (type(exc).__name__, exc)
+    try:
+        pose, _ts = robot.get_transform("base_link", "head_base_link",
+                                        timestamp_ns=0, timeout_ms=500)
+        out["height_m"] = float(pose[2])
+        rpy = quat_to_rpy_deg(pose[3:7])
+        if rpy:
+            out["rpy_deg"] = [round(v, 4) for v in rpy]
+    except Exception as exc:  # noqa: BLE001
+        out["transform_error"] = "%s: %s" % (type(exc).__name__, exc)
+    return out
+
+
 # --------------------------------------------------------------------------- #
 # 汇总
 # --------------------------------------------------------------------------- #
@@ -243,6 +269,7 @@ def rebuild_sequence(out_dir, group, verbose=True):
             "deg": [d["joints"][n]["position_deg"] for n in order],
             "ee_xyz_m": ee.get("pose_xyz_m"),
             "ee_rpy_deg": ee.get("pose_rpy_deg"),
+            "waist": d.get("waist"),
         })
     entries.sort(key=lambda e: (e["recorded_at"], e["json"]))
     for i, e in enumerate(entries, 1):
@@ -308,7 +335,13 @@ def main() -> int:
 
         names, by_name = summarise(frames)
         ee = {} if args.no_ee else read_ee(motion, args.group)
+        waist = read_waist(robot)
         print_table(names, by_name, args.group, len(frames), ee)
+        if waist.get("rpy_deg"):
+            print("  腰姿：j4(偏航)=%.2f°  j5(侧倾)=%.2f°  腰高=%.4f m  躯干 rpy=(%.2f, %.2f, %.2f)°" % (
+                waist.get("leg_joint4_deg", float("nan")), waist.get("leg_joint5_deg", float("nan")),
+                waist.get("height_m", float("nan")),
+                waist["rpy_deg"][0], waist["rpy_deg"][1], waist["rpy_deg"][2]))
 
         ts = time.strftime("%Y%m%d_%H%M%S")
         os.makedirs(args.out_dir, exist_ok=True)
@@ -333,6 +366,7 @@ def main() -> int:
                  "current_a": None if not math.isfinite(r[4]) else round(r[4], 6)}
                 for r in fr] for fr in frames],
             "end_effector": ee,
+            "waist": waist,
         }
         with open(path, "w", encoding="utf-8") as fh:
             json.dump(payload, fh, ensure_ascii=False, indent=2)
