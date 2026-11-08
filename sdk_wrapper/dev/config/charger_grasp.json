@@ -8,10 +8,14 @@
   "end_effector": "right_gripper",
   "straight_line": false,
   "require_robot_idle": true,
+  "idle_wait_timeout_s": 3.0,
+  "idle_poll_interval_s": 0.20,
+  "idle_speed_tolerance_mps": 0.05,
+  "stop_base_before_arm": true,
   "require_ik_reachability": true,
+  "pending_plan_max_age_s": 15.0,
   "position_tolerance_m": 0.01,
   "rotation_tolerance_deg": 3.0,
   "min_plan_standoff_m": 0.02,
-  "max_plan_standoff_m": 0.3,
-  "pending_plan_max_age_s": 15.0
+  "max_plan_standoff_m": 0.30
 }

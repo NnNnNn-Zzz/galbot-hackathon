@@ -134,6 +134,82 @@ class ChargerGraspTool:
         """Use the public planning method so internal composition keeps one contract."""
         return self.plan_wrist_charger_pregrasp()
 
+    def _settle_robot_idle(self) -> ToolResult:
+        """Allow residual chassis motion to decay without bypassing the idle gate."""
+        timeout_s = max(0.0, float(self.config.get("idle_wait_timeout_s", 3.0)))
+        poll_s = max(0.0, float(self.config.get("idle_poll_interval_s", 0.20)))
+        speed_tolerance = max(
+            0.0,
+            float(self.config.get("idle_speed_tolerance_mps", 0.05)),
+        )
+        deadline = time.monotonic() + timeout_s
+        attempts: list[dict[str, typing.Any]] = []
+        stop_requested = False
+
+        while True:
+            state = self.motion_tool.get_robot_state()
+            if not state.succeeded:
+                return unknown(
+                    state.error_code or ErrorCode.STATE_UNCERTAIN,
+                    f"下发前机器人状态不可确认：{state.message}",
+                    self.mode,
+                    data={
+                        "robot_state": state.to_dict(),
+                        "idle_stabilization": attempts,
+                        "motion_dispatched": False,
+                    },
+                )
+            data = dict(state.data)
+            active_tasks = list(data.get("active_task_ids") or [])
+            speed_value = data.get("base_speed")
+            speed = (
+                float(speed_value)
+                if isinstance(speed_value, (int, float))
+                else None
+            )
+            moving_by_speed = speed is not None and speed > speed_tolerance
+            attempt = {
+                "motion_state": data.get("motion_state"),
+                "base_speed": speed,
+                "active_task_ids": active_tasks,
+            }
+            attempts.append(attempt)
+            if not active_tasks and not moving_by_speed:
+                return ok(
+                    "下发前机器人已稳定",
+                    self.mode,
+                    data={
+                        "attempts": len(attempts),
+                        "speed_tolerance_mps": speed_tolerance,
+                        "reports": attempts,
+                    },
+                )
+
+            if (
+                not stop_requested
+                and not active_tasks
+                and bool(self.config.get("stop_base_before_arm", True))
+            ):
+                stop = self.motion_tool.stop_base()
+                attempt["stop_base"] = stop.to_dict()
+                stop_requested = True
+
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return rejected(
+                    ErrorCode.SAFETY_LIMIT,
+                    "下发前机器人持续未静止",
+                    self.mode,
+                    data={
+                        "idle_stabilization": {
+                            "speed_tolerance_mps": speed_tolerance,
+                            "reports": attempts,
+                        },
+                        "motion_dispatched": False,
+                    },
+                )
+            time.sleep(min(poll_s, remaining))
+
     @_tool
     def plan_wrist_charger_pregrasp(self) -> ToolResult:
         """Observe with the wrist camera and return a pre-grasp pose without motion."""
@@ -275,22 +351,12 @@ class ChargerGraspTool:
                 self.mode,
                 data={"motion_dispatched": False},
             )
+        idle_check: dict[str, typing.Any] | None = None
         if bool(self.config.get("require_robot_idle", True)):
-            state = self.motion_tool.get_robot_state()
-            if not state.succeeded:
-                return unknown(
-                    state.error_code or ErrorCode.STATE_UNCERTAIN,
-                    f"下发前机器人状态不可确认：{state.message}",
-                    self.mode,
-                    data={"robot_state": state.to_dict(), "motion_dispatched": False},
-                )
-            if state.data.get("motion_state") != "idle":
-                return rejected(
-                    ErrorCode.SAFETY_LIMIT,
-                    f"下发前机器人不是 idle：{state.data.get('motion_state')}",
-                    self.mode,
-                    data={"robot_state": state.to_dict(), "motion_dispatched": False},
-                )
+            idle_result = self._settle_robot_idle()
+            if not idle_result.succeeded:
+                return idle_result
+            idle_check = dict(idle_result.data)
 
         max_age_s = float(self.config.get("pending_plan_max_age_s", 15.0))
         if (
@@ -361,6 +427,7 @@ class ChargerGraspTool:
         data = {
             "chain": plan_data["chain"],
             "plan_source": plan_source,
+            "idle_stabilization": idle_check,
             "plan": plan_data,
             "motion": motion.to_dict(),
             "target_end_effector_pose": target,

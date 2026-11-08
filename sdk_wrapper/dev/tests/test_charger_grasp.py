@@ -133,6 +133,63 @@ class ChargerGraspToolTest(unittest.TestCase):
         self.assertEqual(charger_tool.calls, 1)
         self.assertEqual(len(adapter.ee_moves), 1)
 
+    def test_residual_base_motion_is_stopped_and_allowed_to_settle(self):
+        tool, adapter, _charger_tool = self.make_tool()
+        tool.config["idle_wait_timeout_s"] = 0.5
+        tool.config["idle_poll_interval_s"] = 0.0
+        states = [
+            ok(
+                "moving",
+                "mock",
+                data={
+                    "motion_state": "moving",
+                    "base_speed": 0.08,
+                    "active_task_ids": [],
+                },
+            ),
+            ok(
+                "idle",
+                "mock",
+                data={
+                    "motion_state": "idle",
+                    "base_speed": 0.01,
+                    "active_task_ids": [],
+                },
+            ),
+        ]
+        stop_calls = []
+        tool.motion_tool.get_robot_state = lambda: states.pop(0)
+        tool.motion_tool.stop_base = lambda: (
+            stop_calls.append(True) or ok("stopped", "mock", data={})
+        )
+
+        result = tool.move_to_wrist_charger_pregrasp(operator_confirmed=True)
+
+        self.assertEqual(result.status, TaskStatus.SUCCEEDED)
+        self.assertEqual(stop_calls, [True])
+        self.assertEqual(result.data["idle_stabilization"]["attempts"], 2)
+        self.assertEqual(len(adapter.ee_moves), 1)
+
+    def test_persistent_base_motion_still_blocks_arm_command(self):
+        tool, adapter, _charger_tool = self.make_tool()
+        tool.config["idle_wait_timeout_s"] = 0.0
+        tool.motion_tool.get_robot_state = lambda: ok(
+            "moving",
+            "mock",
+            data={
+                "motion_state": "moving",
+                "base_speed": 0.20,
+                "active_task_ids": [],
+            },
+        )
+        tool.motion_tool.stop_base = lambda: ok("stopped", "mock", data={})
+
+        result = tool.move_to_wrist_charger_pregrasp(operator_confirmed=True)
+
+        self.assertEqual(result.status, TaskStatus.REJECTED)
+        self.assertEqual(result.error_code, ErrorCode.SAFETY_LIMIT)
+        self.assertEqual(adapter.ee_moves, [])
+
     def test_unreachable_ik_blocks_plan_before_motion(self):
         tool, adapter, charger_tool = self.make_tool()
         tool.motion_tool.check_ee_pose_reachable = lambda *args, **kwargs: rejected(
