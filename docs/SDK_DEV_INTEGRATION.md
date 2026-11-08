@@ -107,6 +107,29 @@ python3 scripts/keyboard_head_control.py
 来判断低头方向。脚本中 `j/k` 以 0.01 rad 低头/抬头，`J/K` 以 0.02 rad
 低头/抬头，`r` 逐步回起始，`q` 退出。正负方向会由实际头部末端姿态验证。
 
+G1 腰部高度（直上直下）键盘遥控（2026-11-08）：
+
+```bash
+source scripts/env_hpu.sh
+python3 scripts/keyboard_leg_height.py --status   # 只读：打印当前腰高后退出
+python3 scripts/keyboard_leg_height.py            # 交互：w/↑ 上升，s/↓ 下降
+```
+
+G1 没有独立的「腰升」轴：整机竖直升降由 `GalbotRobot.set_leg_height()` 完成，
+内部走 `LEG_HEIGHT_CTRL` 协同解算前三条腿关节（`leg_joint1/2/3`），读回量是
+`get_transform("base_link", "head_base_link")` 的 Z。因为不碰 `leg_joint4/5`，
+所以没有上面记录的偏航/滚转副作用。
+
+脚本的安全设计：SDK 区间 0.96–1.54 m，默认再内缩到 1.00–1.50 m；每一小步都是
+「先读实测高度 → 再下发」，因此位置不累积漂移、贴限位自动停；单步硬上限 2 cm，
+默认 3 cm/s（`--speed` 可调，步长 = 速度 × `--duration`）；松手即停（终端只有
+auto-repeat，用 keep-alive 窗口判定按住）；空格急停，`q` 退出，退出时询问是否回原位。
+
+★ 关键点：`set_leg_height` 可能返回 `FAULT` 而实际已到位（见 TROUBLESHOOTING）。
+本脚本每步都以回读的高度为准：只有「状态异常 且 实测没到位」「TIMEOUT」「实测偏离
+目标 > 3 cm」「连续 5 步无位移」才停机。离线用假机器人验证了限位、FAULT 容忍、
+卡死、超时四条分支；真机只做了 `--status` 只读验证（2026-11-08，腰高 1.3270 m）。
+
 G1 专用前倾工具（只动 `leg_joint3`，增加量=前倾）：
 
 ```python
