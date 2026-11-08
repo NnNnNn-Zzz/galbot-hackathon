@@ -12,5 +12,6 @@
   "position_tolerance_m": 0.01,
   "rotation_tolerance_deg": 3.0,
   "min_plan_standoff_m": 0.02,
-  "max_plan_standoff_m": 0.30
+  "max_plan_standoff_m": 0.3,
+  "pending_plan_max_age_s": 15.0
 }

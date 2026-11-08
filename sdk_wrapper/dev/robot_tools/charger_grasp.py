@@ -18,6 +18,7 @@ import functools
 import json
 import math
 import os
+import time
 import typing
 from pathlib import Path
 
@@ -92,6 +93,8 @@ class ChargerGraspTool:
             self.adapter,
             real_authorized=self.mode is RunMode.REAL,
         )
+        self._pending_plan: dict[str, typing.Any] | None = None
+        self._pending_plan_at: float | None = None
 
     @property
     def mode(self) -> RunMode:
@@ -223,6 +226,8 @@ class ChargerGraspTool:
             "next_action": "move_to_wrist_charger_pregrasp",
         }
         if not grasp_plan.get("safe_to_plan"):
+            self._pending_plan = None
+            self._pending_plan_at = None
             return rejected(
                 ErrorCode.SAFETY_LIMIT,
                 "charger pre-grasp 位姿不在安全规划范围内",
@@ -237,12 +242,16 @@ class ChargerGraspTool:
             )
             data["ik_preflight"] = reachable.to_dict()
             if not reachable.succeeded:
+                self._pending_plan = None
+                self._pending_plan_at = None
                 return rejected(
                     reachable.error_code or ErrorCode.SAFETY_LIMIT,
                     f"腕部视觉位姿未通过只读 IK 预检：{reachable.message}",
                     self.mode,
                     data=data,
                 )
+        self._pending_plan = dict(data)
+        self._pending_plan_at = time.monotonic()
         return ok(
             "腕部 charger 坐标已生成 pre-grasp 末端位姿；尚未下发运动",
             self.mode,
@@ -279,18 +288,29 @@ class ChargerGraspTool:
                     data={"robot_state": state.to_dict(), "motion_dispatched": False},
                 )
 
-        plan_result = self._call_plan()
-        if not plan_result.succeeded:
-            if plan_result.error_code == ErrorCode.SAFETY_LIMIT:
-                return plan_result
-            return failed(
-                plan_result.error_code or ErrorCode.NOT_READY,
-                f"运动前重新规划失败：{plan_result.message}",
-                self.mode,
-                data={"plan_result": plan_result.to_dict(), "motion_dispatched": False},
-            )
-
-        plan_data = dict(plan_result.data)
+        max_age_s = float(self.config.get("pending_plan_max_age_s", 15.0))
+        if (
+            self._pending_plan is not None
+            and self._pending_plan_at is not None
+            and time.monotonic() - self._pending_plan_at <= max_age_s
+        ):
+            plan_data = dict(self._pending_plan)
+            plan_source = "recent_preflight"
+        else:
+            plan_result = self._call_plan()
+            if not plan_result.succeeded:
+                if plan_result.error_code == ErrorCode.SAFETY_LIMIT:
+                    return plan_result
+                return failed(
+                    plan_result.error_code or ErrorCode.NOT_READY,
+                    f"运动前重新规划失败：{plan_result.message}",
+                    self.mode,
+                    data={"plan_result": plan_result.to_dict(), "motion_dispatched": False},
+                )
+            plan_data = dict(plan_result.data)
+            plan_source = "fresh_replan"
+        self._pending_plan = None
+        self._pending_plan_at = None
         target = [float(v) for v in plan_data["end_effector_goal"]]
         motion = self.motion_tool.move_ee_to(
             target,
@@ -336,6 +356,7 @@ class ChargerGraspTool:
         )
         data = {
             "chain": plan_data["chain"],
+            "plan_source": plan_source,
             "plan": plan_data,
             "motion": motion.to_dict(),
             "target_end_effector_pose": target,

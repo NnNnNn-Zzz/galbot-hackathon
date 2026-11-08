@@ -121,6 +121,18 @@ class ChargerGraspToolTest(unittest.TestCase):
             [0.45, -0.2, 0.82],
         )
 
+    def test_confirmed_move_reuses_recent_preflight_plan(self):
+        tool, adapter, charger_tool = self.make_tool()
+
+        preflight = tool.plan_wrist_charger_pregrasp()
+        result = tool.move_to_wrist_charger_pregrasp(operator_confirmed=True)
+
+        self.assertEqual(preflight.status, TaskStatus.SUCCEEDED)
+        self.assertEqual(result.status, TaskStatus.SUCCEEDED)
+        self.assertEqual(result.data["plan_source"], "recent_preflight")
+        self.assertEqual(charger_tool.calls, 1)
+        self.assertEqual(len(adapter.ee_moves), 1)
+
     def test_unreachable_ik_blocks_plan_before_motion(self):
         tool, adapter, charger_tool = self.make_tool()
         tool.motion_tool.check_ee_pose_reachable = lambda *args, **kwargs: rejected(
