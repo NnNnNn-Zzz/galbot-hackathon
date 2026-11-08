@@ -66,12 +66,36 @@ except ImportError:  # pragma: no cover
     geo = None  # type: ignore[assignment]
 
 # ---------------------------------------------------------------------------
-# 标准位置（默认取自参考图 8e0d727a...jpg，1280x720）
+# 标准位置档案（每次标定一个腰高，键是腰高 cm）
+# 参考图分辨率都是 1280x720，与右腕相机一致。
 # ---------------------------------------------------------------------------
+PROFILES = {
+    "1327": {
+        "waist_m": 1.3270,
+        "center": (681.54, 383.25),
+        "tilt_deg": 1.10,
+        "long_px": 143.11,
+        "short_px": 129.42,
+        "note": "2026-11-08 首次标定",
+    },
+    "1234": {
+        "waist_m": 1.2337,
+        "center": (686.34, 481.38),
+        "tilt_deg": 0.78,
+        "long_px": 205.91,
+        "short_px": 180.70,
+        "note": "2026-11-08 腰高 1.234 m 标定",
+    },
+}
+
+#: 默认档案（最新一次标定）
+DEFAULT_PROFILE = "1234"
+
+#: 腰高与档案允许的偏差；超过就提示用错了标准
+PROFILE_WAIST_TOL_M = 0.02
+
+# 兼容旧引用（参考图尺寸）
 REF_W, REF_H = 1280, 720
-REF_CENTER = (681.54, 383.25)
-REF_TILT_DEG = 1.10
-REF_SIZE = (143.11, 129.42)
 
 # 绿块 HSV 阈值（深绿底 + 白字）
 HSV_LO = (35, 60, 40)
@@ -241,6 +265,16 @@ def pose_of(ad, chain: str) -> List[float]:
     return [float(v) for v in res.data["pose"]]
 
 
+def read_waist(ad) -> float:
+    """读当前腰高（base_link <- head_base_link 的 Z）。"""
+    robot = ad._ensure_interfaces()[0]
+    pose, _ts = robot.get_transform(
+        "base_link", "head_base_link", timestamp_ns=0, timeout_ms=500)
+    if pose is None or len(pose) < 3:
+        raise RuntimeError("get_transform 返回空")
+    return float(pose[2])
+
+
 def rot_x(deg: float) -> np.ndarray:
     t = math.radians(float(deg))
     c, s = math.cos(t), math.sin(t)
@@ -300,8 +334,11 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     )
     ap.add_argument("--chain", default=DEFAULT_CHAIN, help="手臂链")
     ap.add_argument("--camera", default=DEFAULT_CAMERA, help="相机 id")
+    ap.add_argument("--profile", default="auto",
+                    help="标准档案：auto（按腰高自动匹配）/ %s"
+                         % " / ".join(sorted(PROFILES)))
     ap.add_argument("--ref-image", default=None,
-                    help="从这张参考图重新提取标准中心/倾角（默认用内置常量）")
+                    help="从这张参考图重新提取标准中心/倾角（优先级最高）")
     ap.add_argument("--tol-px", type=float, default=10.0,
                     help="中心容差（像素）；受 SDK 最小步长 6mm≈8px 限制，别设太小")
     ap.add_argument("--tol-deg", type=float, default=1.5, help="倾角容差（度）")
@@ -314,6 +351,8 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     ap.add_argument("--z-tol-m", type=float, default=0.003,
                     help="末端高度允许漂移（米）")
     ap.add_argument("--dry-run", action="store_true", help="只测差距，不下发运动")
+    ap.add_argument("--force", action="store_true",
+                    help="腰高与档案不符时仍强行继续（危险）")
     ap.add_argument("--yes", action="store_true", help="跳过确认")
     ap.add_argument("--save-dir", default="/tmp/align_box",
                     help="过程图保存目录")
@@ -328,37 +367,70 @@ def main(argv: Optional[List[str]] = None) -> int:
             % (args.max_step_m * 1000.0, MIN_STEP_M * 1000.0))
         args.max_step_m = MIN_STEP_M
 
-    ref_u, ref_v = REF_CENTER
-    ref_tilt = REF_TILT_DEG
-
     os.makedirs(args.save_dir, exist_ok=True)
-
-    say("绿块视觉伺服：目标中心 (%.2f, %.2f)  倾角 %+.2f°（相对竖直）"
-        % (ref_u, ref_v, ref_tilt))
 
     from sdk_wrapper.dev.adapters.galbot_adapter import GalbotAdapter
     ad = GalbotAdapter(enable_real_control=True, real_authorized=True)
 
-    # 若给了参考图，重新提取标准
+    # 读腰高：既用来挑标准档案，也用来防呆
+    waist = None
+    try:
+        waist = read_waist(ad)
+    except Exception as exc:  # noqa: BLE001
+        say("! 读腰高失败（%s: %s），将使用默认档案" % (type(exc).__name__, exc))
+
+    # ---- 选标准：参考图 > 指定档案 > 按腰高自动匹配 ----
     if args.ref_image:
         ref_img = cv2.imdecode(np.fromfile(args.ref_image, dtype=np.uint8),
                                cv2.IMREAD_COLOR)
         if ref_img is None:
             say("参考图读不出来：%s" % args.ref_image)
             return 2
-        det = detect_green_box(ref_img)
-        if det is None:
+        rdet = detect_green_box(ref_img)
+        if rdet is None:
             say("参考图里没检出绿色矩形")
             return 2
         rh, rw = ref_img.shape[:2]
-        # 归一化后换算到运行时的图像尺寸（下面抓帧后再缩放）
-        ref_u, ref_v = det["u"], det["v"]
-        ref_tilt = det["tilt_deg"]
-        say("已从参考图重取标准：%dx%d 中心 (%.2f, %.2f) 倾角 %+.2f°"
-            % (rw, rh, ref_u, ref_v, ref_tilt))
+        ref_u, ref_v = rdet["u"], rdet["v"]
+        ref_tilt = rdet["tilt_deg"]
+        args._ref_long = rdet["long_px"]
         args._ref_size = (rw, rh)
+        tag = "image:%s (%dx%d)" % (os.path.basename(args.ref_image), rw, rh)
     else:
+        key = args.profile
+        if key == "auto":
+            if waist is not None:
+                key = min(PROFILES,
+                          key=lambda k: abs(PROFILES[k]["waist_m"] - waist))
+            else:
+                key = DEFAULT_PROFILE
+        if key not in PROFILES:
+            say("未知档案 %r；可用：auto / %s" % (key, " / ".join(sorted(PROFILES))))
+            return 2
+        prof = PROFILES[key]
+        if waist is not None and \
+                abs(prof["waist_m"] - waist) > PROFILE_WAIST_TOL_M and \
+                not args.force:
+            # 腰高对不上就别跑了：标准位置是绑死在腰高上的
+            say("✗ 拒绝运行：当前腰高 %.4f m，最近的档案 %s 标定于 %.4f m，差 %.1f cm"
+                % (waist, key, prof["waist_m"],
+                   abs(prof["waist_m"] - waist) * 100.0))
+            say("  标准位置与腰高是一一对应的，腰不对就不可能对得准。")
+            say("  处置：① 先用腰部遥控把腰高调到位再跑；")
+            say("        ② 或用 --ref-image 传该腰高下标定的标准图；")
+            say("        ③ 确知风险时加 --force 强行继续。")
+            return 2
+        ref_u, ref_v = prof["center"]
+        ref_tilt = prof["tilt_deg"]
+        args._ref_long = prof.get("long_px")
         args._ref_size = (REF_W, REF_H)
+        tag = "profile:%s（%s）" % (key, prof["note"])
+
+    say("绿块视觉伺服")
+    say("  标准来源 %s" % tag)
+    say("  当前腰高 %.4f m" % waist if waist is not None else "  当前腰高 读取失败")
+    say("  目标中心 (%.2f, %.2f)  倾角 %+.2f°（相对竖直）"
+        % (ref_u, ref_v, ref_tilt))
 
     def to_runtime(ref_pt, frame_w, frame_h):
         """参考图坐标 -> 当前相机分辨率坐标。"""
@@ -375,6 +447,33 @@ def main(argv: Optional[List[str]] = None) -> int:
         cv2.imwrite(os.path.join(args.save_dir, "fail_iter00.jpg"), frame["bgr"])
         say("✗ 当前画面没检出绿色矩形；图已存 %s/fail_iter00.jpg" % args.save_dir)
         return 3
+
+    # ---- 误检护栏：绿块尺寸要和标准对得上，否则很可能检到了别的东西 ----
+    ref_long = getattr(args, "_ref_long", None)
+    suspicious = []
+    if ref_long:
+        ratio = det["long_px"] / float(ref_long)
+        if ratio < 0.45 or ratio > 2.2:
+            suspicious.append("长边 %.1f px 是标准 %.1f px 的 %.0f%%"
+                              % (det["long_px"], ref_long, ratio * 100.0))
+    if det["area_ratio"] < 0.004:
+        suspicious.append("面积占比只有 %.2f%%" % (det["area_ratio"] * 100.0))
+    if suspicious:
+        cv2.imwrite(os.path.join(args.save_dir, "suspect_iter00.jpg"), frame["bgr"])
+        say("")
+        say("⚠ 检出的绿块不像目标：%s" % "；".join(suspicious))
+        say("  很可能是画面里别的绿色物体（屏幕上绿字、指示灯之类）。")
+        say("  图已存 %s/suspect_iter00.jpg，先看一眼。" % args.save_dir)
+        if not args.yes:
+            try:
+                ans = input("仍然继续？(输入 y 继续)：").strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                ans = ""
+            if ans != "y":
+                say("已停止，未下发任何运动。")
+                return 3
+        else:
+            say("  --yes 已给，继续——但请确认你真的看到了这条警告")
 
     du = det["u"] - tu
     dv = det["v"] - tv
@@ -463,6 +562,12 @@ def main(argv: Optional[List[str]] = None) -> int:
             dxy = np.array([du, dv]) * scale
 
         n = float(np.linalg.norm(dxy))
+        rot_done = args.no_rotation or abs(dth) <= args.tol_deg
+        if n < MIN_STEP_M * 0.95 and rot_done:
+            # 需要的位移比 SDK 能执行的最小步长还小 —— 再走只会过冲震荡
+            say("  误差已在物理极限内（需要 %.1f mm < 最小步长 %.0f mm），停止迭代"
+                % (n * 1000.0, MIN_STEP_M * 1000.0))
+            break
         if n > 1e-9:
             # 小于 SDK 最小有效步长就放大（否则会被静静吞掉）
             if n < MIN_STEP_M:
