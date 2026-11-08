@@ -32,10 +32,14 @@ adapter 各持一套），代价是跑一次崩一次。所以这里用 subproce
 ----
     cd ~/galbot_hackathon_dev && source ~/galbot_hackathon/scripts/env_hpu.sh
     python3 -u scripts/run_merged_program.py --dry-run     # 全程空跑，不动机器人
-    python3 -u scripts/run_merged_program.py               # 真跑（会先等你确认）
-    python3 -u scripts/run_merged_program.py --yes -v      # 不确认，直接跑
+    python3 -u scripts/run_merged_program.py               # 真跑（交互终端才会等你确认）
+    python3 -u scripts/run_merged_program.py --yes         # 真跑且免确认（ssh 一条命令必须带）
     python3 -u scripts/run_merged_program.py --skip 1,2     # 跳过前两步（腰已就位时）
     python3 -u scripts/run_merged_program.py --retreat 0.10 --waist-height 1.405
+
+★ 非交互环境（Windows 侧 ssh 一条命令）**必须显式 --yes** 才会真跑。
+  不会因为"读不到 stdin"就默默放行 —— 那样用户以为程序在等他确认，
+  实际手臂已经抬了 15 cm。
 """
 from __future__ import annotations
 
@@ -219,10 +223,7 @@ def run_step(idx, cmd, workdir, env, log_fp):
 
 
 def confirm(prompt):
-    """真机动作前的一次确认。非交互 shell 直接放行（避免 EOF 卡流程）。"""
-    if not sys.stdin.isatty():
-        print("  （stdin 不是终端，跳过确认）")
-        return True
+    """真机动作前的一次确认（只在交互终端里问）。"""
     try:
         ans = input(prompt).strip().lower()
     except (EOFError, KeyboardInterrupt):
@@ -373,6 +374,13 @@ def main() -> int:
         print("     找到并关掉（尤其 keyboard_leg_height.py / gripper_ctrl.py 这类会动腰和夹爪的）。")
 
     if not dry and not args.yes:
+        if not sys.stdin.isatty():
+            # 从 Windows 侧 ssh 一条命令跑时 stdin 不是终端。这时**不能**默默放行 ——
+            # 用户很可能以为程序会停下来等他确认，结果手臂直接抬了 15 cm。
+            print("")
+            print("  ✘ 非交互环境（stdin 不是终端），没法等你确认。", file=sys.stderr)
+            print("     真跑请显式加 --yes；想先看计划就加 --dry-run。", file=sys.stderr)
+            return 2
         print("")
         if not confirm("  以上计划会真的动机器人。确认开始？(y / 回车=开始，q=退出) > "):
             print("  已取消。")
