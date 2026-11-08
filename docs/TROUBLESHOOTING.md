@@ -171,7 +171,8 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
   3. 位置固定，剩余 `44.59°` 姿态变化拆成 6 步，每步约 7.4°；6 步全部 `SUCCESS`。
 
   最终实测位姿约 `[0.70936, 0.30077, 0.90818, -0.41130, 0.56483, 0.44152, 0.56290]`，机器人回到 `idle`。相反，此前同时平移+旋转时，2 cm/7° 的 12 步方案在 RA 分支跳到 `left_arm_joint1=2.05754` 时失败，而 5 cm/14° 方案在 `leg_link2` 碰撞监控停下。结论：当前服务对笛卡尔插值的 IK 分支稳定性不足；预抓取运动应先保持姿态平移，再原位小步旋转，不能让单段运动同时承担大平移和大旋转。
-- **后续代码动作**：把上述分段策略接入 `ChargerGraspTool`，并在每段前用当前实际位姿重新生成增量目标；不要通过关闭 WBC collision monitor 实现“重试”。截至本记录，该策略已真机手工脚本验证到 pre-grasp，尚未接入正式工具链。
+- **代码修复（2026-11-08）**：新增 `algorithms/pose_transition.py::PoseTransitionController` 并接入 `ChargerGraspTool`。平移阶段固定起始四元数、每步 ≤ `2 cm`；旋转阶段固定位置、每步 ≤ `7.5°`；全部使用 `with_chain_only` 且保持 collision monitor。控制器还检查累计姿态/位置漂移、单步过冲、无实际前进和最大步数。`MotionTool` / `GalbotAdapter.move_ee_to` 新增显式 `actuate` 与 `enable_collision_check` 参数，避免调用层无意启用 torso。
+- **回归覆盖**：新增纯算法、Tool 集成和 MockAdapter 测试，覆盖平移锁定姿态、旋转锁定位置、累计姿态漂移、分支过冲、成功但无进展、步数上限和 chain-only 参数传递。全量 136 项单测通过。正式工具链的真实前抓取复测仍取决于当前腕部视野能否给出合格 charger 目标；此前手工等价分段已到达目标位姿。
 
 ### charger 上表面接近水平却被判成法向倒置（2026-11-08）
 

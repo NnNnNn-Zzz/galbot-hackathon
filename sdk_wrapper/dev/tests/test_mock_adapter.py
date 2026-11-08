@@ -97,6 +97,24 @@ class MockAdapterTests(unittest.TestCase):
         self.assertEqual(result.status, TaskStatus.REJECTED)
         self.assertEqual(result.error_code, ErrorCode.INVALID_ARGUMENT)
 
+    def test_chain_only_pose_move_records_actuation_and_collision_mode(self):
+        adapter = MockAdapter()
+
+        result = adapter.move_ee_to(
+            "left_arm",
+            [0.45, 0.20, 0.85, 0.0, 0.0, 0.0, 1.0],
+            straight_line=False,
+            enable_collision_check=True,
+            actuate="with_chain_only",
+        )
+
+        self.assertEqual(result.status, TaskStatus.SUCCEEDED)
+        self.assertEqual(
+            adapter.ee_moves[-1]["actuate"],
+            "with_chain_only",
+        )
+        self.assertTrue(adapter.ee_moves[-1]["collision_check"])
+
 
 if __name__ == "__main__":
     unittest.main()

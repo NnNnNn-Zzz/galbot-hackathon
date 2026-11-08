@@ -102,6 +102,7 @@ class MotionTool:
         *,
         chain: str = "right_arm",
         enable_collision_check: bool = True,
+        actuate: str = "with_torso",
     ) -> ToolResult:
         """Read-only IK/collision preflight before an absolute arm command."""
         rejection = self.safety.authorize()
@@ -111,6 +112,7 @@ class MotionTool:
             chain,
             pose,
             enable_collision_check=enable_collision_check,
+            actuate=actuate,
         )
 
     def stop_base(self) -> ToolResult:
@@ -176,6 +178,8 @@ class MotionTool:
         *,
         chain: str = "left_arm",
         straight_line: bool = True,
+        enable_collision_check: bool = True,
+        actuate: str = "with_torso",
     ) -> ToolResult:
         """移动到 base_link 下的绝对末端位姿。
 
@@ -194,7 +198,13 @@ class MotionTool:
                 f"pose 必须是 [x,y,z,qx,qy,qz,qw]，收到 {len(target)} 个",
                 mode=self.mode,
             )
-        return self.adapter.move_ee_to(chain, target, straight_line=straight_line)
+        return self.adapter.move_ee_to(
+            chain,
+            target,
+            straight_line=straight_line,
+            enable_collision_check=enable_collision_check,
+            actuate=actuate,
+        )
 
     def push_once(
         self,

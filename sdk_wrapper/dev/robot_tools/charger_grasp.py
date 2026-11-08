@@ -27,8 +27,14 @@ from pathlib import Path
 
 from sdk_wrapper.dev.algorithms.calibration import rotation_error_deg
 from sdk_wrapper.dev.algorithms.observation_pose import (
+    end_effector_pose_for_camera,
     plan_diagonal_observation_pose,
     plan_grasp_descent_pose,
+    plan_wrist_camera_pose,
+)
+from sdk_wrapper.dev.algorithms.pose_transition import (
+    PoseTransitionController,
+    rotation_error_deg as pose_rotation_error_deg,
 )
 from sdk_wrapper.dev.contracts import (
     ErrorCode,
@@ -71,6 +77,8 @@ class ChargerGraspTool:
     """Plan and optionally command a pose above a wrist-observed charger."""
 
     TOOL_NAMES = (
+        "plan_wrist_observation_from_head",
+        "move_wrist_to_observation_from_head",
         "plan_wrist_charger_pregrasp",
         "move_to_wrist_charger_pregrasp",
         "execute_wrist_charger_grasp",
@@ -154,9 +162,556 @@ class ChargerGraspTool:
             error_code=result.error_code,
         )
 
+    def _move_pose_decomposed(
+        self,
+        target_pose: typing.Sequence[float],
+        *,
+        chain: str,
+    ) -> ToolResult:
+        """Translate on the current IK branch, then rotate in place.
+
+        Every command is generated from the latest measured pose. Translation
+        preserves orientation, rotation preserves position, and both phases
+        have hard per-step limits. Collision monitoring remains enabled.
+        """
+        target = [float(v) for v in target_pose]
+        max_position_step = max(
+            0.001,
+            float(
+                self.config.get(
+                    "decomposed_motion_max_translation_m",
+                    0.02,
+                )
+            ),
+        )
+        max_rotation_step = max(
+            0.1,
+            float(
+                self.config.get(
+                    "decomposed_motion_max_rotation_deg",
+                    7.5,
+                )
+            ),
+        )
+        max_steps = max(
+            1,
+            int(self.config.get("decomposed_motion_max_steps", 120)),
+        )
+        settle_s = max(
+            0.0,
+            float(self.config.get("decomposed_motion_settle_s", 0.1)),
+        )
+        position_tolerance = max(
+            0.0,
+            float(self.config.get("position_tolerance_m", 0.01)),
+        )
+        rotation_tolerance = max(
+            0.0,
+            float(self.config.get("rotation_tolerance_deg", 3.0)),
+        )
+        handoff_tolerance = max(
+            0.0,
+            float(
+                self.config.get(
+                    "decomposed_motion_position_handoff_m",
+                    0.002,
+                )
+            ),
+        )
+
+        steps: list[dict[str, typing.Any]] = []
+        translation_steps = 0
+        rotation_steps = 0
+        current_result = self.motion_tool.get_end_effector_pose(chain)
+        if not current_result.succeeded:
+            return failed(
+                current_result.error_code or ErrorCode.NOT_READY,
+                f"分解运动前无法读取 {chain} 位姿：{current_result.message}",
+                self.mode,
+                data={
+                    "current_end_effector": current_result.to_dict(),
+                    "motion_dispatched": False,
+                },
+            )
+        current = [float(v) for v in current_result.data["pose"]]
+        start = list(current)
+        controller = PoseTransitionController(
+            target,
+            position_tolerance_m=position_tolerance,
+            position_handoff_tolerance_m=handoff_tolerance,
+            rotation_tolerance_deg=rotation_tolerance,
+            max_position_step_m=max_position_step,
+            max_rotation_step_deg=max_rotation_step,
+        )
+
+        for step_index in range(1, max_steps + 1):
+            step = controller.next(current)
+            if step.kind == "complete":
+                return ok(
+                    "末端已按“平移后旋转”安全到达目标位姿",
+                    self.mode,
+                    data={
+                        "motion_dispatched": bool(steps),
+                        "pose_transition": {
+                            "strategy": "translate_then_rotate",
+                            "actuate": "with_chain_only",
+                            "collision_check": True,
+                            "target_pose": target,
+                            "start_pose": start,
+                            "final_pose": current,
+                            "steps_used": len(steps),
+                            "translation_steps": translation_steps,
+                            "rotation_steps": rotation_steps,
+                            "max_translation_step_m": max_position_step,
+                            "max_rotation_step_deg": max_rotation_step,
+                            "position_tolerance_m": position_tolerance,
+                            "rotation_tolerance_deg": rotation_tolerance,
+                            "steps": steps,
+                        },
+                    },
+                )
+
+            before = list(current)
+            motion = self.motion_tool.move_ee_to(
+                step.target_pose,
+                chain=chain,
+                straight_line=False,
+                enable_collision_check=True,
+                actuate="with_chain_only",
+            )
+            measured = self.motion_tool.get_end_effector_pose(chain)
+            record = {
+                "index": step_index,
+                "requested": step.to_dict(),
+                "before_pose": before,
+                "motion": motion.to_dict(),
+                "measured_end_effector": measured.to_dict(),
+            }
+            steps.append(record)
+            if not motion.succeeded:
+                return self._result_with_data(
+                    motion,
+                    {
+                        "motion_dispatched": (
+                            motion.status.value != "rejected"
+                        ),
+                        "pose_transition": {
+                            "strategy": "translate_then_rotate",
+                            "target_pose": target,
+                            "start_pose": start,
+                            "failed_step": step_index,
+                            "steps": steps,
+                        },
+                    },
+                )
+            if not measured.succeeded:
+                return unknown(
+                    measured.error_code or ErrorCode.STATE_UNCERTAIN,
+                    "分解运动已发送，但无法回读实际位姿",
+                    self.mode,
+                    data={
+                        "motion_dispatched": True,
+                        "pose_transition": {
+                            "target_pose": target,
+                            "failed_step": step_index,
+                            "steps": steps,
+                        },
+                    },
+                )
+
+            actual = [float(v) for v in measured.data["pose"]]
+            actual_translation = math.sqrt(
+                sum(
+                    (float(after_value) - float(before_value)) ** 2
+                    for after_value, before_value in zip(
+                        actual[:3],
+                        before[:3],
+                    )
+                )
+            )
+            actual_rotation = pose_rotation_error_deg(before, actual)
+            record["actual_translation_m"] = round(actual_translation, 7)
+            record["actual_rotation_deg"] = round(actual_rotation, 6)
+
+            allowed_translation = (
+                step.step_translation_m
+                + min(
+                    max(position_tolerance, handoff_tolerance),
+                    0.005,
+                )
+            )
+            allowed_rotation = (
+                step.step_rotation_deg
+                + min(rotation_tolerance, 2.0)
+            )
+            if (
+                actual_translation > allowed_translation
+                or actual_rotation > allowed_rotation
+            ):
+                return failed(
+                    ErrorCode.SAFETY_LIMIT,
+                    "单步实际位姿变化超过分支安全上限，已停止继续运动",
+                    self.mode,
+                    data={
+                        "motion_dispatched": True,
+                        "pose_transition": {
+                            "strategy": "translate_then_rotate",
+                            "target_pose": target,
+                            "start_pose": start,
+                            "failed_step": step_index,
+                            "reason": "pose_step_overshoot",
+                            "allowed_translation_m": round(
+                                allowed_translation, 7
+                            ),
+                            "allowed_rotation_deg": round(
+                                allowed_rotation, 6
+                            ),
+                            "steps": steps,
+                        },
+                    },
+                )
+
+            if (
+                controller.phase == "translate"
+                and controller.translation_reference_quaternion is not None
+            ):
+                translation_reference_pose = [
+                    *actual[:3],
+                    *controller.translation_reference_quaternion,
+                ]
+                translation_phase_drift = pose_rotation_error_deg(
+                    translation_reference_pose,
+                    actual,
+                )
+                record[
+                    "translation_phase_orientation_drift_deg"
+                ] = round(translation_phase_drift, 6)
+                if translation_phase_drift > min(rotation_tolerance, 2.0):
+                    return failed(
+                        ErrorCode.SAFETY_LIMIT,
+                        "平移阶段累计姿态漂移超限，已停止继续运动",
+                        self.mode,
+                        data={
+                            "motion_dispatched": True,
+                            "pose_transition": {
+                                "strategy": "translate_then_rotate",
+                                "target_pose": target,
+                                "start_pose": start,
+                                "failed_step": step_index,
+                                "reason": (
+                                    "translation_phase_orientation_drift"
+                                ),
+                                "orientation_drift_deg": round(
+                                    translation_phase_drift, 6
+                                ),
+                                "steps": steps,
+                            },
+                        },
+                    )
+            if (
+                controller.phase == "rotate"
+                and controller.rotation_reference_position is not None
+            ):
+                reference = controller.rotation_reference_position
+                rotation_phase_drift = math.sqrt(
+                    sum(
+                        (float(after) - float(reference_value)) ** 2
+                        for after, reference_value in zip(
+                            actual[:3],
+                            reference,
+                        )
+                    )
+                )
+                record[
+                    "rotation_phase_position_drift_m"
+                ] = round(rotation_phase_drift, 7)
+                if rotation_phase_drift > max(position_tolerance, 0.005):
+                    return failed(
+                        ErrorCode.SAFETY_LIMIT,
+                        "旋转阶段位置漂移超限，已停止继续运动",
+                        self.mode,
+                        data={
+                            "motion_dispatched": True,
+                            "pose_transition": {
+                                "strategy": "translate_then_rotate",
+                                "target_pose": target,
+                                "start_pose": start,
+                                "failed_step": step_index,
+                                "reason": "rotation_phase_position_drift",
+                                "position_drift_m": round(
+                                    rotation_phase_drift, 7
+                                ),
+                                "steps": steps,
+                            },
+                        },
+                    )
+            if actual_translation < 0.0005 and actual_rotation < 0.05:
+                return failed(
+                    ErrorCode.NOT_READY,
+                    "运动返回成功但实际位姿没有前进，已停止避免重复下发",
+                    self.mode,
+                    data={
+                        "motion_dispatched": True,
+                        "pose_transition": {
+                            "strategy": "translate_then_rotate",
+                            "target_pose": target,
+                            "start_pose": start,
+                            "failed_step": step_index,
+                            "reason": "pose_step_no_progress",
+                            "steps": steps,
+                        },
+                    },
+                )
+
+            if step.kind == "translate":
+                translation_steps += 1
+            else:
+                rotation_steps += 1
+            current = actual
+            if settle_s:
+                time.sleep(settle_s)
+
+        return failed(
+            ErrorCode.NOT_READY,
+            f"分解运动超过最大步数 {max_steps}，已停止",
+            self.mode,
+            data={
+                "motion_dispatched": bool(steps),
+                "pose_transition": {
+                    "strategy": "translate_then_rotate",
+                    "target_pose": target,
+                    "start_pose": start,
+                    "last_pose": current,
+                    "steps_used": len(steps),
+                    "steps": steps,
+                },
+            },
+        )
+
     def _call_plan(self) -> ToolResult:
         """Use the public planning method so internal composition keeps one contract."""
         return self.plan_wrist_charger_pregrasp()
+
+    @_tool
+    def plan_wrist_observation_from_head(self) -> ToolResult:
+        """Use head RGB-D to plan the initial wrist camera observation pose."""
+        head_result = self.charger_tool.detect_charger_head()
+        head_data = (
+            dict(head_result.data)
+            if head_result.succeeded
+            else None
+        )
+        if head_data is None:
+            return failed(
+                head_result.error_code or ErrorCode.NOT_READY,
+                f"头部 charger 观测失败：{head_result.message}",
+                self.mode,
+                data={"head_result": head_result.to_dict(), "motion_dispatched": False},
+            )
+        handoff = dict(head_data.get("head_handoff") or {})
+        target_3d = dict(handoff.get("target_3d") or {})
+        target_safety = dict(handoff.get("target_safety") or {})
+        if not handoff.get("usable_for_wrist_handoff"):
+            return failed(
+                ErrorCode.NOT_READY,
+                "头部 charger 尚未满足腕部交接条件",
+                self.mode,
+                data={
+                    "head_observation": self._observation_summary(head_data),
+                    "head_handoff": handoff,
+                    "motion_dispatched": False,
+                },
+            )
+        if not target_3d.get("available") or not target_safety.get("safe"):
+            return failed(
+                ErrorCode.NOT_READY,
+                "头部 charger 的米制 3D 目标或安全检查不可用",
+                self.mode,
+                data={
+                    "head_observation": self._observation_summary(head_data),
+                    "target_3d": target_3d,
+                    "target_safety": target_safety,
+                    "motion_dispatched": False,
+                },
+            )
+
+        standoff = float(
+            self.config.get("head_wrist_camera_standoff_m", 0.30)
+        )
+        camera_plan = plan_wrist_camera_pose(
+            target_3d["center_m"],
+            target_3d["surface_normal_base"],
+            target_3d["long_axis_base"],
+            camera_standoff_m=standoff,
+            min_camera_standoff_m=float(
+                self.config.get("min_head_wrist_camera_standoff_m", 0.20)
+            ),
+            max_camera_standoff_m=float(
+                self.config.get("max_head_wrist_camera_standoff_m", 0.55)
+            ),
+        )
+        if not camera_plan.get("safe_to_plan"):
+            return rejected(
+                ErrorCode.SAFETY_LIMIT,
+                "头部规划的腕部相机观察位超出安全范围",
+                self.mode,
+                data={
+                    "camera_plan": camera_plan,
+                    "motion_dispatched": False,
+                },
+            )
+
+        chain = str(self.config.get("chain", "right_arm"))
+        current_ee = self.motion_tool.get_chain_frame_pose(
+            chain,
+            "EndEffector",
+            "base_link",
+        )
+        current_camera = self.motion_tool.get_chain_frame_pose(
+            chain,
+            "Camera",
+            "base_link",
+        )
+        if not current_ee.succeeded or not current_camera.succeeded:
+            return failed(
+                ErrorCode.NOT_READY,
+                "无法读取当前腕部相机手眼位姿",
+                self.mode,
+                data={
+                    "current_end_effector": current_ee.to_dict(),
+                    "current_camera": current_camera.to_dict(),
+                    "motion_dispatched": False,
+                },
+            )
+        transferred = end_effector_pose_for_camera(
+            camera_plan["camera_pose_base"],
+            current_ee.data["pose"],
+            current_camera.data["pose"],
+        )
+        end_effector_goal = transferred["end_effector_pose_base"]
+        data = {
+            "chain": chain,
+            "head_observation": self._observation_summary(head_data),
+            "head_handoff": handoff,
+            "target_3d": target_3d,
+            "target_safety": target_safety,
+            "camera_plan": camera_plan,
+            "end_effector_goal": end_effector_goal,
+            "ee_from_camera": transferred["ee_from_camera"],
+            "motion_dispatched": False,
+        }
+        if bool(self.config.get("require_ik_reachability", True)):
+            reachable = self.motion_tool.check_ee_pose_reachable(
+                end_effector_goal,
+                chain=chain,
+                enable_collision_check=True,
+                actuate="with_chain_only",
+            )
+            data["ik_preflight"] = reachable.to_dict()
+            if not reachable.succeeded:
+                return rejected(
+                    reachable.error_code or ErrorCode.SAFETY_LIMIT,
+                    "头部生成的腕部观察位未通过只读 IK 预检",
+                    self.mode,
+                    data=data,
+                )
+        return ok(
+            "头部相机已生成腕部初始观察位；尚未下发运动",
+            self.mode,
+            data=data,
+        )
+
+    @_tool
+    def move_wrist_to_observation_from_head(
+        self,
+        operator_confirmed: bool = False,
+    ) -> ToolResult:
+        """Move the wrist to the head-generated observation pose, then verify it."""
+        if operator_confirmed is not True:
+            return rejected(
+                ErrorCode.PERMISSION_DENIED,
+                "腕部头部观察位移动必须由现场监督者确认",
+                self.mode,
+                data={"motion_dispatched": False},
+            )
+        idle_result = self._settle_robot_idle()
+        if not idle_result.succeeded:
+            return idle_result
+        plan_result = self.plan_wrist_observation_from_head()
+        if not plan_result.succeeded:
+            return plan_result
+        plan_data = dict(plan_result.data)
+        chain = str(plan_data["chain"])
+        goal = [float(v) for v in plan_data["end_effector_goal"]]
+        motion = self._move_pose_decomposed(goal, chain=chain)
+        if not motion.succeeded:
+            return self._result_with_data(
+                motion,
+                {
+                    "plan": plan_data,
+                    "idle_stabilization": idle_result.data,
+                    "motion_dispatched": motion.status.value != "rejected",
+                },
+            )
+        measured = self.motion_tool.get_chain_frame_pose(
+            chain,
+            "Camera",
+            "base_link",
+        )
+        if not measured.succeeded:
+            return unknown(
+                measured.error_code or ErrorCode.STATE_UNCERTAIN,
+                "头部引导移动完成，但腕部相机位姿无法确认",
+                self.mode,
+                data={
+                    "plan": plan_data,
+                    "motion": motion.to_dict(),
+                    "measured_camera": measured.to_dict(),
+                    "motion_dispatched": True,
+                },
+            )
+        desired = [float(v) for v in plan_data["camera_plan"]["camera_pose_base"]]
+        actual = [float(v) for v in measured.data["pose"]]
+        position_error = math.sqrt(
+            sum(
+                (desired_value - actual_value) ** 2
+                for desired_value, actual_value in zip(desired[:3], actual[:3])
+            )
+        )
+        orientation_error = rotation_error_deg(desired, actual)
+        matched = (
+            position_error
+            <= float(
+                self.config.get("head_wrist_camera_position_tolerance_m", 0.01)
+            )
+            and orientation_error
+            <= float(
+                self.config.get("head_wrist_camera_rotation_tolerance_deg", 3.0)
+            )
+        )
+        data = {
+            "plan": plan_data,
+            "idle_stabilization": idle_result.data,
+            "motion": motion.to_dict(),
+            "measured_camera_pose": actual,
+            "position_error_m": round(position_error, 7),
+            "orientation_error_deg": round(orientation_error, 6),
+            "pose_matched": matched,
+            "motion_dispatched": True,
+            "next_action": "wrist_plan",
+        }
+        if not matched:
+            return failed(
+                ErrorCode.NOT_READY,
+                "腕部相机未达到头部生成的观察位",
+                self.mode,
+                data=data,
+            )
+        return ok(
+            "腕部已到达头部生成的初始观察位；可用腕部相机继续 5 cm 斜向规划",
+            self.mode,
+            data=data,
+        )
 
     def _settle_robot_idle(self) -> ToolResult:
         """Allow residual chassis motion to decay without bypassing the idle gate."""
@@ -274,6 +829,7 @@ class ChargerGraspTool:
                 plan["descent_pose"],
                 chain=str(self.config.get("chain", "right_arm")),
                 enable_collision_check=True,
+                actuate="with_chain_only",
             )
             plan["ik_preflight"] = reachable.to_dict()
             if not reachable.succeeded:
@@ -404,6 +960,7 @@ class ChargerGraspTool:
                 grasp_plan["observation_pose"],
                 chain=chain,
                 enable_collision_check=True,
+                actuate="with_chain_only",
             )
             data["ik_preflight"] = reachable.to_dict()
             if not reachable.succeeded:
@@ -471,10 +1028,9 @@ class ChargerGraspTool:
         self._pending_plan = None
         self._pending_plan_at = None
         target = [float(v) for v in plan_data["end_effector_goal"]]
-        motion = self.motion_tool.move_ee_to(
+        motion = self._move_pose_decomposed(
             target,
             chain=str(plan_data["chain"]),
-            straight_line=bool(self.config.get("straight_line", False)),
         )
         if not motion.succeeded:
             motion.data.update(
@@ -739,6 +1295,7 @@ class ChargerGraspTool:
                 lift_pose,
                 chain=chain,
                 enable_collision_check=True,
+                actuate="with_chain_only",
             )
             base_data["lift_ik_preflight"] = lift_reachable.to_dict()
             if not lift_reachable.succeeded:
@@ -773,7 +1330,9 @@ class ChargerGraspTool:
             motion = self.motion_tool.move_ee_to(
                 waypoint,
                 chain=chain,
-                straight_line=True,
+                straight_line=False,
+                enable_collision_check=True,
+                actuate="with_chain_only",
             )
             descent_motions.append(motion.to_dict())
             if not motion.succeeded:
@@ -825,11 +1384,7 @@ class ChargerGraspTool:
                 },
             )
 
-        lift = self.motion_tool.move_ee_to(
-            lift_pose,
-            chain=chain,
-            straight_line=True,
-        )
+        lift = self._move_pose_decomposed(lift_pose, chain=chain)
         base_data["lift_motion"] = lift.to_dict()
         if not lift.succeeded:
             return self._result_with_data(

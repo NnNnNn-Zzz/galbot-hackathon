@@ -558,6 +558,8 @@ class GalbotAdapter(RobotAdapter):
         gm = self._import_sdk()
         _robot, motion, _nav = self._ensure_interfaces()
         target = [float(v) for v in target]
+        if actuate not in {"with_torso", "with_chain_only"}:
+            raise ValueError(f"unsupported actuate mode: {actuate!r}")
         if straight_line:
             target_obj = gm.MotionPlanChainTarget()
             target_obj.chain_name = chain
@@ -585,7 +587,8 @@ class GalbotAdapter(RobotAdapter):
         target_obj.cart.frame_id = "EndEffector"
         target_obj.cart.reference_frame = "base_link"
         target_obj.cart.pose = gm.Pose(target)
-        target_obj.cart.assist_chains = {"torso"}
+        if actuate == "with_torso":
+            target_obj.cart.assist_chains = {"torso"}
 
         params = gm.PlannerConfig()
         params.is_direct_execute = True
@@ -603,6 +606,7 @@ class GalbotAdapter(RobotAdapter):
         pose: typing.Sequence[float],
         *,
         enable_collision_check: bool = True,
+        actuate: str = _ACTUATE,
     ) -> ToolResult:
         """Run a read-only collision-aware path plan for an EndEffector target."""
         rejection = self._authorization_rejection()
@@ -623,6 +627,12 @@ class GalbotAdapter(RobotAdapter):
                 mode=self.mode,
                 data={"pose_length": len(target)},
             )
+        if actuate not in {"with_torso", "with_chain_only"}:
+            return rejected(
+                ErrorCode.INVALID_ARGUMENT,
+                f"不支持的 actuate 模式：{actuate!r}",
+                mode=self.mode,
+            )
         try:
             _robot, motion, _nav = self._ensure_interfaces()
             gm = self._import_sdk()
@@ -633,7 +643,8 @@ class GalbotAdapter(RobotAdapter):
             target_obj.cart.frame_id = "EndEffector"
             target_obj.cart.reference_frame = "base_link"
             target_obj.cart.pose = gm.Pose(target)
-            target_obj.cart.assist_chains = {"torso"}
+            if actuate == "with_torso":
+                target_obj.cart.assist_chains = {"torso"}
 
             params = gm.PlannerConfig()
             params.is_direct_execute = False
@@ -657,6 +668,7 @@ class GalbotAdapter(RobotAdapter):
             "reachable": name == "SUCCESS",
             "collision_check": bool(enable_collision_check),
             "environment_collision_check": bool(enable_collision_check),
+            "actuate": str(actuate),
             "motion_status": name,
             "trajectory_points": {
                 key: len(value) for key, value in trajectory.items()
@@ -712,6 +724,7 @@ class GalbotAdapter(RobotAdapter):
         *,
         straight_line: bool = True,
         enable_collision_check: bool = True,
+        actuate: str = _ACTUATE,
         timeout_s: float = 10.0,
     ) -> ToolResult:
         """移动到 base_link 下的绝对位姿。用于"回位再复测"。"""
@@ -734,6 +747,7 @@ class GalbotAdapter(RobotAdapter):
                 straight_line=straight_line,
                 enable_collision_check=enable_collision_check,
                 timeout_s=timeout_s,
+                actuate=actuate,
             )
         except Exception as exc:  # noqa: BLE001
             return unknown(
@@ -744,7 +758,12 @@ class GalbotAdapter(RobotAdapter):
             )
         return self._motion_result(
             status, chain=chain,
-            data={"chain": chain, "target_pose": target, "straight_line": bool(straight_line)},
+            data={
+                "chain": chain,
+                "target_pose": target,
+                "straight_line": bool(straight_line),
+                "actuate": str(actuate),
+            },
             on_success=f"{chain} 已到位姿 {[round(v, 3) for v in target[:3]]}",
         )
 
