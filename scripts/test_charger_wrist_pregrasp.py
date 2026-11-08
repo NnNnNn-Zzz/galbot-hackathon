@@ -24,12 +24,16 @@ if str(REPO_ROOT) not in sys.path:
 
 
 def _print_result(label: str, result: dict[str, typing.Any]) -> None:
-    print(f"\n[{label}] status={result.get('status')} success={result.get('success')}")
+    status = result.get("status")
+    print(f"\n[{label}] status={status} success={status == 'succeeded'}")
     print(result.get("message", ""))
     if result.get("error_code"):
         print(f"error_code={result['error_code']}")
 
-    observation = result.get("observation")
+    data = result.get("data")
+    if not isinstance(data, dict):
+        data = result
+    observation = data.get("observation")
     if isinstance(observation, dict):
         surface = observation.get("surface") or {}
         print(
@@ -41,6 +45,14 @@ def _print_result(label: str, result: dict[str, typing.Any]) -> None:
                     "detection_stage": observation.get("detection_stage"),
                     "proposal_confidence": observation.get("proposal_confidence"),
                     "cascade": observation.get("cascade"),
+                    "capture_attempt": observation.get("capture_attempt"),
+                    "capture_attempt_reports": observation.get(
+                        "capture_attempt_reports"
+                    ),
+                    "target_mode": observation.get("target_mode"),
+                    "whole_fallback_sampling": observation.get(
+                        "whole_fallback_sampling"
+                    ),
                     "eligible_for_precision": observation.get("eligible_for_precision"),
                     "rejection_reasons": observation.get("rejection_reasons"),
                     "surface_center_m": surface.get("surface_center_m"),
@@ -55,36 +67,44 @@ def _print_result(label: str, result: dict[str, typing.Any]) -> None:
                 indent=2,
             ),
         )
-    elif "surface" in result:
-        surface = result.get("surface") or {}
+    elif "surface" in data:
+        surface = data.get("surface") or {}
         print(
             "surface:",
             json.dumps(
                 {
-                    "eligible_for_precision": result.get("eligible_for_precision"),
-                    "detection_stage": result.get("detection_stage"),
-                    "proposal_confidence": result.get("proposal_confidence"),
-                    "cascade": result.get("cascade"),
-                    "rejection_reasons": result.get("rejection_reasons"),
+                    "eligible_for_precision": data.get("eligible_for_precision"),
+                    "detection_stage": data.get("detection_stage"),
+                    "proposal_confidence": data.get("proposal_confidence"),
+                    "cascade": data.get("cascade"),
+                    "capture_attempt": data.get("capture_attempt"),
+                    "capture_attempt_reports": data.get(
+                        "capture_attempt_reports"
+                    ),
+                    "target_mode": data.get("target_mode"),
+                    "whole_fallback_sampling": data.get(
+                        "whole_fallback_sampling"
+                    ),
+                    "rejection_reasons": data.get("rejection_reasons"),
                     "surface_center_m": surface.get("surface_center_m"),
                     "surface_normal_base": surface.get("surface_normal_base"),
                     "long_edge_axis_base": surface.get("long_edge_axis_base"),
                     "short_dimension_m": surface.get("short_dimension_m"),
                     "long_dimension_m": surface.get("long_dimension_m"),
-                    "overlay_ref": result.get("overlay_ref"),
-                    "observation_ref": result.get("observation_ref"),
+                    "overlay_ref": data.get("overlay_ref"),
+                    "observation_ref": data.get("observation_ref"),
                 },
                 ensure_ascii=False,
                 indent=2,
             ),
         )
 
-    if "end_effector_goal" in result:
+    if "end_effector_goal" in data:
         print(
             "end_effector_goal:",
-            json.dumps(result["end_effector_goal"], ensure_ascii=False),
+            json.dumps(data["end_effector_goal"], ensure_ascii=False),
         )
-        plan = result.get("grasp_plan") or result.get("plan", {}).get("grasp_plan") or {}
+        plan = data.get("grasp_plan") or data.get("plan", {}).get("grasp_plan") or {}
         print(
             "grasp_plan:",
             json.dumps(
@@ -100,22 +120,22 @@ def _print_result(label: str, result: dict[str, typing.Any]) -> None:
                 indent=2,
             ),
         )
-    if result.get("motion"):
-        print("motion:", json.dumps(result["motion"], ensure_ascii=False))
-    if result.get("plan_result"):
+    if data.get("motion"):
+        print("motion:", json.dumps(data["motion"], ensure_ascii=False))
+    if data.get("plan_result"):
         print(
             "replan_result:",
-            json.dumps(result["plan_result"], ensure_ascii=False, indent=2),
+            json.dumps(data["plan_result"], ensure_ascii=False, indent=2),
         )
-    if "position_error_m" in result:
+    if "position_error_m" in data:
         print(
             "pose verification:",
             json.dumps(
                 {
-                    "position_error_m": result.get("position_error_m"),
-                    "orientation_error_deg": result.get("orientation_error_deg"),
-                    "pose_matched": result.get("pose_matched"),
-                    "grasp_completed": result.get("grasp_completed"),
+                    "position_error_m": data.get("position_error_m"),
+                    "orientation_error_deg": data.get("orientation_error_deg"),
+                    "pose_matched": data.get("pose_matched"),
+                    "grasp_completed": data.get("grasp_completed"),
                 },
                 ensure_ascii=False,
             ),
@@ -170,6 +190,10 @@ def main(argv: list[str] | None = None) -> int:
     from sdk_wrapper.dev.robot_tools.charger_yolo import ChargerYoloTool
 
     toolhub.configure(mock=bool(args.mock), force=True)
+    if not args.mock:
+        import atexit
+
+        atexit.register(toolhub.shutdown)
     mode = toolhub.describe()
     print(
         f"mode={mode.get('mode')} adapter={mode.get('adapter')} "
@@ -189,19 +213,19 @@ def main(argv: list[str] | None = None) -> int:
     if args.stage == "detect":
         result = charger_tool.segment_charger_top_wrist().to_dict()
         _print_result("detect", result)
-        return 0 if result.get("success") else 1
+        return 0 if result.get("status") == "succeeded" else 1
 
     if args.stage == "plan":
         result = grasp_tool.plan_wrist_charger_pregrasp().to_dict()
         _print_result("plan", result)
-        return 0 if result.get("success") else 1
+        return 0 if result.get("status") == "succeeded" else 1
 
     # Re-observe and preflight IK before asking the operator to authorize motion.
     # Otherwise a failed fresh observation looks like an unexplained rejection
     # after the operator has already typed MOVE.
     preflight = grasp_tool.plan_wrist_charger_pregrasp().to_dict()
     _print_result("move_preflight", preflight)
-    if not preflight.get("success"):
+    if preflight.get("status") != "succeeded":
         print("预检未通过，未要求 MOVE，也未下发运动。")
         return 1
 
@@ -212,7 +236,7 @@ def main(argv: list[str] | None = None) -> int:
         operator_confirmed=True
     ).to_dict()
     _print_result("move", result)
-    return 0 if result.get("success") else 1
+    return 0 if result.get("status") == "succeeded" else 1
 
 
 if __name__ == "__main__":

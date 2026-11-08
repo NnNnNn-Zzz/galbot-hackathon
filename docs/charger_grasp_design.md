@@ -104,8 +104,38 @@ find_power_strip
 6. 到达抓取高度后闭合夹爪，闭合宽度以实测短边尺寸和夹爪标定为准。当前 G1 没有可靠夹持反馈，闭合成功不能等同于抓住。
 7. 沿 `+N` 小步抬起，重新检测；目标随夹爪移动且表面稳定后才报告抓取成功，否则进入恢复流程。
 
+### 6.1 `charger_whole` ROI 与上表面回退
+
+腕部精定位采用两级模型：
+
+```text
+charger_whole 分割
+  -> 完整充电器掩码与 ROI
+  -> ROI 内运行旧 charger 上表面分割
+  -> 成功：以上表面掩码拟合平面、中心和夹爪轴
+  -> 失败：保留 charger_whole 掩码，随机采样局部目标
+```
+
+整体模型始终先运行，不会因为旧上表面模型漏检而丢失目标。旧模型在裁剪 ROI
+内的掩码必须与整体掩码有足够包含关系，并回投到原图分辨率。若旧模型找不到
+上表面，或找到了但三维几何不满足门槛，`whole_fallback` 会对整体掩码做以下
+处理后生成候选取点：
+
+1. 排除整体掩码边缘带，避免把物体轮廓外缘作为目标；
+2. 在有效 D405 深度像素中做可复现的随机采样；
+3. 对每个采样点拟合局部平面，只接受点数足够、RMS 低且法向朝上的候选；
+4. 从通过门槛的候选里随机选一个，使用整体掩码平面估计长轴和尺寸；
+5. 仍执行深度有效率、触边、标定、坐标系和 IK 安全检查后才生成末端位姿。
+
+回退结果的 `target_mode=whole_mask_random_sample`，并在
+`whole_fallback_sampling` 中记录随机种子、尝试次数、拒绝计数和选中的像素。
+随机采样不等同于旧上表面精定位，但提供了明确、可审计的退化路径，不再因旧
+模型漏检直接拒绝整个任务。
+
 ## 7. 当前已实现（第一阶段）
 
+- 已训练五折 `charger_whole` 分割模型，选中 Fold 4（Mask mAP50 `0.9886`、Mask mAP50-95 `0.6800`），用于完整充电器检测和 ROI 划分。
+- 腕部流程已实现“整体 ROI -> 旧上表面模型 -> 整体掩码随机采样回退”；两种路径共用现有 D405 几何、坐标变换、末端位姿规划和运动安全闸门。
 - 头部 `power_strip` 检测工具 `PowerStripYoloTool.detect_power_strip_head()`：当前选择 `/home/mr/yoloseg/runs/yolo11n_detect/weights/best.pt`，单类 `power_strip`；训练集 35 张 / 验证集 9 张，验证 `mAP50(B)=0.995`、`mAP50-95(B)=0.581`。输出只到方向/靠近候选，`grasp_coordinate` 明确为 null。
 - `PowerStripYoloTool.track_power_strip_head()` 使用 YOLO track ID 保持同一个 strip 目标；目标 ID 连续丢失会阻止继续导航。
 - `ChargerSearchTool` 串联“米制 strip 目标 -> 安全检查 -> SLAM 观察位 -> 导航期间 track -> 头部 charger 3D -> 腕部相机垂直摆位”。

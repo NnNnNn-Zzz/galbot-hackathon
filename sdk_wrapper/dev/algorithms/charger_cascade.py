@@ -1,9 +1,9 @@
-"""Two-stage charger YOLO proposal and ROI refinement.
+"""Two-stage charger YOLO segmentation.
 
-The clean segmentation model is the precision authority. If it has no stable
-full-frame detection, a high-recall proposal model may identify candidate ROIs,
-but those proposals remain explicitly marked and cannot be promoted to grasp
-coordinates without a clean mask from the refinement stage.
+``CascadeChargerSegmentationBackend`` is the legacy precision-first cascade.
+``WholeRoiTopSurfaceBackend`` implements the current flow: detect the complete
+charger first, run the legacy top-surface model inside each detected ROI, and
+retain the complete-charger mask as a fallback target.
 """
 
 from __future__ import annotations
@@ -19,7 +19,10 @@ from sdk_wrapper.dev.algorithms.charger_yolo import (
     YoloInstance,
 )
 
-__all__ = ["CascadeChargerSegmentationBackend"]
+__all__ = [
+    "CascadeChargerSegmentationBackend",
+    "WholeRoiTopSurfaceBackend",
+]
 
 
 class CascadeChargerSegmentationBackend:
@@ -313,6 +316,270 @@ class CascadeChargerSegmentationBackend:
             "proposal_only_count": sum(
                 item.stage == "proposal_only" for item in results
             ),
+        }
+        return results
+
+    def predict(self, bgr: np.ndarray) -> list[YoloInstance]:
+        """Compatibility entry point: wrist precision by default."""
+        return self.predict_cascade(bgr, purpose="precision")
+
+
+class WholeRoiTopSurfaceBackend:
+    """Whole-charger ROI detection followed by legacy top-surface segmentation.
+
+    Every precision result carries both the top-surface candidate and the whole
+    charger candidate when available. The tool layer prefers a geometrically
+    valid top surface and can fall back to randomized sampling inside the whole
+    mask when the legacy model or its surface fit is unusable.
+    """
+
+    def __init__(
+        self,
+        roots: typing.Sequence[str | os.PathLike[str]],
+        *,
+        whole_weights: str | os.PathLike[str],
+        top_surface_weights: str | os.PathLike[str],
+        whole_target_class: str = "charger_whole",
+        top_surface_target_class: str = "charger",
+        whole_confidence: float = 0.30,
+        top_surface_confidence: float = 0.05,
+        imgsz: int = 640,
+        iou: float = 0.45,
+        device: str = "cpu",
+        roi_margin: float = 0.20,
+        proposal_limit: int = 3,
+        min_bbox_iou: float = 0.15,
+        min_mask_containment: float = 0.50,
+        whole_backend: typing.Any = None,
+        top_surface_backend: typing.Any = None,
+    ) -> None:
+        self.roots = [os.fspath(root) for root in roots]
+        self.whole_weights = os.fspath(whole_weights)
+        self.top_surface_weights = os.fspath(top_surface_weights)
+        self.whole_target_class = str(whole_target_class)
+        self.top_surface_target_class = str(top_surface_target_class)
+        self.whole_confidence = float(whole_confidence)
+        self.top_surface_confidence = float(top_surface_confidence)
+        self.imgsz = int(imgsz)
+        self.iou = float(iou)
+        self.device = str(device)
+        self.roi_margin = max(0.0, float(roi_margin))
+        self.proposal_limit = max(1, int(proposal_limit))
+        self.min_bbox_iou = float(min_bbox_iou)
+        self.min_mask_containment = max(0.0, min(1.0, float(min_mask_containment)))
+        self.last_report: dict[str, typing.Any] = {}
+
+        self._whole_backend = whole_backend or UltralyticsYoloBackend(
+            self.roots,
+            weights=self.whole_weights,
+            target_class=self.whole_target_class,
+            required_task="segment",
+            imgsz=self.imgsz,
+            confidence=self.whole_confidence,
+            iou=self.iou,
+            device=self.device,
+        )
+        self._top_surface_backend = top_surface_backend or UltralyticsYoloBackend(
+            self.roots,
+            weights=self.top_surface_weights,
+            target_class=self.top_surface_target_class,
+            required_task="segment",
+            imgsz=self.imgsz,
+            confidence=self.top_surface_confidence,
+            iou=self.iou,
+            device=self.device,
+        )
+
+    def describe(self) -> dict[str, typing.Any]:
+        return {
+            "strategy": "whole_roi_then_top_surface",
+            "weights": dict(self._whole_backend.describe()),
+            "top_surface_weights": dict(self._top_surface_backend.describe()),
+            "whole_confidence": self.whole_confidence,
+            "top_surface_confidence": self.top_surface_confidence,
+            "roi_margin": self.roi_margin,
+            "imgsz": self.imgsz,
+            "device": self.device,
+        }
+
+    @staticmethod
+    def _with_stage(
+        instance: YoloInstance,
+        stage: str,
+        proposal_confidence: float | None = None,
+        *,
+        bbox_xyxy=None,
+        mask: np.ndarray | None = None,
+    ) -> YoloInstance:
+        return YoloInstance(
+            class_id=int(instance.class_id),
+            class_name=str(instance.class_name),
+            confidence=float(instance.confidence),
+            bbox_xyxy=tuple(
+                float(value)
+                for value in (
+                    instance.bbox_xyxy if bbox_xyxy is None else bbox_xyxy
+                )
+            ),
+            mask=instance.mask if mask is None else mask,
+            track_id=instance.track_id,
+            stage=stage,
+            proposal_confidence=proposal_confidence,
+        )
+
+    def _dedupe_whole(self, instances: list[YoloInstance]) -> list[YoloInstance]:
+        selected: list[YoloInstance] = []
+        for instance in sorted(
+            (item for item in instances if item.mask is not None),
+            key=lambda item: float(item.confidence),
+            reverse=True,
+        ):
+            if any(
+                CascadeChargerSegmentationBackend._bbox_iou(
+                    instance.bbox_xyxy,
+                    previous.bbox_xyxy,
+                )
+                >= 0.60
+                for previous in selected
+            ):
+                continue
+            selected.append(instance)
+            if len(selected) >= self.proposal_limit:
+                break
+        return selected
+
+    @staticmethod
+    def _promote_top_surface(
+        instance: YoloInstance,
+        origin: tuple[int, int],
+        image_shape: tuple[int, ...],
+        whole: YoloInstance,
+    ) -> YoloInstance | None:
+        if instance.mask is None:
+            return None
+        x_offset, y_offset = origin
+        source_mask = np.asarray(instance.mask, dtype=bool)
+        mask = np.zeros(image_shape[:2], dtype=bool)
+        height, width = source_mask.shape[:2]
+        target_x2 = min(image_shape[1], x_offset + width)
+        target_y2 = min(image_shape[0], y_offset + height)
+        if target_x2 <= x_offset or target_y2 <= y_offset:
+            return None
+        mask[y_offset:target_y2, x_offset:target_x2] = source_mask[
+            : target_y2 - y_offset,
+            : target_x2 - x_offset,
+        ]
+        x1, y1, x2, y2 = [float(value) for value in instance.bbox_xyxy]
+        return WholeRoiTopSurfaceBackend._with_stage(
+            instance,
+            "top_surface",
+            float(whole.confidence),
+            bbox_xyxy=(
+                x1 + x_offset,
+                y1 + y_offset,
+                x2 + x_offset,
+                y2 + y_offset,
+            ),
+            mask=mask,
+        )
+
+    def _top_surface_in_roi(
+        self,
+        image: np.ndarray,
+        whole: YoloInstance,
+    ) -> YoloInstance | None:
+        whole_mask = np.asarray(whole.mask, dtype=bool)
+        x1, y1, x2, y2 = [
+            int(round(float(value))) for value in whole.bbox_xyxy
+        ]
+        width = max(1, x2 - x1)
+        height = max(1, y2 - y1)
+        pad_x = max(8, int(width * self.roi_margin))
+        pad_y = max(8, int(height * self.roi_margin))
+        crop_x1 = max(0, x1 - pad_x)
+        crop_y1 = max(0, y1 - pad_y)
+        crop_x2 = min(image.shape[1], x2 + pad_x)
+        crop_y2 = min(image.shape[0], y2 + pad_y)
+        crop = image[crop_y1:crop_y2, crop_x1:crop_x2]
+        if crop.size == 0:
+            return None
+
+        candidates: list[tuple[float, float, YoloInstance]] = []
+        for instance in self._top_surface_backend.predict(crop):
+            if instance.mask is None:
+                continue
+            promoted = self._promote_top_surface(
+                instance,
+                (crop_x1, crop_y1),
+                image.shape,
+                whole,
+            )
+            if promoted is None or promoted.mask is None:
+                continue
+            bbox_iou = CascadeChargerSegmentationBackend._bbox_iou(
+                whole.bbox_xyxy,
+                promoted.bbox_xyxy,
+            )
+            top_area = int(np.count_nonzero(promoted.mask))
+            if top_area <= 0:
+                continue
+            contained = int(np.count_nonzero(promoted.mask & whole_mask))
+            containment = contained / float(top_area)
+            if (
+                bbox_iou < self.min_bbox_iou
+                and containment < self.min_mask_containment
+            ):
+                continue
+            candidates.append((containment, float(promoted.confidence), promoted))
+        if not candidates:
+            return None
+        candidates.sort(key=lambda item: (item[0], item[1]), reverse=True)
+        return candidates[0][2]
+
+    def predict_cascade(
+        self,
+        bgr: np.ndarray,
+        *,
+        purpose: str,
+    ) -> list[YoloInstance]:
+        image = np.asarray(bgr)
+        if image.ndim != 3 or image.dtype != np.uint8:
+            raise ValueError("bgr must be HxWx3 uint8")
+        wholes = self._dedupe_whole(self._whole_backend.predict(image))
+        results: list[YoloInstance] = []
+        top_count = 0
+        fallback_count = 0
+        for whole in wholes:
+            if purpose != "precision":
+                results.append(
+                    self._with_stage(
+                        whole,
+                        "refined",
+                        float(whole.confidence),
+                        mask=whole.mask,
+                    )
+                )
+                continue
+
+            top = self._top_surface_in_roi(image, whole)
+            if top is not None:
+                results.append(top)
+                top_count += 1
+            if whole.mask is not None:
+                fallback = self._with_stage(
+                    whole,
+                    "whole_fallback",
+                    float(whole.confidence),
+                    mask=whole.mask,
+                )
+                results.append(fallback)
+                fallback_count += 1
+
+        self.last_report = {
+            "strategy": "whole_roi_top_surface",
+            "whole_count": len(wholes),
+            "top_surface_count": top_count,
+            "whole_fallback_count": fallback_count,
         }
         return results
 

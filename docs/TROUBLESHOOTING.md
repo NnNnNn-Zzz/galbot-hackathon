@@ -108,6 +108,8 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 - **修复**：先备份 `/home/galbot/galbot-camera-shots/robot_server.py` 与对应的 user unit，再执行 `systemctl --user daemon-reload && systemctl --user restart galbot-camera-robot.service`。该操作只重启只读相机桥，不发送机器人运动或夹爪命令。
 - **验证**：2026-11-08 重启后队列恢复为 `0/5`，主页返回 HTTP 200，认证后的 `/health` 以及左右腕 `/frame/*` 均返回 JPEG；腕部实例分割状态为 `ready`。后续若再次出现 `5/5`，应同时检查前端轮询和单个请求是否阻塞，不能无限重启掩盖问题。
 
+  `8092` 服务与正式 ToolHub 使用不同的权重配置入口。正式配置切到 `charger_whole` 后，页面仍可能继续加载旧 `charger_seg_clean_v2`，因为服务进程只在启动时读取自己的默认权重。诊断时先读取认证后的 `/api/info.segmentation.weights` 和 `strategy`，再与 `sdk_wrapper/dev/config/charger_yolo.json` 对照；如果 phase 不一致，需要更新 `/home/galbot/galbot-camera-shots/robot_server.py` 的默认模型并重启服务。2026-11-08 已将页面服务改为复用 `WholeRoiTopSurfaceBackend`，`/api/info` 验证为 `charger_seg_whole_final -> charger_seg_clean_v2`，策略 `whole_roi_top_surface`。
+
 ### 夹爪碰到物体后继续收窄会返回 `TIMEOUT`（2026-11-08）
 
 - **现象**：右手夹爪夹住约 2 cm 宽的充电器时，先后请求 1.8 cm 和 1.6 cm 开度，`set_gripper` 均返回 `control_status: TIMEOUT`、`success: false`；现场确认 1.6 cm 指令后夹持已足够紧。返回结果只保留请求值，没有实际夹爪开度反馈。
@@ -166,6 +168,7 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 
   `clean_v2` 的离线结果也需要谨慎解读：数据集只有 54 张训练图（50 张正样本、4 张负样本）和 13 张验证图（12 张正样本、1 张负样本），且 `split.json` 是按帧随机抽取，不是按连续拍摄会话分组。640 输入下 `conf=0.20` 时验证集为 12/12，但 `conf=0.25` 时漏掉最高分为 `0.2168` 的 `charger_0026`；改到 960 输入反而只有 7/12，因此不能用“提高 imgsz”或只看随机验证集 mAP 解决真实场景召回。
 - **处理方案**：当前演示若要求立即检测，应恢复 `yolo11n_seg_charger_v2` 或做双模型/旧模型召回兜底；继续使用 clean 权重时，必须把当前腕部失败帧、不同距离、不同滚动角、插头在视野左右两侧的样本与旧数据中的有效正样本混合训练，并按拍摄会话分组验证。不要只把全局 `confidence` 降到一个很低值：它会同时引入背景误检。模型替换后必须对当前真实腕部帧做固定阈值扫描，并同时检查负样本误检，不能只看单一验证集 mAP。
+- **后续修复（2026-11-08）**：已改为 `charger_whole` 整体模型先行划定 ROI，再在 ROI 内调用 clean 上表面模型；旧模型漏检或上表面几何不可用时，保留整体掩码并随机采样有效深度点，每个采样点仍须通过局部平面 RMS、法向朝上、深度有效率、触边和 IK 检查。真实右腕冒烟中整体模型置信度 `0.496`，旧上表面模型无可接受结果，回退采样得到 `uv=[658,496]` 且深度有效率 `92.5%`。这解决“有整体目标却因旧上表面漏检直接失败”的问题。
 - **验证**：2026-11-08 用当前右腕原图和 clean 验证集完成旧/新权重对照、阈值扫描、640/960 输入对照及目标裁剪复核；clean_v2 没有达到当前生产门槛，旧 v2 在同一 640 输入下有约 `0.593` 的有效目标框。
 
 ### charger `move` 在确认后重新规划失败（2026-11-08）
@@ -175,6 +178,22 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 - **验证**：对同一保存观测直接生成 pre-grasp，并做左臂碰撞感知只读 IK，返回 `SUCCESS`、目标旋转约 `34.8°`，说明左臂可达性和运动规划不是阻碍；拒绝来自过严的表面倾角门槛。
 - **修复**：最大表面倾角从 `30°` 调整为 `50°`，仍低于此前约 `60.9°` 的侧面误检；`--stage move` 改为先重新观测、生成位姿并做 IK 预检，全部通过后才要求输入 `MOVE`。通过预检的位姿在 15 秒内直接复用，不会再因为输入确认后重新拍照导致第二次拒绝；超时后才重新规划。预检失败时直接退出，失败输出会打印嵌套观测及具体拒绝原因。
 - **验证结果与边界**：2026-11-08 本地 105 项单测通过；同一 `08:39` 观测放开到 `50°` 后几何合格，左臂碰撞感知 IK 有解。复核时实时画面已没有 charger，`move` 在预检阶段直接退出，未要求 `MOVE`，也未下发真机动作。此前一次 `moving` 拒绝是动作前状态门槛，连续复读后机器人已回到 `idle`，不是规划失败。
+
+### 腕部 charger 测试成功但打印 `success=None`、退出码 1 且没有观测详情（2026-11-08）
+
+- **现象**：真机 `--stage detect` 的工具结果实际为 `status=succeeded`，但脚本打印 `success=None`、进程退出码 1，并且不显示 `surface`、检测阶段或后备采样坐标；容易被误判为识别失败。
+- **确认原因**：`ToolResult.to_dict()` 按统一协议把业务字段放在 `data` 下，且顶层没有 `success`，状态字段只有 `status`。`test_charger_wrist_pregrasp.py` 仍按旧扁平结构读取 `result["surface"]` / `result["observation"]`，并用不存在的 `result["success"]` 决定退出码。
+- **诊断**：对工具返回值执行 `print(result.to_dict().keys())`，会得到固定的 `status/mode/message/task_id/data/error_code`；`status == "succeeded"` 时业务观测在 `result["data"]`，顶层 `success` 必然不存在。
+- **修复**：现场脚本统一从 `data` 读取观测、位姿和动作结果，用 `status == "succeeded"` 判断成功；新增脚本输出回归测试。修复后 `detect/plan/move` 的退出码与工具协议一致，并会打印 `target_mode`、`whole_fallback_sampling` 和采样像素。
+- **验证**：新增回归测试后本地全量 116 项单测通过。真机右腕已运行到整体掩码随机采样路径；重新部署修正版脚本后只识别阶段退出 0 并显示采样详情。
+
+### 腕部冷启动首帧偶发 `not_ready`，紧接着独立取图可正常识别（2026-11-08）
+
+- **现象**：同一场景连续执行右腕 `detect`，第一次识别成功并生成目标；随后一次 `plan` 和一次 `detect` 都在“没有候选”处返回 `not_ready`。立即用 `capture_right_wrist()` 取 Current RGB，画面中 charger 清晰可见；同一张图离线运行 `charger_whole` 得到最高置信度 `0.9088`。
+- **原因状态**：**假设**为新进程初始化右腕相机后，单次 `_grab()` 偶发拿到尚未稳定的首帧；现有证据排除了模型权重、类别和当前场景遮挡，但尚未逐帧保存并对比 SDK 原始首帧，因此不把原因写成已确认。
+- **诊断**：失败时同时保存 `capture_id`、RGB 和检测报告；若紧接着的独立取图清晰且离线模型高置信度命中，检查进程启动后的前几帧，而不是立即下调生产置信度。
+- **修复**：腕部精定位新增有界重试，默认最多 5 次、间隔 `0.5 s`；`_grab()` 抛出的空 payload 也属于重试范围。每次重新取 RGB-D 和运行两级模型，结果记录在 `capture_attempt` / `capture_attempt_reports`；脚本在真机退出时注册 `toolhub.shutdown()`，确保下一次进程能重新初始化相机。头部交接仍只取一帧，避免改变任务时序。
+- **验证**：新增“模型首帧空”和“adapter 首帧空 payload”两类回归测试；本地全量 117 项单测通过。重新部署后必须连续执行多次真机 `detect`，确认 `capture_attempt > 1` 时能够恢复，且真实无目标时仍在 5 次后返回 `not_ready`。
 
 ### `collision_check=True` 不等于机械臂会绕开桌子（2026-11-08）
 
