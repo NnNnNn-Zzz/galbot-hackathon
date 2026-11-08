@@ -1,18 +1,18 @@
 {
   "note": [
     "YOLO-seg charger-top tool configuration.",
-    "weights=null discovers the newest best.pt under model_search_roots, then validates task=segment and class=charger before use.",
+    "Explicit weights select the charger_whole segmentation model; cascade recall is disabled for this class transition.",
     "These quality thresholds are initial safety gates, not calibrated grasp tolerances."
   ],
   "model_search_roots": [
     "/home/mr/yoloseg/runs",
     "~/yoloseg/runs"
   ],
-  "weights": "~/yoloseg/runs/charger_seg_clean_v2/weights/best.pt",
-  "target_class": "charger",
+  "weights": "~/yoloseg/runs/charger_seg_whole_v1/weights/best.pt",
+  "target_class": "charger_whole",
   "required_task": "segment",
   "cascade": {
-    "enabled": true,
+    "enabled": false,
     "proposal_weights": "~/yoloseg/runs/yolo11n_seg_charger_v2/weights/best.pt",
     "refine_confidence": 0.01,
     "full_accept_confidence": 0.2,
