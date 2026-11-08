@@ -1,0 +1,377 @@
+{
+  "name": "drawer.exp2_visual_grasp_return",
+  "description": "实验 2 · 真机版：从 P0 起，视觉识别 → 竖直下探 42 cm 夹取抽屉内药盒 → 原路回撤到 P0（夹爪保持咬合 7.5 cm）→ P1 → P2 → 抱持位。去程下探 10 段 + 回撤 10 段 + 回程 37 段，共 57 段；全程 0 底盘运动、0 左臂运动。",
+  "version": 1,
+  "experiment": {
+    "layer": 2,
+    "start_point": "P0_measured",
+    "mock_scene": "drawer_p0",
+    "goal": "验证『P0 竖直下探能进抽屉内腔并夹住药盒，再带着盒子原路撤回抱持位』这条完整作业链，为接入 YOLO/视觉定位后的自动化打好运动学基础。",
+    "scope": "右臂 + 右夹爪。不含底盘转向、不含投放、不含左臂。视觉段只做识别与存证，不驱动位姿修正（无可靠的手眼标定）。",
+    "prerequisite": "实验 1 已通过，且手臂当前就停在 P0（±2°，由 gate_at_p0 硬门判定）。",
+    "direction_rationale": "去程 CARRY→P2→P1→P0 已由实验 1 在真机验证（37/37 段）。本实验到此为止不重走去程，直接接 P0 往下；回程是实验 1 那条链的严格倒序，构型集合完全相同，所以跨度与限位余量也被实验 1 一并验证过了。",
+    "pass_criteria": [
+      "起始位硬门通过：起跑时已在 P0_measured ≤2.0°",
+      "下探 10 段 + 回撤 10 段 + 回程 37 段，共 57 段全部到位，每段关节偏差 ≤3.0°",
+      "每段跨度 max < 90°（本链最大 15.0°，来自实验 1 的 IK 分支尾差）",
+      "合爪后回读宽度落在 0.060–0.090 m（用户要求咬合维持 7.5 cm），且 ≥0.055 m 硬下限",
+      "回撤到 P0 后、以及回到抱持位后，回读宽度仍在该区间（= 盒子全程没掉）",
+      "收尾停在抱持位 CARRY_home，不产生任何后续运动指令"
+    ],
+    "expected_outcome": "总状态 ok；手臂回到抱持位；夹爪回读约 7.5 cm；视觉若未配后端则记 verified=False。",
+    "measured_spans_deg": {
+      "P0_measured->VIA_P0_DIVE_1": 5.1,
+      "下探段单段最大（离线 IK）": 5.15,
+      "VIA_P0_DIVE_10->P0_measured（回撤末段）": 5.15,
+      "P0_measured->VIA_P1_P0_6": 13.3,
+      "P1->P2 关节lerp 单段": 14.2,
+      "P2->CARRY 单段最大": 15.0
+    },
+    "known_constraints": {
+      "下探深度是配置值，不是视觉给的": "0.42 m 是按『药盒立在内腔底面上、TCP 抓盒腰』估的。现场必须量内腔底面高度与药盒高度，用 `tools/drawer_calib/_plan_exp2_dive.py --depth <m> --steps 10 --write` 重生成点位。",
+      "抽屉顶板是否挡竖直通道未实测": "占位盒按 z 上限 1.05 m 估。若外壳顶更高，竖直下探会在 VIA_P0_DIVE_5 前后撞顶，表现为该段 SUCCESS 但回读偏差超容差，或规划器直接 FAULT。",
+      "带载回程净空靠估": "TCP 在抽屉占位盒内腔上方时，最小竖向余量 8.37 cm（VIA_P1_P0_4，z=1.134 vs 盒顶 1.05）。盒子若从 TCP 下垂 >8 cm 就会刮到盒顶。盒子实际外廓未量。",
+      "P0 不能上抬": "想先抬 5 cm 再回程是**不可行**的：离线 IK 显示上抬 3 cm 就把 j7 用到限位（余量 0.0°），因为 P0 本身 j7 只剩 4.4°。所以回程严格按原路，不加上抬。"
+    },
+    "site_assumption": "沿用用户 2026-11-08 09:52 的净空场地假设：不做连杆级/环境级碰撞检测，抽屉占位盒只作 TCP 参考。下探段**主动进入**占位盒范围（那是伸进抽屉），属预期。",
+    "exit_policy": "跑完一个周期停在抱持位 CARRY_home，夹着药盒不动；不自动张爪、不自动投放、不自动归位。后续投放由实验 3 或人工决定。",
+    "failure_taxonomy": {
+      "SAFETY_ABORT": "起始位不在 P0（gate）/ 某段跨度 ≥90° / 某点贴限位 <2°",
+      "NO_TARGET": "合爪后回读宽度 <0.055 m = 夹空，药盒不在爪心（下探深度或 xy 偏了）",
+      "NOT_VERIFIED": "回读宽度不在 0.060–0.090 m / 读不到夹爪宽度 / 视觉 gate 不通过",
+      "UNDETERMINED": "读不到关节角或夹爪宽度 —— 不猜、也不再发动作"
+    }
+  },
+  "notes": [
+    "⚠️ VIA_P0_DIVE_* 全部是离线 IK（tools/drawer_calib/_plan_exp2_dive.py），零实测。",
+    "⚠️ 执行前必须已停在 P0：先 scripts/home_to_carry.py --yes 回正，再跑实验 1 到达 P0。gate_at_p0 会在偏差 >2° 时零运动退出。",
+    "⚠️ 合爪指令是 0.02 m（不是 0.075 m）。真机上夹爪合到盒厚就停住，回读 0.075 才是『咬住了』的证据；命令 0.075 时空爪与夹住无法区分。可观测结果仍是咬合 7.5 cm。",
+    "⚠️ 视觉默认 advisory：没配 VLM Key 时结论记 verified=False，但**不拦路**。配置里带了 static_verdict，只有在 mock 上才会生效（真机上会被忽略）。",
+    "⚠️ 本实验不做视觉位姿修正：腕部 RGB-D 的 depth_alignment=unverified、头部 depth_sensor=null，没有可信的手眼标定，任何「按视觉纠偏」都是赌。",
+    "速度统一 0.15 rad/s，手放急停。"
+  ],
+  "steps": [
+    {
+      "id": "preflight",
+      "stage": "preflight",
+      "non_fatal": true
+    },
+    {
+      "id": "snap_start",
+      "stage": "exp_arm_snapshot",
+      "params": {
+        "label": "START",
+        "chain": "right_arm",
+        "gripper_side": "right",
+        "fail_on_tight": false
+      }
+    },
+    {
+      "id": "gate_at_p0",
+      "stage": "exp_gate_start",
+      "params": {
+        "at": "P0_measured",
+        "file": "pipeline/configs/teach_drawer_real.json",
+        "chain": "right_arm",
+        "tolerance_deg": 2.0,
+        "gripper_side": "right",
+        "_comment": "实验 1 的终点是 P0。手臂可能被拖过/被遥操作占过，所以实测比对；不在 P0 就一条运动指令都不发。"
+      }
+    },
+    {
+      "id": "vision_check",
+      "stage": "exp_vision_check",
+      "params": {
+        "camera": "head_left",
+        "tag": "exp2_grasp",
+        "policy": "advisory",
+        "backend": "",
+        "static_verdict": {
+          "ok": true,
+          "box_present": true,
+          "graspable": true,
+          "offset_x_cm": 0.0,
+          "offset_y_cm": 0.0,
+          "confidence": 0.9,
+          "reason": "mock 静态桩：仅用于把 gate 分支也跑一遍，真实运行请在配置里删掉 static_verdict 或配 VLM Key"
+        },
+        "_comment": "默认 advisory：视觉只记录不拦路，结论里 verified=False。要视觉把关就把 policy 改成 gate。"
+      }
+    },
+    {
+      "id": "open_gripper",
+      "stage": "exp_grip",
+      "params": {
+        "action": "open",
+        "side": "right",
+        "label": "open_before_dive",
+        "width_m": 0.1
+      }
+    },
+    {
+      "id": "dive_to_grasp",
+      "stage": "exp_replay_chain",
+      "params": {
+        "chain": "right_arm",
+        "speed_rad_s": 0.15,
+        "tolerance_deg": 3.0,
+        "settle_s": 0.4,
+        "gripper_side": "right",
+        "stop_on_fail": true,
+        "block_danger_span": true,
+        "require_fresh_joints": false,
+        "file": "pipeline/configs/teach_drawer_real.json",
+        "points": [
+          "VIA_P0_DIVE_1",
+          "VIA_P0_DIVE_2",
+          "VIA_P0_DIVE_3",
+          "VIA_P0_DIVE_4",
+          "VIA_P0_DIVE_5",
+          "VIA_P0_DIVE_6",
+          "VIA_P0_DIVE_7",
+          "VIA_P0_DIVE_8",
+          "VIA_P0_DIVE_9",
+          "VIA_P0_DIVE_10"
+        ],
+        "start_point": "P0_measured",
+        "_comment": "P0 竖直下探 10 段 × 4.2 cm，TCP z 1.2448 → 0.8248。x/y 锁死、姿态锁死为 P0 姿态，全部离线 IK（单段 ≤5.2°，最小限位余量 8.9°）。"
+      }
+    },
+    {
+      "id": "snap_at_grasp",
+      "stage": "exp_arm_snapshot",
+      "params": {
+        "label": "AT_GRASP",
+        "chain": "right_arm",
+        "gripper_side": "right",
+        "fail_on_tight": false
+      }
+    },
+    {
+      "id": "grasp_close",
+      "stage": "exp_grip",
+      "params": {
+        "action": "close",
+        "side": "right",
+        "label": "grasp",
+        "width_m": 0.02,
+        "effort": 10.0,
+        "expect_min_m": 0.06,
+        "expect_max_m": 0.09,
+        "hard_floor_m": 0.055
+      }
+    },
+    {
+      "id": "ascend_to_p0",
+      "stage": "exp_replay_chain",
+      "params": {
+        "chain": "right_arm",
+        "speed_rad_s": 0.15,
+        "tolerance_deg": 3.0,
+        "settle_s": 0.4,
+        "gripper_side": "right",
+        "stop_on_fail": true,
+        "block_danger_span": true,
+        "require_fresh_joints": false,
+        "file": "pipeline/configs/teach_drawer_real.json",
+        "points": [
+          "VIA_P0_DIVE_9",
+          "VIA_P0_DIVE_8",
+          "VIA_P0_DIVE_7",
+          "VIA_P0_DIVE_6",
+          "VIA_P0_DIVE_5",
+          "VIA_P0_DIVE_4",
+          "VIA_P0_DIVE_3",
+          "VIA_P0_DIVE_2",
+          "VIA_P0_DIVE_1",
+          "P0_measured"
+        ],
+        "start_point": "VIA_P0_DIVE_10",
+        "_comment": "倒序回放同一批构型（10 段）+ 末段回 P0_measured。构型集合与下行完全相同，故跨度/限位余量与下行一致。"
+      }
+    },
+    {
+      "id": "snap_back_p0",
+      "stage": "exp_arm_snapshot",
+      "params": {
+        "label": "AT_P0_HOLDING",
+        "chain": "right_arm",
+        "gripper_side": "right",
+        "fail_on_tight": false
+      }
+    },
+    {
+      "id": "hold_at_p0",
+      "stage": "exp_grip",
+      "params": {
+        "action": "check",
+        "side": "right",
+        "label": "hold_at_p0",
+        "expect_min_m": 0.06,
+        "expect_max_m": 0.09,
+        "hard_floor_m": 0.055
+      }
+    },
+    {
+      "id": "leg1_p0_to_p1",
+      "stage": "exp_replay_chain",
+      "params": {
+        "chain": "right_arm",
+        "speed_rad_s": 0.15,
+        "tolerance_deg": 3.0,
+        "settle_s": 0.4,
+        "gripper_side": "right",
+        "stop_on_fail": true,
+        "block_danger_span": true,
+        "require_fresh_joints": false,
+        "file": "pipeline/configs/teach_drawer_real.json",
+        "points": [
+          "VIA_P1_P0_6",
+          "VIA_P1_P0_5",
+          "VIA_P1_P0_4",
+          "VIA_P1_P0_3",
+          "VIA_P1_P0_2",
+          "VIA_P1_P0_1",
+          "P1_measured"
+        ],
+        "start_point": "P0_measured",
+        "_comment": "实验 1 leg3 倒序 7 段。起点 j7 余量只有 4.4°（P0 固有），第一步就离开它。"
+      }
+    },
+    {
+      "id": "snap_at_p1",
+      "stage": "exp_arm_snapshot",
+      "params": {
+        "label": "AT_P1",
+        "chain": "right_arm",
+        "gripper_side": "right",
+        "fail_on_tight": false
+      }
+    },
+    {
+      "id": "leg2_p1_to_p2",
+      "stage": "exp_replay_chain",
+      "params": {
+        "chain": "right_arm",
+        "speed_rad_s": 0.15,
+        "tolerance_deg": 3.0,
+        "settle_s": 0.4,
+        "gripper_side": "right",
+        "stop_on_fail": true,
+        "block_danger_span": true,
+        "require_fresh_joints": false,
+        "file": "pipeline/configs/teach_drawer_real.json",
+        "points": [
+          "VIA_P2_P1_11",
+          "VIA_P2_P1_10",
+          "VIA_P2_P1_9",
+          "VIA_P2_P1_8",
+          "VIA_P2_P1_7",
+          "VIA_P2_P1_6",
+          "VIA_P2_P1_5",
+          "VIA_P2_P1_4",
+          "VIA_P2_P1_3",
+          "VIA_P2_P1_2",
+          "VIA_P2_P1_1",
+          "P2_measured"
+        ],
+        "start_point": "P1_measured",
+        "_comment": "实验 1 leg2 倒序 12 段（关节 lerp；端点 j3 差 170° 属两支 IK 解）。"
+      }
+    },
+    {
+      "id": "snap_at_p2",
+      "stage": "exp_arm_snapshot",
+      "params": {
+        "label": "AT_P2",
+        "chain": "right_arm",
+        "gripper_side": "right",
+        "fail_on_tight": false
+      }
+    },
+    {
+      "id": "leg3_p2_to_carry",
+      "stage": "exp_replay_chain",
+      "params": {
+        "chain": "right_arm",
+        "speed_rad_s": 0.15,
+        "tolerance_deg": 3.0,
+        "settle_s": 0.4,
+        "gripper_side": "right",
+        "stop_on_fail": true,
+        "block_danger_span": true,
+        "require_fresh_joints": false,
+        "file": "pipeline/configs/teach_drawer_real.json",
+        "points": [
+          "VIA_CARRY_P2_17",
+          "VIA_CARRY_P2_16",
+          "VIA_CARRY_P2_15",
+          "VIA_CARRY_P2_14",
+          "VIA_CARRY_P2_13",
+          "VIA_CARRY_P2_12",
+          "VIA_CARRY_P2_11",
+          "VIA_CARRY_P2_10",
+          "VIA_CARRY_P2_9",
+          "VIA_CARRY_P2_8",
+          "VIA_CARRY_P2_7",
+          "VIA_CARRY_P2_6",
+          "VIA_CARRY_P2_5",
+          "VIA_CARRY_P2_4",
+          "VIA_CARRY_P2_3",
+          "VIA_CARRY_P2_2",
+          "VIA_CARRY_P2_1",
+          "CARRY_home"
+        ],
+        "start_point": "P2_measured",
+        "_comment": "实验 1 leg1 倒序 18 段，末端直线退回抱持位。"
+      }
+    },
+    {
+      "id": "snap_at_carry",
+      "stage": "exp_arm_snapshot",
+      "params": {
+        "label": "AT_CARRY",
+        "chain": "right_arm",
+        "gripper_side": "right",
+        "fail_on_tight": false
+      }
+    },
+    {
+      "id": "hold_at_carry",
+      "stage": "exp_grip",
+      "params": {
+        "action": "check",
+        "side": "right",
+        "label": "hold_at_carry",
+        "expect_min_m": 0.06,
+        "expect_max_m": 0.09,
+        "hard_floor_m": 0.055
+      }
+    },
+    {
+      "id": "verify_exp2",
+      "stage": "exp_verify_chain",
+      "params": {
+        "require_points": [
+          "VIA_P0_DIVE_10",
+          "P0_measured",
+          "P1_measured",
+          "P2_measured",
+          "CARRY_home"
+        ],
+        "max_err_deg": 3.0,
+        "min_limit_margin_deg": 2.0,
+        "max_span_deg": 90.0,
+        "allow_wide_edges": [],
+        "require_keys": [
+          "exp.gate",
+          "vision",
+          "grip.grasp",
+          "grip.hold_at_p0",
+          "grip.hold_at_carry"
+        ],
+        "_comment": "所有回放点到位 + 无 ≥90° 宽边 + 五类证据键齐全。"
+      }
+    }
+  ]
+}

@@ -763,10 +763,37 @@ def drawer_table() -> List[Dict[str, Any]]:
     ]
 
 
+def drawer_p0_table() -> List[Dict[str, Any]]:
+    """实验 2 的 mock 桌面：药盒在 **P0 正下方**的抽屉内腔里。
+
+    ⚠️ 与 drawer_table() 一样是**离线仿真用的假数据**，不是实测。
+      区别只在盒子位置：实验 2 从 `P0_measured` 竖直下探 42 cm（落点
+      base 系 x=0.5251, y=-0.2162, z≈0.8248），所以盒子必须摆在那儿，
+      否则 mock 上 `set_gripper` 夹不到东西 → 如实报 NO_TARGET →
+      "运动链是否成立"这个本实验真正要答的问题会被 mock 的布局误差掩盖。
+
+    盒厚取 **7.5 cm**：这正是用户 2026-11-08 指定的「咬合维持 7.5 cm 的夹爪距离」。
+    合爪指令是 0.02 m（远小于盒厚），所以夹爪会停在 0.075 m —— 回读值 0.075 就是
+    "夹到了"的证据；若盒不在那儿，回读会掉到 0.02，判定夹空。
+    """
+    return [
+        {"id": "box_under_p0", "label": "white",
+         "ee_pose": [0.5251, -0.2162, 0.8248],
+         "position_m": [0.5251, -0.2162, 0.8248],
+         #: 夹持方向厚度 7.5 cm（= 实验 2 要求维持的咬合距离）
+         "width_m": 0.075, "size_m": [0.075, 0.055, 0.090],
+         "frame": "base_link", "unit": "m",
+         "image_ref": "mock_frame_0",
+         "bbox": [120, 90, 70, 45], "score": 0.94,
+         "expiry_date": "2026-09-15"},
+    ]
+
+
 #: mock 场景名 → 桌面构造函数。用 --objects 选。
 SCENES = {
     "default": default_table,
     "drawer": drawer_table,
+    "drawer_p0": drawer_p0_table,
 }
 
 

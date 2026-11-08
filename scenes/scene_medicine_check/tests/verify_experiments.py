@@ -10,11 +10,11 @@
   走的是 runner + exp_* stage，不碰 baseline_flow。两套东西互不干扰，
   合在一起跑反而会让"9 项全过"这个基线结论变得含糊。
 
-覆盖的场景（14 项）：
+覆盖的场景（42 项）：
   A. 正常路径（4 项）
-     1. 实验 1 全绿，链条跑到 CARRY_home
-     2. 实验 1 的 P1→P2「已知不可行边」被 SAFETY_ABORT 拦下，但 non_fatal 不中断
-     3. 实验 2 全绿，后拉 30 cm 有确证
+     1. 实验 1 全绿，链条跑到 P0
+     2. 实验 1 的 P0→P1→P2 方向断言（端点到达顺序不得倒置）
+     3. 实验 2（拉抽屉，旧 L2）全绿，后拉 30 cm 有确证
      4. 实验 3 全绿，下探 + 夹到 + 投放三段都有确证
   B. 安全拦截（3 项）
      5. 关掉 block_danger_span 也拦不住 —— 跨度超 90° 时 planner 层必须拒绝
@@ -26,9 +26,22 @@
     10. 夹爪读不到宽度 → 夹没夹到不可判定，verify 不允许判成 passed
     11. is_holding 为 None → 投放"不可判定"，不许当成功
   D. 契约一致性（3 项）
-    12. 三份配置用的 stage 全部已注册
-    13. 三份配置引用的示教点全部存在
+    12. 四份配置用的 stage 全部已注册
+    13. 四份配置引用的示教点全部存在
     14. 配置文件里所有 known_impossible_edges 都被 allow_wide_edges 覆盖
+  E. 真机可执行性（3 项）／F. 上机前准备（7 项）／G. 方向纠正一致性（8 项）
+    15〜32. 见各项标题
+  H. 实验 2「视觉识别 + 箱内夹取 + 带载回程」（10 项，2026-11-08 新增）
+    33. 19 步全 ok，verify_exp2 判通过（57 段链）
+    34. 动作顺序 下探→回撤→P1→P2→抱持位，端点到达顺序不得倒置
+    35. 起始位不在 P0 → SAFETY_ABORT 且零 set_joints
+    36. 爪心没盒子 → grasp_close 必须 NO_TARGET（不许把 set_gripper 的 SUCCESS 当夹到）
+    37. 夹爪宽度读不到 → open_gripper 即 unknown，整体全停
+    38. 视觉 gate 判定不通过 → 停爪，零 set_joints / 零 set_gripper
+    39. 视觉 advisory（未配 VLM）→ 照走但 verified=False
+    40. 回程 = 实验 1 的严格倒序（18/12/7 段逐点相等）
+    41. 下探 10 点：限位内、标未实测、z 单调降、总深 42 cm、落点对齐 mock 盒位
+    42. 只动右臂：零底盘指令、左臂从未被写入、正好 57 段
 """
 
 from __future__ import annotations
@@ -54,6 +67,9 @@ EXPS = {
     "2": "exp2_drawer_open.json",
     "3": "exp3_dive_drop.json",
     "1a": "exp1_real_carry_p2_p1_p0.json",
+    #: 实验 2（新编号）：P0 视觉识别 → 箱内夹取 → 带载回程到抱持位。
+    #: 与 "2"（拉抽屉，旧 L2，编号已被本实验占用）是两份不同配置，别混。
+    "2v": "exp2_visual_grasp_return.json",
 }
 TEACH = os.path.join(CFG_DIR, "teach_drawer_real.json")
 
@@ -84,12 +100,16 @@ def step(res: dict, step_id: str) -> dict:
 
 
 def run(exp: str, cfg: dict | None = None, faults: dict | list | None = None,
-        objects=None, start: str | None = None, teach_file: str = "teach_drawer_real.json"):
+        objects=None, start: str | None = None, teach_file: str = "teach_drawer_real.json",
+        want_io: bool = False):
     """跑一份实验配置，返回 runner 的结果字典。全程 mock，零硬件。
 
     faults 支持两种写法：
       {"set_joints": "unknown"}                       —— 单次注入
       [{"method": "...", "behavior": "...", "times": 5}] —— 完整写法（可指定次数）
+
+    want_io=True 时返回 (结果, 后端)，后端对象上能看 `.calls`（下发过哪些指令）
+    —— 用于断言"这一步一条运动指令都没发"。
     """
     if isinstance(faults, dict):
         faults = [{"method": k, "behavior": v} for k, v in faults.items()]
@@ -111,7 +131,8 @@ def run(exp: str, cfg: dict | None = None, faults: dict | list | None = None,
         kwargs["objects"] = objects
     kwargs["teach_file"] = teach_file
     bio = pio.build_io("mock", faults=faults or [], **kwargs)
-    return runner.run_pipeline(Context(params={}), bio, cfg)
+    res = runner.run_pipeline(Context(params={}), bio, cfg)
+    return (res, bio) if want_io else res
 
 
 def statuses(res: dict) -> dict:
@@ -604,6 +625,172 @@ def part_g() -> None:
           not bad_from, f"问题：{bad_from[:4]}" if bad_from else "三段首行起点均与配置一致")
 
 
+def part_h() -> None:
+    """H 实验 2（P0 视觉识别 → 箱内下探夹取 → 带载回程到抱持位）。
+
+    这一组的重点是「不许把说不清当成通过」：
+      · 起始位不在 P0 → 零运动拒绝，不是"照着走"；
+      · 爪心没盒子 → 必须 NO_TARGET，不能因为 set_gripper 返回 SUCCESS 就算夹到；
+      · 读不到夹爪宽度 → 必须 unknown，不能当成功；
+      · 视觉不通过 → gate 策略必须停爪；advisory 下必须记 verified=False。
+    """
+    pts = teach_points()
+
+    # 33. 正常路径全绿
+    r33 = run("2v")
+    st33 = statuses(r33)
+    v33 = step(r33, "verify_exp2")
+    bad33 = [k for k, v in st33.items() if v != "ok"]
+    check(33, "实验 2 全绿：19 步全部 ok，verify_exp2 判通过（5 个指定点 + 57 段链）",
+          r33.get("status") == "ok" and v33.get("status") == "ok" and not bad33
+          and (v33.get("data") or {}).get("passed") is True,
+          f"status={r33.get('status')} counts={r33.get('counts')} 非 ok 步={bad33} "
+          f"verify={(v33.get('message') or '')[:80]}")
+
+    # 34. 动作顺序：必须 下探 → 回撤 → P1 → P2 → 抱持位，不许倒过来
+    ids34 = [s.get("id") for s in load("2v")["steps"] if s.get("stage") == "exp_replay_chain"]
+    want34 = ["dive_to_grasp", "ascend_to_p0", "leg1_p0_to_p1",
+              "leg2_p1_to_p2", "leg3_p2_to_carry"]
+    reached = []
+    for t in r33.get("trace") or []:
+        if t.get("stage") != "exp_replay_chain":
+            continue
+        for row in (t.get("data") or {}).get("trace") or []:
+            if str(row.get("to")) in ("P1_measured", "P2_measured", "CARRY_home"):
+                reached.append(str(row.get("to")))
+    check(34, "实验 2 动作顺序：下探→回撤→P1→P2→抱持位，端点到达顺序不得倒置",
+          ids34 == want34 and reached == ["P1_measured", "P2_measured", "CARRY_home"],
+          f"回放步={ids34}；端点到达顺序={reached}")
+
+    # 35. 起始位硬门：人把它放在 P1 却下"开始实验 2" → 必须零运动拒绝
+    r35, io35 = run("2v", start="P1_measured", want_io=True)
+    g35 = step(r35, "gate_at_p0")
+    n35 = io35.calls.count("set_joints")
+    check(35, "起始位硬门：起点是 P1 时 gate_at_p0 必须 SAFETY_ABORT，且零 set_joints",
+          g35.get("status") == "failed" and str(g35.get("code")) == "SAFETY_ABORT" and n35 == 0
+          and not io35.calls.count("set_gripper"),
+          f"gate={g35.get('status')}/{g35.get('code')} set_joints={n35}（应 0）"
+          f" msg={(g35.get('message') or '')[:80]}")
+
+    # 36. 夹空：爪心没有盒子 → 回读掉到指令值 0.02 → 必须 NO_TARGET
+    r36 = run("2v", objects=[])
+    g36 = step(r36, "grasp_close")
+    check(36, "夹空判据：爪心没盒子时 grasp_close 必须 NO_TARGET（set_gripper 返 SUCCESS 不等于夹到）",
+          g36.get("status") == "failed" and str(g36.get("code")) == "NO_TARGET"
+          and r36.get("status") == "failed",
+          f"grasp_close={g36.get('status')}/{g36.get('code')} "
+          f"msg={(g36.get('message') or '')[:90]}")
+
+    # 37. 读不到夹爪宽度 → 第一个要用宽度的步就 unknown，整体立即全停
+    #     注意：卡住的不是 grasp_close 而是更早的 open_gripper —— 因为 exp_grip 每次都会回读
+    #     宽度，读不到就报"不可判定"。这是**刻意的**：夹爪完全读不到时，
+    #     "有没有夹到"这个问题全程无法回答，早停比带着未知往下走到合爪合理。
+    r37 = run("2v", faults=[{"method": "get_gripper_width", "behavior": "unknown",
+                             "times": 99}])
+    g37 = step(r37, "open_gripper")
+    check(37, "夹爪宽度读不到 → open_gripper 即 unknown，整体立即全停（不重试、不归位）",
+          g37.get("status") == "unknown" and r37.get("status") == "unknown"
+          and step(r37, "grasp_close").get("status") == "skipped"
+          and r37.get("aborted_without_safety") is True,
+          f"open_gripper={g37.get('status')} grasp_close="
+          f"{step(r37, 'grasp_close').get('status')} 整体={r37.get('status')} "
+          f"aborted_without_safety={r37.get('aborted_without_safety')}")
+
+    # 38. 视觉 gate：判定"没盒子"时必须停爪，且一条运动/夹爪指令都不发
+    cfg38 = load("2v")
+    for s in cfg38["steps"]:
+        if s.get("id") == "vision_check":
+            s["params"]["policy"] = "gate"
+            s["params"]["static_verdict"] = {
+                "ok": True, "box_present": False, "graspable": False,
+                "confidence": 0.5, "reason": "回归用：故意判不通过"}
+    r38, io38 = run("2v", cfg=cfg38, want_io=True)
+    v38 = step(r38, "vision_check")
+    n38 = io38.calls.count("set_joints") + io38.calls.count("set_gripper")
+    check(38, "视觉 gate 策略：判定不通过 → vision_check 停爪，零 set_joints / 零 set_gripper",
+          v38.get("status") == "failed" and n38 == 0,
+          f"vision_check={v38.get('status')} 运动/夹爪指令数={n38}（应 0） "
+          f"msg={(v38.get('message') or '')[:80]}")
+
+    # 39. 视觉 advisory（无 VLM Key）：不拦路，但必须记 verified=False
+    cfg39 = load("2v")
+    for s in cfg39["steps"]:
+        if s.get("id") == "vision_check":
+            s["params"].pop("static_verdict", None)
+    r39 = run("2v", cfg=cfg39)
+    vd39 = (step(r39, "vision_check").get("data") or {})
+    inner39 = vd39.get("verdict") or {}
+    check(39, "视觉 advisory（未配 VLM）：流程照走，但结论必须 verified=False，不许冒充视觉确认",
+          r39.get("status") == "ok" and vd39.get("verified") is False
+          and inner39.get("ok") is False and "未配置" in str(inner39.get("message", "")),
+          f"整体={r39.get('status')} step.verified={vd39.get('verified')} "
+          f"verdict.ok={inner39.get('ok')} msg={str(inner39.get('message'))[:60]}")
+
+    # 40. 回程必须严格是实验 1 那条链的倒序（同一条路，不许另写一份）
+    e1 = load("1a")
+    legs1 = {s["id"]: (s.get("params") or {}).get("points") or [] for s in e1["steps"]}
+    cfg2 = {s["id"]: (s.get("params") or {}).get("points") or [] for s in load("2v")["steps"]}
+    pair = []
+    for back, fwd in (("leg3_p2_to_carry", "leg1_carry_to_p2"),
+                      ("leg2_p1_to_p2", "leg2_p2_to_p1"),
+                      ("leg1_p0_to_p1", "leg3_p1_to_p0")):
+        a, b = cfg2[back], list(reversed(legs1[fwd]))[1:]
+        pair.append((back, len(a), len(b), a[:-1] == b))
+    check(40, "回程 = 实验 1 的严格倒序（18/12/7 段，逐点相等；只把末点换成下一段起点）",
+          all(x[3] and x[1] == x[2] + 1 for x in pair),
+          "；".join(f"{n}: {la} vs {lb} 一致={okk}" for n, la, lb, okk in pair))
+
+    # 41. 下探点位必须是「7 关节 + 限位内 + 标未实测 + z 单调下降」
+    LIM = {
+        "right_arm_joint1": (-172.1, 172.1), "right_arm_joint2": (-92.1, 92.1),
+        "right_arm_joint3": (-167.1, 167.1), "right_arm_joint4": (17.2, 147.1),
+        "right_arm_joint5": (-167.1, 167.1), "right_arm_joint6": (-42.1, 47.1),
+        "right_arm_joint7": (-88.1, 88.1),
+    }
+    prob41, zs, spans41 = [], [], []
+    prev_q = [float(v) for v in pts["P0_measured"]["joint_positions"]]
+    for i in range(1, 11):
+        name = f"VIA_P0_DIVE_{i}"
+        p = pts.get(name)
+        if not p:
+            prob41.append((name, "缺失"))
+            continue
+        q = [float(v) for v in p["joint_positions"]]
+        if len(q) != 7:
+            prob41.append((name, f"{len(q)} 关节"))
+            continue
+        if p.get("measured") is not False:
+            prob41.append((name, "measured 未标 False"))
+        for n, val in zip(p.get("joint_names") or [], q):
+            lo, hi = LIM.get(n, (-9e9, 9e9))
+            d = val * 180.0 / math.pi
+            if not (lo < d < hi):
+                prob41.append((name, f"{n}={d:.1f}° 越限"))
+        spans41.append(max(abs(a - b) * 180.0 / math.pi for a, b in zip(q, prev_q)))
+        prev_q = q
+        zs.append(float(p["pose"][2]))
+    mono = all(a > b for a, b in zip(zs, zs[1:]))
+    box_z = float(pio.SCENES["drawer_p0"]()[0]["ee_pose"][2])
+    p0_z = float(pts["P0_measured"]["pose"][2])
+    depth = p0_z - zs[-1]
+    check(41, "下探 10 点：7 关节齐全、限位内、标未实测、z 单调下降、总深 42 cm 且落点与 mock 盒位一致（±1 cm）",
+          not prob41 and mono and abs(zs[-1] - box_z) < 0.01
+          and abs(depth - 0.42) < 0.01 and max(spans41) < 15.0,
+          f"问题={prob41[:4] or '无'}；z={[round(z, 3) for z in zs]}；"
+          f"P0 z={p0_z:.4f} 落点 z={zs[-1]:.4f} 总深={depth * 100:.1f}cm；"
+          f"最大单段={max(spans41) if spans41 else -1:.2f}°；mock 盒 z={box_z:.4f}")
+
+    # 42. 只动右臂：无底盘指令、无左臂指令、正好 57 段关节回放
+    r42, io42 = run("2v", want_io=True)
+    base42 = [c for c in io42.calls
+              if c in ("turn", "move_forward", "move_left", "move_to_pose", "set_base_pose")]
+    n42 = io42.calls.count("set_joints")
+    left42 = "left_arm" in io42.arm_joints
+    check(42, "实验 2 只动右臂：零底盘指令、左臂从未被写入、正好 57 段关节回放",
+          not base42 and not left42 and n42 == 57,
+          f"底盘指令={base42 or '无'} 左臂被写={left42} set_joints={n42}（应 57）")
+
+
 def main() -> int:
     print("=" * 76)
     print("抽屉三实验 · 二次验证（全程 mock，零硬件指令）")
@@ -611,7 +798,8 @@ def main() -> int:
     for fn, title in ((part_a, "A 正常路径"), (part_b, "B 安全拦截"),
                       (part_c, "C 三终态语义"), (part_d, "D 契约一致性"),
                       (part_e, "E 真机可执行性"), (part_f, "F 上机前准备"),
-                      (part_g, "G 方向纠正一致性")):
+                      (part_g, "G 方向纠正一致性"),
+                      (part_h, "H 实验 2（视觉夹取 + 带载回程）")):
         print(f"\n---- {title} ----")
         fn()
     bad = [x for x in RESULTS if not x[2]]

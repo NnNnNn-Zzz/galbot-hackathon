@@ -2208,6 +2208,326 @@
       "fk_position_trusted": false,
       "position_source": "urdf_fk_calibrated",
       "measured": false
+    },
+    "VIA_P0_DIVE_1": {
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        1.1432580229456877,
+        0.7095312812303003,
+        -1.5547790913753856,
+        1.675530542917343,
+        0.5106631909814523,
+        -0.5739904285095425,
+        -1.3710541581882674
+      ],
+      "pose": [
+        0.5251125924582071,
+        -0.21617803377798012,
+        1.2028066048513373,
+        -0.5232004702839156,
+        0.41795756873502016,
+        0.5331227519600085,
+        0.5170617661115431
+      ],
+      "measured": false,
+      "source": "ik_seeded_from_prev",
+      "note": "实验 2 下探第 1/10 段：TCP z 1.203 m，距 P0 4.2 cm；离线 IK，未实测"
+    },
+    "VIA_P0_DIVE_2": {
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        1.0707459216582842,
+        0.6958397486125132,
+        -1.5683892140063247,
+        1.7060875396491029,
+        0.5040888183836473,
+        -0.579934531871416,
+        -1.2814338313623725
+      ],
+      "pose": [
+        0.5251030570283637,
+        -0.2161787152983539,
+        1.1608051644682587,
+        -0.523202306997743,
+        0.41795582774020407,
+        0.5331188570581632,
+        0.5170653307457759
+      ],
+      "measured": false,
+      "source": "ik_seeded_from_prev",
+      "note": "实验 2 下探第 2/10 段：TCP z 1.161 m，距 P0 8.4 cm；离线 IK，未实测"
+    },
+    "VIA_P0_DIVE_3": {
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        0.9933173223493879,
+        0.6901474172083507,
+        -1.5818244397516135,
+        1.7225893048925525,
+        0.49778101430368404,
+        -0.5803825539266142,
+        -1.1915366376407877
+      ],
+      "pose": [
+        0.5250943626587142,
+        -0.21617891706186407,
+        1.118805026884915,
+        -0.5232042664164991,
+        0.41795398383959376,
+        0.5331149243041613,
+        0.5170688933598253
+      ],
+      "measured": false,
+      "source": "ik_seeded_from_prev",
+      "note": "实验 2 下探第 3/10 段：TCP z 1.119 m，距 P0 12.6 cm；离线 IK，未实测"
+    },
+    "VIA_P0_DIVE_4": {
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        0.9117707607919652,
+        0.6924736595828233,
+        -1.594482577781361,
+        1.7249470873912944,
+        0.49207457612625,
+        -0.5754794392057756,
+        -1.1024450348719108
+      ],
+      "pose": [
+        0.5250862399821534,
+        -0.2161783352071323,
+        1.0768058264463878,
+        -0.5232061635216678,
+        0.41795207578620125,
+        0.5331106640540129,
+        0.5170729084673
+      ],
+      "measured": false,
+      "source": "ik_seeded_from_prev",
+      "note": "实验 2 下探第 4/10 段：TCP z 1.077 m，距 P0 16.8 cm；离线 IK，未实测"
+    },
+    "VIA_P0_DIVE_5": {
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        0.8270308261192905,
+        0.7026929315842896,
+        -1.60582712825861,
+        1.7131492999446873,
+        0.48727605709810795,
+        -0.5653354608078124,
+        -1.0154256142390554
+      ],
+      "pose": [
+        0.5250782029239603,
+        -0.2161767227278359,
+        1.0348074182361573,
+        -0.5232081053940447,
+        0.41795035906280836,
+        0.5331054778156938,
+        0.5170776782381394
+      ],
+      "measured": false,
+      "source": "ik_seeded_from_prev",
+      "note": "实验 2 下探第 5/10 段：TCP z 1.035 m，距 P0 21.0 cm；离线 IK，未实测"
+    },
+    "VIA_P0_DIVE_6": {
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        0.7400504426850135,
+        0.7205248307994561,
+        -1.6154160896573637,
+        1.6872680029185292,
+        0.4835772713508869,
+        -0.5500253217019428,
+        -0.9318498698264452
+      ],
+      "pose": [
+        0.525069750326241,
+        -0.2161741504368438,
+        0.9928099116726613,
+        -0.5232103086345814,
+        0.4179490243505259,
+        0.5330992176742837,
+        0.5170829818298185
+      ],
+      "measured": false,
+      "source": "ik_seeded_from_prev",
+      "note": "实验 2 下探第 6/10 段：TCP z 0.993 m，距 P0 25.2 cm；离线 IK，未实测"
+    },
+    "VIA_P0_DIVE_7": {
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        0.6517514597761471,
+        0.7455862493202026,
+        -1.622986860956081,
+        1.6474240706079142,
+        0.48106033673984383,
+        -0.5295706737575732,
+        -0.8530537319645944
+      ],
+      "pose": [
+        0.5250602032313896,
+        -0.2161708083302973,
+        0.9508138296422629,
+        -0.5232129908314347,
+        0.4179484602025915,
+        0.5330912029684676,
+        0.5170889866910147
+      ],
+      "measured": false,
+      "source": "ik_seeded_from_prev",
+      "note": "实验 2 下探第 7/10 段：TCP z 0.951 m，距 P0 29.4 cm；离线 IK，未实测"
+    },
+    "VIA_P0_DIVE_8": {
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        0.5629178414485703,
+        0.7774572252532472,
+        -1.628446749257692,
+        1.5937113279260597,
+        0.4796890415353798,
+        -0.5039272463717337,
+        -0.7802454126765735
+      ],
+      "pose": [
+        0.5250483550867905,
+        -0.21616700948811668,
+        0.9088199310985557,
+        -0.523216946451324,
+        0.41794798203911915,
+        0.5330811345725632,
+        0.5170957505321523
+      ],
+      "measured": false,
+      "source": "ik_seeded_from_prev",
+      "note": "实验 2 下探第 8/10 段：TCP z 0.909 m，距 P0 33.6 cm；离线 IK，未实测"
+    },
+    "VIA_P0_DIVE_9": {
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        0.4741324540901089,
+        0.8157809618223764,
+        -1.6318762575170462,
+        1.5260805305304899,
+        0.4793666347404056,
+        -0.47295930323142876,
+        -0.7144315801368675
+      ],
+      "pose": [
+        0.5250329345316647,
+        -0.21616297903759943,
+        0.8668298461911079,
+        -0.5232225494296293,
+        0.4179482868216528,
+        0.5330682479077714,
+        0.5171031196809239
+      ],
+      "measured": false,
+      "source": "ik_seeded_from_prev",
+      "note": "实验 2 下探第 9/10 段：TCP z 0.867 m，距 P0 37.8 cm；离线 IK，未实测"
+    },
+    "VIA_P0_DIVE_10": {
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        0.38569324495287466,
+        0.8603517817465877,
+        -1.6334609298207647,
+        1.4441880607742337,
+        0.4799592042116592,
+        -0.436399538411992,
+        -0.6564202320523442
+      ],
+      "pose": [
+        0.5250115579171218,
+        -0.2161588975306656,
+        0.8248460323394864,
+        -0.5232310160127469,
+        0.4179484244033246,
+        0.5330521592376654,
+        0.5171110267177739
+      ],
+      "measured": false,
+      "source": "ik_seeded_from_prev",
+      "note": "实验 2 下探第 10/10 段：TCP z 0.825 m，距 P0 42.0 cm；离线 IK，未实测"
     }
   },
   "skipped": [],
