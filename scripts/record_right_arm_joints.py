@@ -15,6 +15,8 @@
 输出：
   1. 终端一张表（名称 / 角度 rad / 角度 deg / 速度 / 力矩 / 电流 / 帧间抖动）
   2. JSON 落到 --out-dir（默认 ~/joint_records），文件名带时间戳
+  3. 追加一条到同目录的 <group>_sequence.json —— 按采集顺序排队，
+     后续拼连续轨迹直接读这个文件（--rebuild-seq 可从目录里已有 JSON 重建）
 """
 
 from __future__ import annotations
@@ -207,6 +209,66 @@ def print_table(names, by_name, group, n_frames, ee):
     print("═" * 92)
 
 
+# --------------------------------------------------------------------------- #
+# 序列归档：把目录里所有单点 JSON 按采集时间排成一条采样序列
+# --------------------------------------------------------------------------- #
+def _is_point_file(fn):
+    return fn.endswith(".json") and "_joints_" in fn and not fn.endswith("_sequence.json")
+
+
+def rebuild_sequence(out_dir, group, verbose=True):
+    """扫描 out_dir 下所有 <group>_joints_*.json，按 recorded_at 排序重写序列文件。"""
+    entries = []
+    if not os.path.isdir(out_dir):
+        return None
+    for fn in sorted(os.listdir(out_dir)):
+        if not _is_point_file(fn):
+            continue
+        try:
+            with open(os.path.join(out_dir, fn), encoding="utf-8") as fh:
+                d = json.load(fh)
+        except Exception:  # noqa: BLE001 - 坏文件跳过，不阻塞归档
+            continue
+        if d.get("group") != group:
+            continue
+        ee = d.get("end_effector") or {}
+        order = d.get("joint_order", [])
+        entries.append({
+            "recorded_at": d.get("recorded_at", ""),
+            "json": fn,
+            "note": d.get("note", ""),
+            "dof": d.get("dof"),
+            "joint_order": order,
+            "rad": [d["joints"][n]["position_rad"] for n in order],
+            "deg": [d["joints"][n]["position_deg"] for n in order],
+            "ee_xyz_m": ee.get("pose_xyz_m"),
+            "ee_rpy_deg": ee.get("pose_rpy_deg"),
+        })
+    entries.sort(key=lambda e: (e["recorded_at"], e["json"]))
+    for i, e in enumerate(entries, 1):
+        e["label"] = "seq%02d" % i
+
+    seq_path = os.path.join(out_dir, "%s_sequence.json" % group)
+    payload = {
+        "group": group,
+        "updated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+        "count": len(entries),
+        "joint_order": entries[0]["joint_order"] if entries else [],
+        "entries": entries,
+    }
+    with open(seq_path, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh, ensure_ascii=False, indent=2)
+
+    if verbose:
+        print("")
+        print("  采样序列（%d 点）→ %s" % (len(entries), seq_path))
+        for e in entries:
+            print("    %s  %s  %s  %s" % (
+                e["label"], e["recorded_at"][:19], e["json"],
+                ("(%s)" % e["note"]) if e["note"] else ""))
+    return seq_path
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="只读记录右臂（或指定组）全部自由度的关节参数")
     ap.add_argument("--group", default=DEFAULT_GROUP, help="关节组，默认 right_arm（可选 left_arm）")
@@ -214,7 +276,15 @@ def main() -> int:
     ap.add_argument("--interval", type=float, default=DEFAULT_INTERVAL_S, help="帧间隔秒，默认 0.15")
     ap.add_argument("--out-dir", default=os.path.expanduser("~/joint_records"), help="JSON 输出目录")
     ap.add_argument("--no-ee", action="store_true", help="跳过末端位姿读取")
+    ap.add_argument("--note", default="", help="给这个采样点加备注，写进序列（如 '举起'）")
+    ap.add_argument("--rebuild-seq", action="store_true",
+                    help="不连机器人，只按目录里已有 JSON 重建采样序列")
     args = ap.parse_args()
+
+    if args.rebuild_seq:
+        p = rebuild_sequence(args.out_dir, args.group)
+        print("序列已重建：%s" % p)
+        return 0
 
     if args.samples < 1:
         print("--samples 必须 ≥ 1", file=sys.stderr)
@@ -254,6 +324,7 @@ def main() -> int:
             }) for n in names),
             "samples": len(frames),
             "interval_s": args.interval,
+            "note": args.note,
             "raw_frames": [[
                 {"name": r[0],
                  "position_rad": None if not math.isfinite(r[1]) else round(r[1], 6),
@@ -266,6 +337,7 @@ def main() -> int:
         with open(path, "w", encoding="utf-8") as fh:
             json.dump(payload, fh, ensure_ascii=False, indent=2)
         print("JSON 已保存：%s" % path)
+        seq_path = rebuild_sequence(args.out_dir, args.group)
 
         # 便于 shell 抓取的一行摘要
         print("SUMMARY %s" % json.dumps({
@@ -273,6 +345,7 @@ def main() -> int:
             "dof": len(names),
             "deg": [round(by_name[n]["position_deg"], 3) for n in names],
             "json": path,
+            "sequence": seq_path,
         }, ensure_ascii=False))
         return 0
     except Exception as exc:  # noqa: BLE001
