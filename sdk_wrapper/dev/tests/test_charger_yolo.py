@@ -10,7 +10,11 @@ from sdk_wrapper.dev.adapters import MockAdapter
 from sdk_wrapper.dev.algorithms.charger_cascade import (
     CascadeChargerSegmentationBackend,
 )
-from sdk_wrapper.dev.algorithms.charger_yolo import YoloInstance, analyze_charger_top
+from sdk_wrapper.dev.algorithms.charger_yolo import (
+    UltralyticsYoloBackend,
+    YoloInstance,
+    analyze_charger_top,
+)
 from sdk_wrapper.dev.contracts import ErrorCode, TaskStatus, ok
 from sdk_wrapper.dev.robot_tools.charger_yolo import ChargerYoloTool
 from sdk_wrapper.dev.robot_tools.perception import PerceptionTool
@@ -197,13 +201,14 @@ class ChargerYoloGeometryTest(unittest.TestCase):
 
 
 class ChargerYoloToolTest(unittest.TestCase):
-    def test_default_config_uses_cascade_backend(self):
+    def test_default_config_uses_charger_whole_backend(self):
         tool = ChargerYoloTool(PerceptionTool(MockAdapter()))
 
-        self.assertIsInstance(tool.backend, CascadeChargerSegmentationBackend)
+        self.assertIsInstance(tool.backend, UltralyticsYoloBackend)
+        self.assertEqual(tool.config["target_class"], "charger_whole")
         self.assertEqual(
-            tool.config["cascade"]["proposal_weights"],
-            "~/yoloseg/runs/yolo11n_seg_charger_v2/weights/best.pt",
+            tool.config["weights"],
+            "~/yoloseg/runs/charger_seg_whole_final/weights/best.pt",
         )
 
     def test_left_arm_override_switches_wrist_rgb_and_depth(self):

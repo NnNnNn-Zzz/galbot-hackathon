@@ -1,14 +1,14 @@
 {
   "note": [
     "YOLO-seg charger-top tool configuration.",
-    "Explicit weights select the charger_whole segmentation model; cascade recall is disabled for this class transition.",
+    "Explicit weights select the five-fold-selected charger_whole segmentation model; cascade recall is disabled for this class transition.",
     "These quality thresholds are initial safety gates, not calibrated grasp tolerances."
   ],
   "model_search_roots": [
     "/home/mr/yoloseg/runs",
     "~/yoloseg/runs"
   ],
-  "weights": "~/yoloseg/runs/charger_seg_whole_v1/weights/best.pt",
+  "weights": "~/yoloseg/runs/charger_seg_whole_final/weights/best.pt",
   "target_class": "charger_whole",
   "required_task": "segment",
   "cascade": {
