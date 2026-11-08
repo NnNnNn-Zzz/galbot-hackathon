@@ -11,18 +11,22 @@
 
 用法
 ----
+    python3 scripts/set_waist_height.py --from-baseline       # 调到记录的「初始腰高」
     python3 scripts/set_waist_height.py --target 1.3904
     python3 scripts/set_waist_height.py --target 1.3904 --dry-run
 """
 from __future__ import annotations
 
 import argparse
+import json
+import os
 import sys
 import time
 
 SDK_MIN, SDK_MAX = 0.96, 1.54
 TOL_M = 0.0015
 MAX_TRIES = 3
+DEFAULT_BASELINE = os.path.expanduser("~/joint_records/waist_baseline.json")
 
 
 def _status_name(value) -> str:
@@ -40,10 +44,26 @@ def read_height(robot):
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="设置腰部高度（head_base_link Z）")
-    ap.add_argument("--target", type=float, required=True, help="目标腰高（米）")
+    ap.add_argument("--target", type=float, default=None, help="目标腰高（米）")
+    ap.add_argument("--from-baseline", action="store_true",
+                    help="用记录的初始腰高（~/joint_records/waist_baseline.json）")
+    ap.add_argument("--baseline", default=DEFAULT_BASELINE, help="基线文件路径")
     ap.add_argument("--duration", type=float, default=3.0, help="运动时长（秒），默认 3")
     ap.add_argument("--dry-run", action="store_true", help="只读当前值并打印计划")
     args = ap.parse_args()
+
+    if args.from_baseline:
+        if not os.path.exists(args.baseline):
+            print("找不到基线文件：%s" % args.baseline, file=sys.stderr)
+            return 2
+        with open(args.baseline, encoding="utf-8") as fh:
+            base = json.load(fh)
+        args.target = float(base["height_m"])
+        print("基线「%s」= %.4f m（%s）" % (base.get("alias_cn", base.get("name")),
+                                          args.target, base.get("recorded_at", "")))
+    if args.target is None:
+        print("必须给 --target 或 --from-baseline", file=sys.stderr)
+        return 2
 
     if not (SDK_MIN <= args.target <= SDK_MAX):
         print("目标 %.4f m 超出 SDK 支持区间 [%.2f, %.2f]" % (args.target, SDK_MIN, SDK_MAX),
