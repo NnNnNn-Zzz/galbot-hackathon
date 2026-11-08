@@ -104,7 +104,9 @@
         "gripper_side": "right",
         "stop_on_fail": true,
         "block_danger_span": true,
-        "_comment": "抱持位 → P0：拆成 CARRY→P2→P1→P0 三段共 37 段（每段 ≤15°）。不再直连（直连会刮到桌上的抽屉，见 exp1_real_carry_p2_p1_p0.json 的 why_not_carry_to_p0_directly）。"
+        "_comment": "抱持位 → P0：拆成 CARRY→P2→P1→P0 三段共 37 段（每段 ≤15°）。不再直连（直连会刮到桌上的抽屉，见 exp1_real_carry_p2_p1_p0.json 的 why_not_carry_to_p0_directly）。",
+        "start_point": "CARRY_home",
+        "_start_point_note": "名义上一点；链实际从运行时读到的当前关节角出发，回正到位后应与该点吻合（trace 第 0 行标 from_measured=false）"
       }
     },
     {
@@ -181,7 +183,9 @@
         "gripper_side": "right",
         "stop_on_fail": true,
         "block_danger_span": true,
-        "_comment": "ALIGN→CARRY 直连 95.3°@joint1 / 合计 316.4°（超门槛）。6 个关节插值点把它压到 ≤13.6°/95.3°。⚠️ 拉完抽屉后手臂实际构型在示教文件里没有对应点，所以链的第一步跨度会是「抽屉全开位 → JNT_ALIGN_CARRY_1」，真机上若超 90° 会被拦 —— 那是真实约束，不许绕过。"
+        "_comment": "ALIGN→CARRY 直连 95.3°@joint1 / 合计 316.4°（超门槛）。6 个关节插值点把它压到 ≤13.6°/95.3°。⚠️ 拉完抽屉后手臂实际构型在示教文件里没有对应点，所以链的第一步跨度会是「抽屉全开位 → JNT_ALIGN_CARRY_1」，真机上若超 90° 会被拦 —— 那是真实约束，不许绕过。",
+        "start_point": "ALIGN_handle",
+        "_start_point_note": "名义上一点；链实际从运行时读到的当前关节角出发，回正到位后应与该点吻合（trace 第 0 行标 from_measured=false）"
       }
     },
     {

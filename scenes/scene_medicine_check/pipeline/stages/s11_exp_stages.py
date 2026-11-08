@@ -12,7 +12,7 @@
                            必须先跑 scripts/home_to_carry.py --yes 回正，否则第一段就可能超跨度。
                            ⚠️ 旧的 CARRY_home → P0 → P1 → P2 方向已废弃：CARRY(−108.9°) 一步到
                            P0(+69.3°) 是单段 j1 178.2°，末端直线 y 几乎不变，t≈0.3 即进入抽屉
-                           占位区，会刮到桌上的抽屉（真机 09:04 于 JNT_P0_P1_3 返回 FAULT）。
+                           占位区，会刮到桌上的抽屉（真机 09:04 于旧链第 3 点返回 ControlStatus.FAULT）。
 
   实验 2「抽屉开合」    —— 接在实验 1 之后，验证**接触类动作**：
                            对位把手 → 闭爪 → 沿 -x 直线后拉 → 张爪退出。
@@ -274,7 +274,13 @@ class ExpReplayChain(Stage):
 
         trace: List[Dict[str, Any]] = []
         prev_pos = list(start["joint_positions"])
-        prev_name = "START"
+        # 起点标签：手臂实际从「运行时读到的当前关节角」出发，配置里的 start_point 只是
+        # **名义**上一点（回正到位时应与该点吻合）。两者必须分开记 —— 否则日志里会出现
+        # "START → VIA_P2_P1_1" 这种与实际不符的段（2026-11-08 实验 1 真机就踩了）。
+        declared_start = str(self.params.get("start_point") or "") or None
+        prev_name = declared_start or "RUNTIME_START"
+        chain_t0 = time.time()
+        chain_started_at = time.strftime("%Y-%m-%dT%H:%M:%S")
 
         if dry:
             # ---------------- 只读预演：只算跨度，不发指令 ----------------
@@ -320,7 +326,7 @@ class ExpReplayChain(Stage):
                 dry_run=True, segments=len(trace), worst=worst, trace=trace)
         # ---------------- 真回放 ----------------
         done: List[str] = []
-        for pt in points:
+        for i, pt in enumerate(points):
             rec = load_point(path, pt)
             names = list(rec["joint_names"])
             tgt = [float(v) for v in rec["joint_positions"]]
@@ -362,6 +368,7 @@ class ExpReplayChain(Stage):
                 logger.warning("跨度偏大：%s → %s 最大 %.1f°（合计 %.1f°），真机上要盯着",
                                prev_name, pt, max(pre_delta), sum(pre_delta))
 
+            t_dispatch = time.time()
             ret = io.set_joints(tgt, names, speed)
             if not ret.get("success"):
                 res = outcome(ret, f"回放到 {pt} 失败")
@@ -399,6 +406,9 @@ class ExpReplayChain(Stage):
 
             row = {
                 "from": prev_name, "to": pt,
+                # 第 0 行（i=0）的 from 是配置声明的名义起点，不是实测上一点；
+                # 之后的 from 都是上一条已回读校验过的点。
+                "from_measured": i > 0,
                 "pre_delta_deg": round(max(pre_delta), 2),
                 "pre_sum_deg": round(sum(pre_delta), 2),
                 "span_risk": risk,
@@ -411,6 +421,9 @@ class ExpReplayChain(Stage):
                 "tightest_margin_deg": margins.get(tight) if tight else None,
                 "ee_pose": after["ee_pose"],
                 "motion_dispatched": True,
+                # 从下发 set_joints 到回读快照完成（含 settle）的实测墙钟时间
+                "elapsed_s": round(time.time() - t_dispatch, 3),
+                "settle_s": settle_s,
             }
             trace.append(row)
             logger.info("回放 %s：偏差 %.2f°（容差 %.1f°），%s 余量 %.1f°",
@@ -445,9 +458,14 @@ class ExpReplayChain(Stage):
         ctx.flags.setdefault("exp.chain_all", []).extend(trace)
         ctx.flags.setdefault("exp.chain_done_all", []).extend(done)
         verified = sum(1 for r in trace if r.get("verified"))
-        return ok(f"回放完成：{verified}/{len(points)} 点通过（容差 {tol_deg:.1f}°）",
+        total_s = round(time.time() - chain_t0, 3)
+        motion_s = round(sum(float(r.get("elapsed_s") or 0.0) for r in trace), 3)
+        logger.info("链路耗时：总 %.2f s（其中下发+回读 %d 段共 %.2f s，其余为日志/规划开销）",
+                    total_s, len(trace), motion_s)
+        return ok(f"回放完成：{verified}/{len(points)} 点通过（容差 {tol_deg:.1f}°，{total_s:.1f} s）",
                   points=points, done=done, verified=verified,
-                  total=len(points), trace=trace)
+                  total=len(points), trace=trace,
+                  total_s=total_s, motion_s=motion_s, started_at=chain_started_at)
 
 
 @register_stage("exp_verify_chain")

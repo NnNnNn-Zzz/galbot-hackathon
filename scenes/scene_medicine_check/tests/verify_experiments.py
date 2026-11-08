@@ -478,7 +478,10 @@ def part_g() -> None:
     #     口径：.py 里不许出现旧前缀（那是代码引用）；.json 只查已删除的文件名
     #     —— provenance/note 里的历史说明文字是有意保留的，不算引用。
     bad_ref = []
-    skip_dirs = (os.sep + "logs", os.sep + ".git", os.sep + "__pycache__", os.sep + "_urdf")
+    # tools/drawer_calib 是离线标定工具，其 STALE_PREFIXES 字面量用于**删除**旧点，
+    # 属正当用途，不算"引用已删除点位"。
+    skip_dirs = (os.sep + "logs", os.sep + ".git", os.sep + "__pycache__", os.sep + "_urdf",
+                 os.sep + "tools" + os.sep + "drawer_calib")
     for dirpath, _dn, fns in os.walk(ROOT):
         if any(seg in dirpath for seg in skip_dirs):
             continue
@@ -547,6 +550,58 @@ def part_g() -> None:
     check(30, "实验 1 是零接触空爪实验：配置里不含任何夹爪开合步",
           not grip and st1.get("leg3_p1_to_p0") == "ok",
           f"夹爪步={grip} leg3={st1.get('leg3_p1_to_p0')}")
+
+    # ---- 31/32：trace 可观测性（2026-11-08 真机暴露的两个日志缺陷）----
+    # 31. 每段都得有实测耗时，链级得有 total_s —— 否则事后只能靠文件 mtime 反推
+    r31 = run("1")
+    miss_elapsed, bad_total, n_rows, tot = [], [], 0, []
+    for t in r31.get("trace") or []:
+        if t.get("stage") != "exp_replay_chain":
+            continue
+        dd = t.get("data") or {}
+        rows = dd.get("trace") or []
+        n_rows += len(rows)
+        miss_elapsed += [f"{t.get('step')}/{r.get('to')}"
+                         for r in rows if not isinstance(r.get("elapsed_s"), (int, float))]
+        # total_s 必须存在，且不小于各行 elapsed 之和（否则说明计时口径错）
+        ts = dd.get("total_s")
+        mot = dd.get("motion_s")
+        if not isinstance(ts, (int, float)) or ts <= 0:
+            bad_total.append((t.get("step"), ts))
+        elif isinstance(mot, (int, float)) and mot > ts + 0.2:
+            bad_total.append((t.get("step"), f"motion_s {mot} > total_s {ts}"))
+        else:
+            tot.append(ts)
+    check(31, "每条回放行都带实测 elapsed_s，链级带 total_s / motion_s / started_at",
+          (not miss_elapsed) and (not bad_total) and n_rows > 0,
+          f"共 {n_rows} 行；缺 elapsed 的 {len(miss_elapsed)} 行 {miss_elapsed[:3]}；"
+          f"total_s 异常 {bad_total[:2]}；各段 total_s={[round(v, 2) for v in tot]}")
+
+    # 32. 每段首行的 from 必须写成配置声明的名义起点，且标明它没被实测过
+    #     （真机 09:58 的 trace 里 leg2/leg3 首行都写成 "START"，与事实不符）
+    cfg32 = {s["id"]: (s.get("params") or {}) for s in load("1")["steps"]}
+    bad_from = []
+    for t in r31.get("trace") or []:
+        if t.get("stage") != "exp_replay_chain":
+            continue
+        sid = t.get("step")
+        want = (cfg32.get(sid) or {}).get("start_point")
+        rows = (t.get("data") or {}).get("trace") or []
+        if not rows:
+            continue
+        if not want:
+            bad_from.append((sid, "配置未声明 start_point"))
+            continue
+        if rows[0].get("from") != want:
+            bad_from.append((sid, f"首行 from={rows[0].get('from')!r} 应为 {want!r}"))
+        if rows[0].get("from_measured") is not False:
+            bad_from.append((sid, "首行 from_measured 应为 False"))
+        for prev, cur in zip(rows, rows[1:]):
+            if cur.get("from") != prev.get("to") or cur.get("from_measured") is not True:
+                bad_from.append((sid, f"{cur.get('to')} 的 from 链断裂"))
+                break
+    check(32, "trace 的 from 字段：首行=声明的名义起点并标 from_measured=False，其后逐点衔接",
+          not bad_from, f"问题：{bad_from[:4]}" if bad_from else "三段首行起点均与配置一致")
 
 
 def main() -> int:

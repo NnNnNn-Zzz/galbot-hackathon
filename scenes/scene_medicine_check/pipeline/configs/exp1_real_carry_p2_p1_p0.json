@@ -97,7 +97,9 @@
         "stop_on_fail": true,
         "block_danger_span": true,
         "require_fresh_joints": false,
-        "_comment": "抱持位 → P2：末端直线 + 姿态 slerp，18 段 ×3.1°，末端 z 0.801→1.008 单调升，y −0.215→−0.654 向右退出，全程 x≤0.350（不进抽屉正面 x≥0.42）。"
+        "_comment": "抱持位 → P2：末端直线 + 姿态 slerp，18 段 ×3.1°，末端 z 0.801→1.008 单调升，y −0.215→−0.654 向右退出，全程 x≤0.350（不进抽屉正面 x≥0.42）。",
+        "start_point": "CARRY_home",
+        "_start_point_note": "名义上一点；链实际从运行时读到的当前关节角出发，回正到位后应与该点吻合（trace 第 0 行标 from_measured=false）"
       }
     },
     {
@@ -137,7 +139,9 @@
         "stop_on_fail": true,
         "block_danger_span": true,
         "require_fresh_joints": false,
-        "_comment": "P2 → P1：端点 j3 差 170°（两支 IK 解），末端直线过肘奇异解不出，只能关节 lerp 12 段 ×14.2°。末端轨迹为高位弧（最低 z 0.950），y 全程 ≤ −0.524（在抽屉占位盒之外）。"
+        "_comment": "P2 → P1：端点 j3 差 170°（两支 IK 解），末端直线过肘奇异解不出，只能关节 lerp 12 段 ×14.2°。末端轨迹为高位弧（最低 z 0.950），y 全程 ≤ −0.524（在抽屉占位盒之外）。",
+        "start_point": "P2_measured",
+        "_start_point_note": "名义上一点；链实际从运行时读到的当前关节角出发，回正到位后应与该点吻合（trace 第 0 行标 from_measured=false）"
       }
     },
     {
@@ -172,7 +176,9 @@
         "stop_on_fail": true,
         "block_danger_span": true,
         "require_fresh_joints": false,
-        "_comment": "P1 → P0：以右侧远处摆回最高点，y −0.795→−0.216 同时 z 1.025→1.245。7 段 ×13.4°。用关节 lerp 而非末端直线 —— 后者会把 j6 压到 −41.0°（限位 −42.1°）。"
+        "_comment": "P1 → P0：以右侧远处摆回最高点，y −0.795→−0.216 同时 z 1.025→1.245。7 段 ×13.4°。用关节 lerp 而非末端直线 —— 后者会把 j6 压到 −41.0°（限位 −42.1°）。",
+        "start_point": "P1_measured",
+        "_start_point_note": "名义上一点；链实际从运行时读到的当前关节角出发，回正到位后应与该点吻合（trace 第 0 行标 from_measured=false）"
       }
     },
     {
