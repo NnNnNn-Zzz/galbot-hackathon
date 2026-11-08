@@ -256,6 +256,21 @@
 
 ---
 
+### G-23 `get_joint_states` 的 `velocity` / `effort` 恒为 0（只有 `position` 和 `current` 是真的）
+- **报错原文**：无报错。9 帧连续采样，7 个右臂关节的 `velocity`、`effort` **全部精确等于 0.0**；
+  同时刻 `current` 有正常非零值（-3.66 A ~ +5.54 A），`position` 帧间极差 0.096 mrad（真实抖动）
+- **触发条件**：`robot.get_joint_states(["right_arm"], [])` 空闲静止状态下读取
+- **真因**：这版固件/驱动只填充 `JointState.position` 与 `JointState.current`，
+  `velocity` / `effort` / `acceleration` 字段留默认 0.0。**不是"机器人真的一点速度都没有"**，
+  是这两个字段没数据；拿它们做"是否在动"或"是否撞到"的判断会永远得到"否"
+- **正确做法**：① 判静止用**位置差分**（连续两帧 `position` 之差 / 时间差），别信 `velocity`；
+  ② 判受力用 `current`（有值），别信 `effort`；③ 记录关节位姿一律存 `position_rad`（+换算 deg）
+- **涉及接口**：`GalbotRobot.get_joint_states()` / `GalbotRobot.get_joint_positions()`
+- **发现日期**：2026-11-08，真机（`scripts/record_right_arm_joints.py`，右臂 7 DOF 全量记录）
+
+---
+
+
 ## 更新记录
 
 | 日期 | 条目 | 一句话 |
@@ -267,3 +282,4 @@
 | 2026-11-08 | G-20 | 1.6 mm 的 move_line 会死等不返回：小步要有容差和下界，脚本一律 `python3 -u` |
 | 2026-11-08 | G-21 | IK 要纯 list 7 元，传 `Pose` 报 TypeError、漏四元数静默 INVALID_INPUT |
 | 2026-11-08 | G-22 | move_ee_to 对 <6mm 位移回 SUCCESS 但不动（假成功）；平移+旋转组合走直线 FAULT |
+| 2026-11-08 | G-23 | `get_joint_states` 的 velocity/effort 恒为 0，只有 position 和 current 可信 |
