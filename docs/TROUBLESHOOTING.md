@@ -85,6 +85,8 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 
   2026-11-08 正式 charger 链路复测时，`StereoDepthTool` 报 `ImportError: cannot import name '_sdk_bootstrap' from 'sdk_wrapper.wrapper'`。确认原因是 wrapper 重构后 bootstrap 已移动到 `sdk_wrapper.dev.adapters.galbot_adapter`，工具仍从旧位置导入。将导入改为 adapter 的 `_sdk_bootstrap()` 后，真机头部检测得到有效的 `target_3d` 和 `target_safety`；当前低置信提案因距离、平面法向等安全门槛被正确拒绝，没有进入底盘或腕部运动。
 
+  当日 `keyboard_head_control.py` 又复现同一导入错误，但原因不是头部控制逻辑：HPU 上仍保留旧版 `head.py`，本地 `HeadLookTool` 已改为通过 `sdk_wrapper.dev.toolhub` 获取共享机器人单例。诊断时先比较本地与 HPU 文件的导入路径和哈希；修复方式是重新部署最新 `sdk_wrapper/dev/robot_tools/head.py`，无需修改 `wrapper.py`。2026-11-08 覆盖后 HPU 头部测试 7/7 通过，`HeadLookTool(real_authorized=True).get_head_pose()` 返回真实姿态，旧导入错误消失。
+
 ### G1 躯干轴向：`leg_joint4/5` 不当前倾，`leg_joint3` 可产生俯仰（2026-11-07）
 
 - **现象**：监督脚本最初期望用 `torso` 链的 `leg_joint4`、`leg_joint5` 实现前倾，但真机中 `leg_joint4` 产生偏航，`leg_joint5` 也没有产生俯仰；现场观察到侧向运动，`leg_joint5` 微步时头部滚转约变化 1.14°，俯仰和偏航基本不变。
