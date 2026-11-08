@@ -157,3 +157,80 @@ wsl -d Ubuntu-22.04-GalbotG1 -e bash -c 'ssh g1 "cd ~/galbot_hackathon_dev && so
 
 `scripts/` 下的都在 `~/galbot_hackathon`（git，origin = `github.com/NnNnNn-Zzz/galbot-hackathon`），
 部署副本在 `~/galbot_hackathon_dev/scripts/`。第③步的三个文件只在机器人 home，不在 git 里。
+
+---
+
+# 第二段：绿块两级对准 + 夹紧 + 抬回 1.327 m
+
+`scripts/run_second_stage.py`，跑在第一段五步全部完成**之后**。
+
+## 七步
+
+| 步 | 动作 | 脚本 |
+|---|---|---|
+| ① | 腰高 → **1.3270 m** | `set_waist_height.py --target 1.3270` |
+| ② | 绿块视觉对准 @1.327（`--force`） | `align_box_1327.py` |
+| ③ | 腰高 → **1.2337 m**（竖直下降） | `set_waist_height.py --target 1.2337` |
+| ④ | 绿块视觉对准 @1.234（`--force`） | `align_box_1234.py` |
+| ⑤ | 腰高 → **1.125 m**（继续竖直下降） | `set_waist_height.py --target 1.125` |
+| ⑥ | 夹爪抓紧到 **7 cm** | `gripper_ctrl.py --seq 7 --effort 10` |
+| ⑦ | 腰高 → **1.3270 m**（竖直上升） | `set_waist_height.py --target 1.3270` |
+
+腰高轨迹：`当前 → 1.327 → 1.234 → 1.125 → 1.327`
+
+## 三个设计决定
+
+**1. 第①步先把腰高设到 1.327，再跑 align_box_1327。**
+两个 align 脚本的标准档案（画面中心/长边/倾角）各自在对应腰高采的：
+1.327 档是 `中心(681.54, 383.25) 倾角+1.10°`，1.234 档是 `中心(686.34, 481.38) 倾角+0.78°`。
+腰高不对时"绿块该在画面哪个位置"本身就变了，在别的腰高强跑等于让手臂追一个不存在的构图。
+所以是「先到位、再对准」；`--force` 只是容差保险，不是"随便什么高度都能对"。
+
+**2. 升降用 `set_waist_height.py`，不用 `keyboard_leg_height.py`。**
+后者是键盘遥控（靠字符流判定"还在按"），没法在编排里定到某个高度。
+`set_waist_height.py` 走的是同一个 `set_leg_height`（腰部直上直下，不产生偏航/滚转副作用），
+但带「回读闭环 + 最多 3 次补发」，正好能"降到 1.234 附近"。
+
+**3. 升降时长按行程放大。**
+1.3904 → 1.2337 是 157 mm，SDK 默认 3 s 就是 5.2 cm/s。编排默认给 `--duration 5`（≈3.1 cm/s）更稳。
+
+## 怎么跑
+
+```bash
+cd ~/galbot_hackathon_dev && source ~/galbot_hackathon/scripts/env_hpu.sh
+
+python3 -u scripts/run_second_stage.py --dry-run    # 七步全空跑
+python3 -u scripts/run_second_stage.py --yes        # 真跑（ssh 必须带 --yes）
+python3 -u scripts/run_second_stage.py --yes --skip 1,2
+python3 -u scripts/run_second_stage.py --yes --gripper-cm 6.5 --duration 6
+python3 -u scripts/run_second_stage.py --yes --no-force-align   # 不给 align 加 --force
+```
+
+**和第一段不同：七步全都支持空跑**（`set_waist_height` / `align_green_box` 有 `--dry-run`，
+`gripper_ctrl` 有 `--dry`），所以 `--dry-run` 能完整验证整条链。
+
+## 常用参数
+
+| 参数 | 默认 | 说明 |
+|---|---|---|
+| `--h-align-hi` | `1.3270` | 高档对准腰高（align_box_1327 的标准） |
+| `--h-align-lo` | `1.2337` | 低档对准腰高（align_box_1234 的标准） |
+| `--h-grip` | `1.125` | 夹爪动作高度 |
+| `--gripper-cm` | `7.0` | 夹爪目标开度 |
+| `--gripper-effort` | `10.0` | 夹爪力度 N·m |
+| `--duration` | `5.0` | 每次升降时长（秒） |
+| `--no-force-align` | 关 | 不给 align 加 `--force` |
+| `--skip` / `--dry-run` / `--yes` / `--force` / `--log` / `-v` | — | 同第一段 |
+
+## 失败排查
+
+| 步 | 现象 | 处理 |
+|---|---|---|
+| ①③⑤⑦ | 假 FAULT | 脚本按回读 Z 判定 + 3 次补发，看最终高度即可 |
+| ①③⑤⑦ | 高度没变且状态异常 | 可能被安全限制拒绝，`probe_waist.py` 只读确认 |
+| ②④ | 返回 3 | 多为「腰高不符 / 画面里没找到绿块」，先 `--dry-run` 看差距 |
+| ②④ | 腰高到位仍返回 3 | 检查相机是否被挡住、绿块是否还在画面里 |
+| ⑥ | TIMEOUT | 多半是夹住绿块到不了 7 cm，看它打印的实测宽度；抓空会合到最小间距 |
+
+⚠ `align_box_*` 只看画面构图，**不保证物理夹持位置**；第⑥步夹紧才是真实接触。
+如果夹完发现位置不对，要调的是对齐容差而不是夹爪参数。
