@@ -251,7 +251,7 @@ def move_arm_delta(dx: float, dy: float, dz: float, chain: str = "right_arm",
 
 
 def move_along_gripper(distance_m: float, chain: str = "right_arm",
-                       use_torso: bool = True, auto_lift: bool = True) -> dict:
+                       use_torso: bool = True, auto_lift: bool = False) -> dict:
     """沿**夹爪指向**直线走 distance_m 米（米制；正=伸出逼近，负=后退）。
 
     SDK 没有工具系相对运动的原语，这里按当前姿态算出夹爪 +X 轴再走直线，
@@ -260,8 +260,9 @@ def move_along_gripper(distance_m: float, chain: str = "right_arm",
     Args:
         use_torso: True 让躯干协助（默认，够得更远）；
             False 走纯手臂 with_chain_only（躯干零动作，但安全高度更高）。
-        auto_lift: 路径过低时先垂直抬到该模式的建议高度再走。
-            False 则直接拒绝并告知差多少 —— 想自己控制高度时用。
+        auto_lift: 默认 **False** —— 纯沿夹爪轴平移，不抬升、不拒绝。
+            True 才会在路径偏低时先抬到"建议高度"再走，但那会让动作
+            多出一段竖直位移（前进变斜向上），只在明确要避障时才开。
 
     超过 ``ALONG_GRIPPER_MAX_M`` 会**拒绝**（不截断），因为截断后的动作和调用方
     要的不是一回事。

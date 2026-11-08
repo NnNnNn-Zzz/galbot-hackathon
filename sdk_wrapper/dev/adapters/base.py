@@ -213,7 +213,7 @@ class RobotAdapter(ABC):
         distance_m: float,
         *,
         actuate: str = "with_torso",
-        auto_lift: bool = True,
+        auto_lift: bool = False,
         max_step_m: float = 0.05,
         enable_collision_check: bool = True,
         timeout_s: float = 10.0,
@@ -228,9 +228,10 @@ class RobotAdapter(ABC):
         Args:
             actuate: ``"with_torso"``（默认，躯干协助，伸得更远）或
                 ``"with_chain_only"``（纯手臂，躯干零借用）。
-            auto_lift: 路径最低点低于该模式的建议高度时，先垂直抬升再走。
-                **两档建议高度不同**（纯手臂肘部下沉更多，需要更高），
-                共用同一个阈值会在中途莫名 FAULT。
+            auto_lift: 默认 **False**，即纯沿夹爪轴平移，既不抬升也不因高度拒绝。
+                设 True 才会在路径偏低时先垂直抬到该模式的建议高度再走 ——
+                注意那会给轨迹额外塞一段竖直位移，前进会变成"斜着往前上"。
+                高度门槛依赖"桌面高度已知/深度可信"，这两条不成立时不要开它。
 
         注意：夹爪指向通常带 z 分量（实测相对 +Z 倾角 95.3°），所以"前进"
         同时会下降；不加 auto_lift 直接走长距离很容易贴桌被碰撞检查拒绝。

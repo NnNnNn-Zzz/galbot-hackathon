@@ -801,7 +801,7 @@ class GalbotAdapter(RobotAdapter):
         distance_m: float,
         *,
         actuate: str = _ACTUATE,
-        auto_lift: bool = True,
+        auto_lift: bool = False,
         max_step_m: float = 0.05,
         enable_collision_check: bool = True,
         timeout_s: float = 10.0,
@@ -917,18 +917,11 @@ class GalbotAdapter(RobotAdapter):
                 return f"EXC:{type(exc).__name__}"
             return None if _enum_name(st) == "SUCCESS" else _enum_name(st)
 
-        # ---- 阶段 1：抬到该模式的建议高度 ----
-        if need_lift:
-            if not auto_lift:
-                return rejected(
-                    ErrorCode.SAFETY_LIMIT,
-                    f"路径最低点 z={lowest_z:.3f} 低于门槛 {gate_z:.3f}"
-                    f"（actuate={actuate}，{'前进' if distance_m > 0 else '后退'}）；"
-                    f"先抬升，或设 auto_lift=True 让本接口自己抬",
-                    mode=self.mode,
-                    data={"current_z": pose[2], "predicted_end_z": predicted_end_z,
-                          "gate_z": gate_z, "actuate": actuate},
-                )
+        # ---- 阶段 1：抬到该模式的建议高度（仅在 auto_lift=True 时）----
+        # auto_lift=False = 纯沿夹爪平移：不抬、也不拒绝。
+        # 高度门槛建立在"桌面高度已知 / 深度可信"的假设上，假设不成立时
+        # 强行抬升只会给轨迹塞进一段竖直位移（实测每步被抬 6 cm，完全跑偏）。
+        if need_lift and auto_lift:
             while True:
                 st_name, cur = _read()
                 if st_name != "SUCCESS":

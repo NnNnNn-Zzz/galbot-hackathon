@@ -480,7 +480,7 @@ class MockAdapter(SyntheticCameraMixin, RobotAdapter):
         distance_m: float,
         *,
         actuate: str = "with_torso",
-        auto_lift: bool = True,
+        auto_lift: bool = False,
         max_step_m: float = 0.05,
         enable_collision_check: bool = True,
         timeout_s: float = 10.0,

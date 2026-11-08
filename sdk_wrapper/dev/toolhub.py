@@ -662,7 +662,7 @@ def move_arm_delta(dx: float, dy: float, dz: float, chain: str = "right_arm",
 
 
 def move_along_gripper(distance_m: float, chain: str = "right_arm",
-                       actuate: str = "with_torso", auto_lift: bool = True) -> dict:
+                       actuate: str = "with_torso", auto_lift: bool = False) -> dict:
     """沿**夹爪指向**直线走 distance_m 米（正=伸出逼近，负=后退），姿态不变。
 
     抓取前的"沿逼近轴推近"、抓完的"沿原路退出"都用这个，别用 move_arm_delta
