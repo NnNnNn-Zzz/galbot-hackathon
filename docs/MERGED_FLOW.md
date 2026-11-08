@@ -1,6 +1,35 @@
-# 合并流程：腰回正 → 腰高 → run_sequence → 张爪后退 → 抬手程序
+# G1 完整流程：12 步一条命令
 
-一条命令跑完五个原本分散的程序。合并只固定**调用顺序和前置条件**，每个子脚本的运动逻辑一字未改。
+**总入口 `scripts/run_full_program.py`** —— 把下面两段合成一条：
+
+```bash
+cd ~/galbot_hackathon_dev && source ~/galbot_hackathon/scripts/env_hpu.sh
+python3 -u scripts/run_full_program.py --dry-run    # 全链路空跑（第③步会跳过）
+python3 -u scripts/run_full_program.py --yes        # 真跑
+python3 -u scripts/run_full_program.py --yes --skip 1,2      # 腰已就位
+python3 -u scripts/run_full_program.py --yes --only 2        # 只跑第二段
+python3 -u scripts/run_full_program.py --yes --first-args "--retreat 0.10"
+python3 -u scripts/run_full_program.py --yes --second-args "--gripper-cm 6.5"
+```
+
+| 段 | 步骤 | 脚本 |
+|---|---|---|
+| 第一段 | 1 腰回正 → 2 腰高1.3904 → 3 run_sequence → 4 张爪后退15cm → 5 抬手程序 | `run_merged_program.py` |
+| 第二段 | 6 腰高1.327 → 7 对准@1327 → 8 降1.234 → 9 对准@1234 → 10 降1.125 → 11 夹爪7cm → 12 升1.327 | `run_second_stage.py` |
+
+腰高轨迹：`1.3904 → 1.3270 → 1.2337 → 1.1250 → 1.3270`
+
+**总入口只是「编排的编排」**：统一 1~12 编号、统一参数、统一汇总，底层仍然调那两个分段脚本，
+所以每一步的 dry-run 分支、排查建议、返回码语义都原样生效。传 `--skip` 时按编号自动分派
+（1~5 → 第一段原样，6~12 → 第二段减 5）；某段步骤全被跳过时整段不启动，连 SDK 初始化都不做。
+
+分段单独调试仍然可以直接跑那两份脚本，参数见下面对应章节。
+
+---
+
+# 第一段：腰回正 → 腰高 → run_sequence → 张爪后退 → 抬手程序
+
+合并只固定**调用顺序和前置条件**，每个子脚本的运动逻辑一字未改。
 
 ## 一、五步在干什么
 
