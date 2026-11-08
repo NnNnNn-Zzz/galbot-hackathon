@@ -1,0 +1,198 @@
+{
+  "name": "drawer.exp2_drawer_open",
+  "description": "实验 2 · 抽屉开合：回初始位 → 咬住把手 → 沿 -x 分段后拉 30 cm → 张爪退出 → 回抱持位",
+  "version": 2,
+  "experiment": {
+    "layer": 2,
+    "start_point": "CARRY_home",
+    "goal": "证明【示教数据 + 夹爪力】能把抽屉拉开到可用行程，把『夹不住』『拉不动』这两类失败单独暴露出来",
+    "scope": "只做抽屉的拉出，不下探、不夹药盒、不投放、不动底盘；全程右臂 + 夹爪",
+    "prerequisite": "实验 1 必须先通过（否则分不清是臂没站对还是抽屉拉不动）",
+    "pass_criteria": [
+      "咬住后夹爪实测宽度 > close_m + 3 mm（说明摸到了把手而不是空合）",
+      "后拉 30 cm 分 6 段全部 SUCCESS（每段 5 cm），累计 Δx ≥ 28 cm",
+      "拉完后末端位姿可读，且 z 漂移 < 2 cm（说明拉的是直线不是斜的）",
+      "全程无限位余量 < 2° 的关节"
+    ],
+    "measured_spans_deg": {
+      "START(P0)->P0": 0.0,
+      "P0->ALIGN": 99.2,
+      "ALIGN->CARRY": 95.3,
+      "_note": "P0->ALIGN 与 ALIGN->CARRY 都超 90°：本配置用 block_danger_span=true，会先在 preflight 之后的 replay 处拦。要真跑必须先加中间点。"
+    },
+    "failure_taxonomy": {
+      "STAGE_FAILED": "后拉某一段失败 —— 夹爪 effort（10 N）不够拉开滑轨静摩擦，或已到行程末端",
+      "NO_TARGET": "咬住位置读不到 —— 无法规划直线，不发动作",
+      "NOT_VERIFIED": "回放/后拉后偏差超容差",
+      "SAFETY_ABORT": "某段关节跨度 ≥ 90°，或限位余量 < 2°",
+      "UNDETERMINED": "中途读不到位姿 —— 立即全停，连归位都不发"
+    }
+  },
+  "notes": [
+    "⚠️ 本实验只验证【拉】这一段。咬住点位 ALIGN_handle 是唯一有实测 TCP 的点（sdk_snapshot），operator 确认过「夹爪正确围住把手」。",
+    "⚠️ P0_measured → ALIGN_handle 的 j7 要转 99.2°、ALIGN → CARRY_home 的 j1 要转 95.3°，都超 90° 安全跨度。block_danger_span=true 会直接拒绝 —— 这是**设计意图**，不是 bug。真机上必须先补示教点。",
+    "后拉方向：drawer_pull 从咬住时的【实测末端位姿】出发，沿 -x 分段平移（base_link 前方为 +x），姿态锁死。这是唯一能保证「拉的是直线」的做法 —— 关节插值会因为同末端位姿多解把夹爪绕把手转半圈。",
+    "力：拉抽屉靠 tuning.GRIPPER_EFFORT_N = 10 N。10 N 对滑轨静摩擦是否够，是**只能实测**的量，代码无法预判。",
+    "pull_cm=30 来自队友实测「TCP 后移 30.114 cm」（HANDOFF_BRIEF.md 的八段拉屉记录），但那次是**人工扶稳**抽屉的。本次抽屉外壳粘桌上、带滑轨，摩擦工况完全不同，30 cm 可能需要调。",
+    "step_cm=5 让每段可停、可判：任何一段失败立刻停，不盲目往下走。",
+    "入口段改为 CARRY→P2→P1→P0（37 段），与实验 1 共用同一条已核算的安全爬升路径。"
+  ],
+  "steps": [
+    {
+      "id": "preflight",
+      "stage": "preflight",
+      "non_fatal": true
+    },
+    {
+      "id": "snap_start",
+      "stage": "exp_arm_snapshot",
+      "params": {
+        "label": "START",
+        "chain": "right_arm",
+        "gripper_side": "right",
+        "fail_on_tight": false
+      }
+    },
+    {
+      "id": "to_p0",
+      "stage": "exp_replay_chain",
+      "params": {
+        "file": "pipeline/configs/teach_drawer_real.json",
+        "points": [
+          "VIA_CARRY_P2_1",
+          "VIA_CARRY_P2_2",
+          "VIA_CARRY_P2_3",
+          "VIA_CARRY_P2_4",
+          "VIA_CARRY_P2_5",
+          "VIA_CARRY_P2_6",
+          "VIA_CARRY_P2_7",
+          "VIA_CARRY_P2_8",
+          "VIA_CARRY_P2_9",
+          "VIA_CARRY_P2_10",
+          "VIA_CARRY_P2_11",
+          "VIA_CARRY_P2_12",
+          "VIA_CARRY_P2_13",
+          "VIA_CARRY_P2_14",
+          "VIA_CARRY_P2_15",
+          "VIA_CARRY_P2_16",
+          "VIA_CARRY_P2_17",
+          "P2_measured",
+          "VIA_P2_P1_1",
+          "VIA_P2_P1_2",
+          "VIA_P2_P1_3",
+          "VIA_P2_P1_4",
+          "VIA_P2_P1_5",
+          "VIA_P2_P1_6",
+          "VIA_P2_P1_7",
+          "VIA_P2_P1_8",
+          "VIA_P2_P1_9",
+          "VIA_P2_P1_10",
+          "VIA_P2_P1_11",
+          "P1_measured",
+          "VIA_P1_P0_1",
+          "VIA_P1_P0_2",
+          "VIA_P1_P0_3",
+          "VIA_P1_P0_4",
+          "VIA_P1_P0_5",
+          "VIA_P1_P0_6",
+          "P0_measured"
+        ],
+        "chain": "right_arm",
+        "speed_rad_s": 0.15,
+        "tolerance_deg": 3.0,
+        "settle_s": 0.5,
+        "gripper_side": "right",
+        "stop_on_fail": true,
+        "block_danger_span": true,
+        "_comment": "抱持位 → P0：拆成 CARRY→P2→P1→P0 三段共 37 段（每段 ≤15°）。不再直连（直连会刮到桌上的抽屉，见 exp1_real_carry_p2_p1_p0.json 的 why_not_carry_to_p0_directly）。"
+      }
+    },
+    {
+      "id": "bite_and_pull",
+      "stage": "drawer_pull",
+      "params": {
+        "file": "pipeline/configs/teach_drawer_real.json",
+        "bite_point": "ALIGN_handle",
+        "pull_cm": 30.0,
+        "step_cm": 5.0,
+        "close_here": true,
+        "close_m": 0.075,
+        "open_m": 0.1,
+        "settle_s": 0.4,
+        "speed_rad_s": 0.2,
+        "gripper_side": "right",
+        "block_danger_span": true
+      }
+    },
+    {
+      "id": "release_pull",
+      "stage": "drawer_release_pull",
+      "params": {
+        "extra_cm": -30.0,
+        "step_cm": 5.0,
+        "settle_s": 0.4,
+        "gripper_side": "right",
+        "_comment": "张爪后沿 +x 笛卡尔推回抽屉口（-30 = 前推 30 cm）。用笛卡尔而不是关节回放，是因为『拉完后的手臂构型』没有示教数据，关节回放会让规划器去猜"
+      }
+    },
+    {
+      "id": "verify_exp2",
+      "stage": "exp_verify_chain",
+      "params": {
+        "require_points": [],
+        "max_err_deg": 3.0,
+        "min_limit_margin_deg": 2.0,
+        "max_span_deg": 90.0,
+        "require_pull": true,
+        "min_pulled_cm": 28.0,
+        "require_keys": [
+          "pull.pulled_m"
+        ]
+      }
+    },
+    {
+      "id": "settle_at_open",
+      "stage": "exp_arm_snapshot",
+      "params": {
+        "label": "AT_DRAWER_OPEN",
+        "chain": "right_arm",
+        "gripper_side": "right",
+        "fail_on_tight": false
+      }
+    },
+    {
+      "id": "back_to_carry",
+      "stage": "exp_replay_chain",
+      "params": {
+        "file": "pipeline/configs/teach_drawer_real.json",
+        "points": [
+          "JNT_ALIGN_CARRY_1",
+          "JNT_ALIGN_CARRY_2",
+          "JNT_ALIGN_CARRY_3",
+          "JNT_ALIGN_CARRY_4",
+          "JNT_ALIGN_CARRY_5",
+          "JNT_ALIGN_CARRY_6",
+          "CARRY_home"
+        ],
+        "chain": "right_arm",
+        "speed_rad_s": 0.2,
+        "tolerance_deg": 3.0,
+        "settle_s": 0.5,
+        "gripper_side": "right",
+        "stop_on_fail": true,
+        "block_danger_span": true,
+        "_comment": "ALIGN→CARRY 直连 95.3°@joint1 / 合计 316.4°（超门槛）。6 个关节插值点把它压到 ≤13.6°/95.3°。⚠️ 拉完抽屉后手臂实际构型在示教文件里没有对应点，所以链的第一步跨度会是「抽屉全开位 → JNT_ALIGN_CARRY_1」，真机上若超 90° 会被拦 —— 那是真实约束，不许绕过。"
+      }
+    },
+    {
+      "id": "snap_end",
+      "stage": "exp_arm_snapshot",
+      "params": {
+        "label": "END_CARRY",
+        "chain": "right_arm",
+        "gripper_side": "right",
+        "fail_on_tight": false
+      }
+    }
+  ]
+}

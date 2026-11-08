@@ -609,6 +609,63 @@ def get_ee_pose(chain: str = "") -> dict:
             "pose": pose, "frame": "base_link", "unit": "m"}
 
 
+def get_joint_positions(joint_groups=None, joint_names=None) -> dict:
+    """读指定关节组的当前关节角（弧度）。**只读**，不发任何运动指令。
+
+    示教采点专用：拖动手臂到位后读一次，把 positions 连同 names 一起存 json 回放。
+
+    ⚠️ 两个必守细节（踩过）：
+      1. joint_groups 必须显式给（如 ["right_arm"]），joint_names 传 []；
+         无参调用返回 25 个错位数据，且不报错 —— 比报错更危险。
+      2. 返回的 joint_names/positions 必须**成对保存**，回放时按名字下发，
+         不能按索引猜，否则左右臂一混就撞。
+    """
+    groups = [str(g) for g in (joint_groups or ["right_arm"])]
+    names = [str(n) for n in (joint_names or [])]
+    if _mock_mode:
+        mock_names = names or [f"{groups[0]}_joint{i}" for i in range(1, 8)]
+        return _mock_ok("get_joint_positions",
+                        joint_names=mock_names,
+                        joint_positions=[-1.90, 1.46, 0.54, 1.96, 0.0, 0.4, 0.0])
+    robot = _get_robot()
+    try:
+        pos = robot.get_joint_positions(joint_groups=groups, joint_names=names)
+        nm = robot.get_joint_names(only_active_joint=True, joint_groups=groups) if not names else names
+    except Exception as exc:  # noqa: BLE001 - 读关节失败要如实报，不许编数
+        return {"success": False, "completion": "failed",
+                "message": f"get_joint_positions 调用失败: {exc}"}
+    if pos is None or len(pos) == 0:
+        return {"success": False, "completion": "failed",
+                "message": "get_joint_positions 返回空（关节组名写错或机器人未就绪）"}
+    pos = [float(v) for v in pos]
+    if len(nm) != len(pos):
+        # 数量对不上就不猜对应关系，直接判不可信
+        return {"success": False, "completion": "failed",
+                "message": f"关节名 {len(nm)} 个、角度 {len(pos)} 个，数量不一致，拒绝返回"}
+    return {"success": True, "message": "ok", "completion": "completed",
+            "joint_names": [str(n) for n in nm], "joint_positions": pos}
+
+
+def get_gripper_width(side: str = "right") -> dict:
+    """读夹爪当前开度（米）。**只读**，不发动作。"""
+    if _mock_mode:
+        return _mock_ok("get_gripper_width", width=0.10, side=side)
+    _sdk_bootstrap()
+    import galbot_sdk.g1 as gm
+    gripper_name = getattr(gm.G1JointGroup, f"{side}_gripper", None)
+    if not isinstance(gripper_name, str):
+        return {"success": False, "completion": "failed",
+                "message": f"未知夹爪侧 {side!r}，G1JointGroup 无 {side}_gripper"}
+    robot = _get_robot()
+    state = robot.get_gripper_state(gripper_name)
+    width = getattr(state, "width", None)
+    if width is None:
+        return {"success": False, "completion": "failed",
+                "message": "get_gripper_state 返回无 width 字段"}
+    return {"success": True, "message": "ok", "completion": "completed",
+            "width": float(width), "side": side}
+
+
 #: capture_image 支持的相机名 → SensorType 成员名（头部双目 + 手臂，按需扩充）
 CAMERA_MAP = {
     "head_left": "HEAD_LEFT_CAMERA",

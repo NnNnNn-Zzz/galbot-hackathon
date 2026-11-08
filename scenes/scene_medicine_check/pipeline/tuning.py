@@ -86,6 +86,15 @@ ANNOUNCE_PAUSE_S = 5.0         # 场景描述：停顿五秒等人说「好」
 MOVE_TIMEOUT_S = 20.0          # 单次末端位姿移动超时
 ARM_SPEED_RAD_S = 0.2          # 关节运动速度上限
 
+# ===========================================================================
+# 8. 抽屉场景（2026-11-07 新增）
+# ===========================================================================
+TABLE_Z_M = 0.72               # 桌面实测高度（用户现场确认），下探段的安全闸门用
+DRAWER_DIVE_DEPTH_CM = 28.0    # 示教点位 3 到盒内的竖直距离（用户给定）
+DRAWER_DIVE_STEP_CM = 4.0      # 分段步长：4 cm × 7 段，兼顾 move_line_to 的 10s 超时
+DRAWER_GRIPPER_CLOSE_M = 0.075 # 药盒 7.5 cm 宽，闭到 0.02 会夹扁；抽屉把手同理留余量
+TEACH_FILE = "pipeline/configs/teach_drawer.json"
+
 
 def split_distance(total_cm: float) -> List[float]:
     """把总距离按安全上限切段，返回每段厘米数。

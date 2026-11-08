@@ -1,0 +1,177 @@
+{
+  "version": 1,
+  "created": "MOCK-PLACEHOLDER",
+  "chain": "right_arm",
+  "gripper_side": "right",
+  "frame": "base_link",
+  "unit": "m / rad",
+  "points": {
+    "P1_init": {
+      "pose": [
+        0.3,
+        -0.17,
+        0.6,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.9,
+        1.46,
+        0.54,
+        1.96,
+        0.0,
+        0.4,
+        0.0
+      ],
+      "gripper_width": 0.1,
+      "note": "初始位：手臂竖直下垂，夹爪张开",
+      "ee_pose_ok": true,
+      "joints_ok": true
+    },
+    "P2_grasp": {
+      "pose": [
+        0.42,
+        -0.16,
+        0.85,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.9,
+        1.2,
+        0.7,
+        1.9,
+        0.0,
+        0.4,
+        0.0
+      ],
+      "gripper_width": 0.1,
+      "note": "咬住抽屉把手",
+      "ee_pose_ok": true,
+      "joints_ok": true
+    },
+    "P3_pull_done": {
+      "pose": [
+        0.12,
+        -0.16,
+        0.85,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.9,
+        1.3,
+        0.6,
+        1.96,
+        0.0,
+        0.4,
+        0.0
+      ],
+      "gripper_width": 0.1,
+      "note": "抽屉拉到位的末端（仅作校验参照，不作回放目标）",
+      "ee_pose_ok": true,
+      "joints_ok": true
+    },
+    "P3_dive_ref": {
+      "pose": [
+        0.44,
+        -0.16,
+        1.1,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.9,
+        1.34,
+        0.54,
+        1.96,
+        0.0,
+        0.4,
+        0.0
+      ],
+      "gripper_width": 0.1,
+      "note": "盲下探起点（28cm 之旅的上端）",
+      "ee_pose_ok": true,
+      "joints_ok": true
+    },
+    "P4_drop": {
+      "pose": [
+        0.45,
+        -0.35,
+        0.6,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "joint_names": [
+        "right_arm_joint1",
+        "right_arm_joint2",
+        "right_arm_joint3",
+        "right_arm_joint4",
+        "right_arm_joint5",
+        "right_arm_joint6",
+        "right_arm_joint7"
+      ],
+      "joint_positions": [
+        -1.9,
+        1.4,
+        0.5,
+        1.9,
+        0.0,
+        0.4,
+        0.0
+      ],
+      "gripper_width": 0.1,
+      "note": "垃圾桶上方投放点",
+      "ee_pose_ok": true,
+      "joints_ok": true
+    }
+  },
+  "skipped": [],
+  "warning": "⚠️ 本文件是【代码跑通用的虚构占位值】，不是任何真机示教数据。真机执行前必须用 teach_record 重新采集覆盖，否则所有动作都会跑偏。"
+}
