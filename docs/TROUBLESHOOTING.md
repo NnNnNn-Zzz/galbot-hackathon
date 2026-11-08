@@ -183,7 +183,7 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 - **诊断**：检查 `service_motion_plan` 日志中的 planner 类型。`traj plan` 表示直接轨迹规划；低层采样式避障应显示 `Start Unified Motion Planning` 和 `MpsTask handling on motion plan`。SDK 文档也明确：GalbotMotion 不自动导入实时感知，环境障碍必须通过 `add_obstacle()` / `attach_target_object()` 加载。
 - **修复**：`straight_line=False` 的绝对末端移动改为低层 `motion_plan([[MotionPlanChainTarget]], PlannerConfig)`，同时启用 `is_check_collision` 和 `enable_env_collision_check`，并允许 torso 协助；只读预检使用同一 planner 但设置 `is_direct_execute=False`，确认有完整路径后才执行。
 - **验证**：2026-11-08 在 HPU 对当前左臂 EndEffector 位姿做只读路径预检，返回 `SUCCESS`；服务日志从 `MpsTask handling on traj plan` 变为 `MpsTask handling on motion plan`。本地 105 项单测通过，未执行额外真机动作。
-- **边界**：这只保证在“已加载的碰撞环境”中搜索安全路径，不会凭空知道桌子几何。若桌子未被机器人碰撞服务加载，仍需通过底盘观察位、提高预抓取高度，或显式添加桌面/目标障碍后再规划。
+- **边界**：这只保证在“已加载的碰撞环境”中搜索安全路径，不会凭空知道桌子几何。2026-11-08 在 HPU 查询 `GalbotMotion.get_built_obstacles_list()`，实际仅返回 `['ground']`，没有桌面或目标物体。因此当前 planner 会避开地面和机器人自身，但无法可靠避开未加载的桌子；仍需通过底盘观察位、提高预抓取高度，或使用 `add_obstacle()` 显式加载桌面 box/点云/深度图后再规划。
 
 ### 头部关节已动但姿态校验不变：测错 frame（2026-11-07）
 
