@@ -210,8 +210,10 @@ def run_step(idx, cmd, workdir, env, log_fp):
 
     t0 = time.time()
     try:
+        # ★ stdin=DEVNULL：子脚本若有 input() 就立即 EOF 走自己的兜底分支，
+        #   不会因为读完终端而永久挂住（align_green_box 踩过这个坑）。
         proc = subprocess.Popen(
-            cmd, cwd=workdir, env=env,
+            cmd, cwd=workdir, env=env, stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, bufsize=1,
         )
@@ -220,14 +222,21 @@ def run_step(idx, cmd, workdir, env, log_fp):
         return 127, 0.0
 
     assert proc.stdout is not None
+    cancelled = False
     for line in proc.stdout:
         sys.stdout.write(line)
         sys.stdout.flush()
         if log_fp is not None:
             log_fp.write(line)
             log_fp.flush()
+        if "已取消" in line:   # 只认取消关键字：dry-run 也会打「未下发」，别误伤
+            cancelled = True
     rc = proc.wait()
     dt = time.time() - t0
+    if cancelled and rc == 0:
+        print("  ✘ 子脚本报了「已取消 / 未下发」但退出码是 0 —— 这一步实际什么都没做",
+              file=sys.stderr)
+        rc = 90
     print("  → 返回码 %d，耗时 %.1f s" % (rc, dt), flush=True)
     return rc, dt
 

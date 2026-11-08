@@ -230,6 +230,7 @@ python3 -u scripts/run_second_stage.py --yes --no-force-align   # 不给 align �
 | ①③⑤⑦ | 高度没变且状态异常 | 可能被安全限制拒绝，`probe_waist.py` 只读确认 |
 | ②④ | 返回 3 | 多为「腰高不符 / 画面里没找到绿块」，先 `--dry-run` 看差距 |
 | ②④ | 腰高到位仍返回 3 | 检查相机是否被挡住、绿块是否还在画面里 |
+| ②④ | **进程 S 睡不返回、屏幕上停在"约束：只动手臂关节…"就没下文** | 曾经的真 bug（2026-11-08 14:36 现场）：`align_green_box` 在 `if not args.yes` 时 `input()` 等你在终端按 y，但它的 prompt **不带换行**，被编排器 `for line in proc.stdout` 的逐行转发吞掉了——你看不到它在问，它就一直等。已修（命令补 `--yes` + 子进程 `stdin=DEVNULL`）；再遇到先查 `ls -l /proc/PID/fd/0`，指向 `/dev/pts/*` 就是还在等终端 |
 | ⑥ | TIMEOUT | 多半是夹住绿块到不了 7 cm，看它打印的实测宽度；抓空会合到最小间距 |
 
 ⚠ `align_box_*` 只看画面构图，**不保证物理夹持位置**；第⑥步夹紧才是真实接触。
