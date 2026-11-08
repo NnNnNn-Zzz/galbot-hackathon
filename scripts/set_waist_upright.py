@@ -101,9 +101,12 @@ def main() -> int:
 
         for name in names:
             done = 0
+            sim = None  # dry-run 的模拟值：真跑时保持 None，每轮都重读实测
             while done < MAX_STEPS_PER_JOINT:
-                cur = read_group(robot, [name])
-                now = cur[name]
+                if sim is None:
+                    now = read_group(robot, [name])[name]
+                else:
+                    now = sim
                 err = target - now
                 if abs(err) <= tol:
                     print("  %s 已到位：%.3f°" % (name, math.degrees(now)))
@@ -118,7 +121,7 @@ def main() -> int:
                     if done >= 3:
                         print("  ... dry-run 只看前 3 步")
                         break
-                    cur[name] = nxt
+                    sim = nxt
                     continue
 
                 status = robot.set_joint_positions(
