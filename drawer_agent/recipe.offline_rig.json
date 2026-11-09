@@ -1,0 +1,118 @@
+{
+  "schema": "drawer_demo_recipe/2",
+  "mode": "shared_agent",
+  "commissioned": false,
+  "setup_id": "OFFLINE_RIG",
+  "model_id": "offline_synthetic_top",
+  "arm": "right_arm",
+  "reference_frame": "base_link",
+  "tool_id": "offline_tool",
+  "tcp_frame": "offline_tcp",
+  "fixed_camera": true,
+  "observation_source": "offline rig: synthetic fixed head camera at OBSERVE_HIGH",
+  "box_size_m": [
+    0.085,
+    0.075,
+    0.075
+  ],
+  "closing_axis_yaw_rad": 1.5707963267948966,
+  "box_center_to_tcp_xy_m": [
+    0.0,
+    0.0
+  ],
+  "tool_orientation_xyzw": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+  ],
+  "above_tcp_z_m": 1.02,
+  "grasp_tcp_z_m": 0.82,
+  "short_lift_m": 0.03,
+  "gripper_open_m": 0.095,
+  "gripper_close_m": 0.065,
+  "drawer_opening_m": 0.27,
+  "calibration": {
+    "id": "offline_cal",
+    "verified": true,
+    "camera_id": "offline_fixed_head",
+    "evidence_ref": "offline_rig_constructed_not_measurement",
+    "pixel_convention": "original_distortion_compensated",
+    "image_size_wh": [
+      640,
+      480
+    ],
+    "H_pixel_to_base_xy": [
+      0.001,
+      0.0,
+      0.18,
+      0.0,
+      -0.001,
+      0.24,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "opening_roi_xy_m": [
+      0.3,
+      -0.15,
+      0.7,
+      0.15
+    ],
+    "nominal_center_xy_m": [
+      0.52,
+      0.0
+    ],
+    "box_top_z_m": 0.84
+  },
+  "limits": {
+    "min_confidence": 0.85,
+    "min_rectangularity": 0.9,
+    "max_frame_age_s": 1.0,
+    "max_receipt_age_s": 0.5,
+    "size_tolerance_m": 0.005,
+    "max_axis_error_rad": 0.08,
+    "max_center_shift_m": 0.025,
+    "max_recheck_delta_m": 0.003,
+    "max_recheck_axis_rad": 0.04,
+    "perception_timeout_s": 3.0,
+    "action_timeout_s": 30.0,
+    "max_linear_speed_m_s": 0.1,
+    "max_joint_speed_rad_s": 0.3,
+    "gripper_speed_m_s": 0.01,
+    "gripper_effort_n": 5.0,
+    "max_base_yaw_speed_rad_s": 0.15,
+    "stroke_tolerance_m": 0.02
+  },
+  "base_motion": {
+    "allowed": true,
+    "release_mode": "drop",
+    "drop_yaw_rad": -0.5235987755982988,
+    "max_segment_rad": 0.2617993877991494,
+    "yaw_tolerance_rad": 0.03490658503988659,
+    "return_shift_tolerance_m": 0.03,
+    "return_yaw_tolerance_rad": 0.03490658503988659,
+    "drop_radius_m": 0.488,
+    "drop_offset_tolerance_m": 0.06,
+    "rotate_segment_timeout_s": 12.0,
+    "push_timeout_s": 45.0
+  },
+  "waypoint_refs": {
+    "HOME": "HOME",
+    "HANDLE_CLEAR": "HANDLE_CLEAR",
+    "OBSERVE_HIGH": "OBSERVE_HIGH",
+    "START": "START",
+    "DROP": "DROP",
+    "HANDLE_RELEASE": "HANDLE_RELEASE"
+  },
+  "route_refs": {
+    "drawer_open_release": "drawer_open_release",
+    "rise_to_observe": "rise_to_observe",
+    "retreat_to_start": "retreat_to_start",
+    "rotate_to_drop": "rotate_to_drop",
+    "rotate_back": "rotate_back",
+    "regrip_handle": "regrip_handle",
+    "push_drawer_closed": "push_drawer_closed",
+    "close_to_home": "close_to_home"
+  }
+}
