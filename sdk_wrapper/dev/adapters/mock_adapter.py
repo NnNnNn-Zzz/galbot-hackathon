@@ -402,6 +402,7 @@ class MockAdapter(SyntheticCameraMixin, RobotAdapter):
         pose: typing.Sequence[float],
         *,
         enable_collision_check: bool = True,
+        actuate: str = "with_torso",
     ) -> ToolResult:
         if chain not in self._ee_pose:
             return rejected(
@@ -424,6 +425,7 @@ class MockAdapter(SyntheticCameraMixin, RobotAdapter):
                 "target_pose": target,
                 "reachable": True,
                 "collision_check": bool(enable_collision_check),
+                "actuate": str(actuate),
             },
         )
 
@@ -593,6 +595,7 @@ class MockAdapter(SyntheticCameraMixin, RobotAdapter):
         *,
         straight_line: bool = True,
         enable_collision_check: bool = True,
+        actuate: str = "with_torso",
         timeout_s: float = 10.0,
     ) -> ToolResult:
         """虚拟绝对移动：直接改写虚拟末端位姿（不碰硬件、不改变杯子位置）。"""
@@ -607,7 +610,15 @@ class MockAdapter(SyntheticCameraMixin, RobotAdapter):
         if len(target) != 7:
             return rejected(ErrorCode.INVALID_ARGUMENT, "pose 必须是 7 个数值", mode=self.mode)
         self._ee_pose[chain] = target
-        self._ee_moves.append({"chain": chain, "target": target, "absolute": True})
+        self._ee_moves.append(
+            {
+                "chain": chain,
+                "target": target,
+                "absolute": True,
+                "actuate": str(actuate),
+                "collision_check": bool(enable_collision_check),
+            }
+        )
         return ok(
             f"Mock {chain} 已到指定位姿",
             mode=self.mode,

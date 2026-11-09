@@ -1,19 +1,44 @@
 {
   "note": [
-    "YOLO-seg charger-top tool configuration.",
-    "weights=null discovers the newest best.pt under model_search_roots, then validates task=segment and class=charger before use.",
-    "These quality thresholds are initial safety gates, not calibrated grasp tolerances."
+    "YOLO-seg charger-whole ROI tool configuration.",
+    "The five-fold-selected charger_whole model detects the object and defines ROI; the legacy charger model then segments its top surface inside that ROI.",
+    "If the top-surface model or its geometry is unusable, a reproducible random target is sampled inside the whole-charger mask and still requires metric and plane validation."
   ],
   "model_search_roots": [
     "/home/mr/yoloseg/runs",
     "~/yoloseg/runs"
   ],
-  "weights": "~/yoloseg/runs/charger_seg_clean/weights/best.pt",
-  "target_class": "charger",
+  "weights": "~/yoloseg/runs/charger_seg_whole_final/weights/best.pt",
+  "target_class": "charger_whole",
   "required_task": "segment",
+  "cascade": {
+    "enabled": true,
+    "strategy": "whole_roi_top_surface",
+    "top_surface_weights": "~/yoloseg/runs/charger_seg_clean_v2/weights/best.pt",
+    "top_surface_target_class": "charger",
+    "top_surface_confidence": 0.01,
+    "iou": 0.45,
+    "roi_margin": 0.20,
+    "proposal_limit": 3,
+    "min_bbox_iou": 0.15,
+    "min_mask_containment": 0.5
+  },
+  "whole_fallback_sampling": {
+    "sample_attempts": 64,
+    "sample_seed": 20261108,
+    "sample_radius_px": 12,
+    "min_mask_fill_ratio": 0.2,
+    "min_depth_valid_ratio": 0.5,
+    "max_depth_m": 1.5,
+    "max_surface_tilt_deg": 50.0,
+    "max_local_plane_rms_m": 0.02
+  },
   "imgsz": 640,
   "confidence": 0.3,
   "iou": 0.7,
+  "capture_attempts": 20,
+  "detection_attempts": 3,
+  "capture_retry_delay_s": 0.5,
   "device": "cpu",
   "head_camera": "head_left",
   "wrist_camera": "right_arm",
@@ -28,7 +53,7 @@
     "max_depth_m": 1.5,
     "min_long_dimension_m": 0.02,
     "min_short_dimension_m": 0.015,
-    "max_surface_tilt_deg": 30.0,
+    "max_surface_tilt_deg": 50.0,
     "safe_standoff_m": 0.12,
     "depth_sample_stride": 2
   },

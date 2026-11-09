@@ -83,6 +83,10 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 - **修复**：使用 `StereoDepthTool.capture_stereo_depth()` 直接调该 SDK 模块，保存原始 `.npy` 与伪彩色预览。2026-11-08 用头部外参和地面平面完成尺度验证后，应用层换算固定为 `depth_m = raw_value * 0.001`。
 - **验证**：2026-11-07 在 HPU 真机完成封装调用，返回 `succeeded/real`，图像为 1280×960、`uint16`，有效像素比例 1.0，原始值范围 384–7798；预览能区分桌面、物体和背景。2026-11-08 复测得到头左内参 `K` 为 `fx=486.2493, fy=486.2607, cx=652.1300, cy=480.4339`、`distortion_model=kannala_brandt`，并通过 `get_sensor_extrinsic(HEAD_LEFT_CAMERA, "base_link")` 反投影。按毫米假设变换到 `base_link` 后，地面 RANSAC 平面 `z=-0.0021 m`、法向 `(0.0868, -0.0323, 0.9957)`，42,809/86,016 个采样点落在 3 cm 平面内；其他候选尺度会得到数十米到数千米的地面高度，因此确认 FOUNDATION_STEREO 原始深度单位是毫米。RGB 高 992、双目图高 960，反投影时 `fy/cy` 必须乘 `960/992`，并对 Kannala-Brandt 鱼眼畸变先去畸变。
 
+  2026-11-08 正式 charger 链路复测时，`StereoDepthTool` 报 `ImportError: cannot import name '_sdk_bootstrap' from 'sdk_wrapper.wrapper'`。确认原因是 wrapper 重构后 bootstrap 已移动到 `sdk_wrapper.dev.adapters.galbot_adapter`，工具仍从旧位置导入。将导入改为 adapter 的 `_sdk_bootstrap()` 后，真机头部检测得到有效的 `target_3d` 和 `target_safety`；当前低置信提案因距离、平面法向等安全门槛被正确拒绝，没有进入底盘或腕部运动。
+
+  当日 `keyboard_head_control.py` 又复现同一导入错误，但原因不是头部控制逻辑：HPU 上仍保留旧版 `head.py`，本地 `HeadLookTool` 已改为通过 `sdk_wrapper.dev.toolhub` 获取共享机器人单例。诊断时先比较本地与 HPU 文件的导入路径和哈希；修复方式是重新部署最新 `sdk_wrapper/dev/robot_tools/head.py`，无需修改 `wrapper.py`。2026-11-08 覆盖后 HPU 头部测试 7/7 通过，`HeadLookTool(real_authorized=True).get_head_pose()` 返回真实姿态，旧导入错误消失。
+
 ### G1 躯干轴向：`leg_joint4/5` 不当前倾，`leg_joint3` 可产生俯仰（2026-11-07）
 
 - **现象**：监督脚本最初期望用 `torso` 链的 `leg_joint4`、`leg_joint5` 实现前倾，但真机中 `leg_joint4` 产生偏航，`leg_joint5` 也没有产生俯仰；现场观察到侧向运动，`leg_joint5` 微步时头部滚转约变化 1.14°，俯仰和偏航基本不变。
@@ -105,6 +109,8 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 - **诊断**：在 HPU 执行 `ss -ltnp | grep 8092`，检查监听进程是否存活以及队列是否为 `5/5`；再查 `systemctl --user status galbot-camera-robot.service` 和 `/home/galbot/galbot-camera-shots/systemd.log`。不要仅因进程存活就判断服务正常。
 - **修复**：先备份 `/home/galbot/galbot-camera-shots/robot_server.py` 与对应的 user unit，再执行 `systemctl --user daemon-reload && systemctl --user restart galbot-camera-robot.service`。该操作只重启只读相机桥，不发送机器人运动或夹爪命令。
 - **验证**：2026-11-08 重启后队列恢复为 `0/5`，主页返回 HTTP 200，认证后的 `/health` 以及左右腕 `/frame/*` 均返回 JPEG；腕部实例分割状态为 `ready`。后续若再次出现 `5/5`，应同时检查前端轮询和单个请求是否阻塞，不能无限重启掩盖问题。
+
+  `8092` 服务与正式 ToolHub 使用不同的权重配置入口。正式配置切到 `charger_whole` 后，页面仍可能继续加载旧 `charger_seg_clean_v2`，因为服务进程只在启动时读取自己的默认权重。诊断时先读取认证后的 `/api/info.segmentation.weights` 和 `strategy`，再与 `sdk_wrapper/dev/config/charger_yolo.json` 对照；如果 phase 不一致，需要更新 `/home/galbot/galbot-camera-shots/robot_server.py` 的默认模型并重启服务。2026-11-08 已将页面服务改为复用 `WholeRoiTopSurfaceBackend`，`/api/info` 验证为 `charger_seg_whole_final -> charger_seg_clean_v2`，策略 `whole_roi_top_surface`。
 
 ### 夹爪碰到物体后继续收窄会返回 `TIMEOUT`（2026-11-08）
 
@@ -137,8 +143,36 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
   grep -n "TRAC-IK solver failed\|SERVICE_STATUS_EXECUTE_FAILED" \
     /userdata/log/service_motion_plan/Info_*.log | tail -40
   ```
-- **修复**：末端姿态改为 local `+X=接近轴`、local `Y=两指闭合轴`、local `Z=夹爪长轴`；`plan` 阶段先调用只读 `inverse_kinematics`，无解时直接返回 `rejected/safety_limit`，不再把命令送进运动服务。腕部精定位同时增加物理长/短边最小值（`0.02/0.015 m`）和表面法向相对竖直最大倾角（`30°`）门槛。
+- **修复**：末端姿态改为 local `+X=接近轴`、local `Y=两指闭合轴`、local `Z=夹爪长轴`；`plan` 阶段先调用只读 `inverse_kinematics`，无解时直接返回 `rejected/safety_limit`，不再把命令送进运动服务。腕部精定位同时增加物理长/短边最小值（`0.02/0.015 m`）和表面法向相对竖直最大倾角门槛；当前校准值为 `50°`。
 - **验证**：2026-11-08 HPU 单测通过。修正轴映射后，首个位姿的旋转量从约 `167°` 降到约 `93°`，但只读 IK 仍返回 `FAULT`，工具在运动前明确拒绝。调整机器人位置后再次观测到完整顶面：中心 `[0.60777, -0.052781, 0.735523]`、长/短边 `3.02/2.37 cm`、平面 RMS `1.38 mm`、法向倾角 `3.98°`，证明该充电器本身是小型目标，最初 `4×6 cm` 门槛过严。最终门槛改为 `2×1.5 cm` 并新增小尺寸合法样本回归。更新后的目标 `[0.7025586, -0.034594, 0.8552943]` 仍因距离稍远而无 IK 解；虚拟底盘前移约 `0.12 m` 后即可求解，因此继续测试时应先小幅靠近再重新 `plan`。
+
+### 左臂 charger `move` 预检成功但执行仍报 `FAULT`：动态碰撞监控在轨迹执行中急停（2026-11-08）
+
+- **现象**：左腕已经识别 charger 并生成 pre-grasp 位姿，`ik_preflight` 返回 `SUCCESS/reachable=true`；现场输入 `MOVE` 后仍得到 `[move] status=failed`、`末端移动失败（FAULT）`、`error_code=sdk_error`。另一部分观测中预检本身返回 `rejected(FAULT)`，但下一次同类目标又能成功规划。
+- **确认原因**：`service_motion_plan` 在 `10:16:15`、`10:17:01`、`10:18:07` 的异步预检都找到 TRAC-IK 解，并分别返回 `SERVICE_STATUS_FINISHED`；之后的直接执行日志明确为 `Direct execute task, send target to WBC`。失败发生在轨迹开始后的动态碰撞监控，不是通信断开、急停按钮、没有 IK 解或目标不可达。已确认的碰撞点包括：
+  - `10:16:25`：`right_gripper_l_finger_link` sphere；
+  - `10:17:06`：`left_arm_link7` sphere；
+  - `10:18:13`：`right_arm_link2` sphere。
+
+  随后日志出现 `Trajectory collision!`、`SendStopSingorixTarget` 和 `SERVICE_STATUS_EXECUTE_FAILED`。因此 `FAULT` 是 WBC 执行阶段被轨迹碰撞监控中止；预检通过只代表规划 snapshot 中的路径可解。
+- **诊断**：
+
+  ```bash
+  grep -nE "Start Unified Motion Planning|TRAC-IK solver found|Async task, not send target|Direct execute task|Collision detected|Trajectory collision|SERVICE_STATUS_EXECUTE_FAILED" \
+    /userdata/log/service_motion_plan/service_motion_plan.INFO | tail -160
+  ```
+
+  2026-11-08 同机只读复核结果：左臂当前末端约 `[0.439, 0.248, 0.909]`，右臂约 `[0.586, -0.207, 1.152]`，机器人 `idle`；对同一左臂目标分别用 `with_torso+collision`、`chain_only+collision`、`chain_only+no_collision` 做 `motion_plan`，三者都返回 `SUCCESS`。这进一步排除了稳定 IK 不可达，并把差异指向预检与执行时动态 ESDF/机器人状态不一致。
+- **修复与安全处理**：失败后禁止直接重复发送同一 `MOVE`。先把非执行臂收回到安全收拢位、停止并等待底盘残余运动结束，再重新拍照和规划；显式比较 `with_torso` 与 chain-only 路径，必要时关闭 torso 协助。充电器目标距离较远时优先使用更近的二次观察位，减少跨工作空间的大姿态变化。动态碰撞监控触发后必须视为“运动已部分执行并被停止”，重新读取两臂实际位姿后再决定下一步。
+- **离线碰撞回放**：不要通过关闭 WBC collision monitor 来试碰撞。服务每次急停都会保存 `save_data/*.collision.point_cloud.msgpack` 和失败轨迹；点云顶层格式为 `[frame, robot_base_pose, points]`，可以直接解包，与日志中的 collision sphere 坐标一起画 3D/俯视/侧视图。2026-11-08 `10:18:13` 快照中 collision sphere 位于 map `[-1.784, -0.182, 1.113]`，最近离散 ESDF 点约 `9.7 cm`，点云显示附近存在桌面上方约 1 m 高的竖直物体区域。该快照足以定位空间冲突，但体素点不是碰撞对本身，不能只凭最近点距离反推出具体碰撞副。
+- **已验证的安全分解路径（2026-11-08）**：保持 collision monitor、环境碰撞检查和自碰撞检查全部开启，关闭 torso 协助，把“平移 + 旋转”拆开：
+  1. 从 `[0.583, 0.323, 0.952]` 开始，保持当前姿态，每次平移约 2 cm；4 步到达 `[0.661, 0.306, 0.922]`，全部 `SUCCESS`；
+  2. 再保持姿态平移 3 步，到达 `[0.710, 0.300, 0.908]`，全部 `SUCCESS`；
+  3. 位置固定，剩余 `44.59°` 姿态变化拆成 6 步，每步约 7.4°；6 步全部 `SUCCESS`。
+
+  最终实测位姿约 `[0.70936, 0.30077, 0.90818, -0.41130, 0.56483, 0.44152, 0.56290]`，机器人回到 `idle`。相反，此前同时平移+旋转时，2 cm/7° 的 12 步方案在 RA 分支跳到 `left_arm_joint1=2.05754` 时失败，而 5 cm/14° 方案在 `leg_link2` 碰撞监控停下。结论：当前服务对笛卡尔插值的 IK 分支稳定性不足；预抓取运动应先保持姿态平移，再原位小步旋转，不能让单段运动同时承担大平移和大旋转。
+- **代码修复（2026-11-08）**：新增 `algorithms/pose_transition.py::PoseTransitionController` 并接入 `ChargerGraspTool`。平移阶段固定起始四元数、每步 ≤ `2 cm`；旋转阶段固定位置、每步 ≤ `7.5°`；全部使用 `with_chain_only` 且保持 collision monitor。控制器还检查累计姿态/位置漂移、单步过冲、无实际前进和最大步数。`MotionTool` / `GalbotAdapter.move_ee_to` 新增显式 `actuate` 与 `enable_collision_check` 参数，避免调用层无意启用 torso。
+- **回归覆盖**：新增纯算法、Tool 集成和 MockAdapter 测试，覆盖平移锁定姿态、旋转锁定位置、累计姿态漂移、分支过冲、成功但无进展、步数上限和 chain-only 参数传递。全量 136 项单测通过。正式工具链的真实前抓取复测仍取决于当前腕部视野能否给出合格 charger 目标；此前手工等价分段已到达目标位姿。
 
 ### charger 上表面接近水平却被判成法向倒置（2026-11-08）
 
@@ -147,6 +181,60 @@ bash scripts/deploy_hpu.sh [机器人IP]   # 默认 192.168.166.7
 - **诊断**：读取 `surface.surface_normal_base`，对接近水平的工作台面应满足 `z≈+1`；若 `x/y` 很小而 `z≈-1`，检查是否在朝上修正之后又执行了首轴符号规范化。用保存的 `charger_mask_bool.npy`、`depth_m.npy`、原内参和当前深度相机外参离线重算即可复现。
 - **修复**：平面法向只做单位化和 `z>=0` 修正，不再调用首非零轴 canonicalization；长边轴仍可独立规范化。新增小负倾角回归测试，确保 `-10°` 的合法表面仍得到向上法向。
 - **验证**：2026-11-08 对同一保存帧重算后，法向变为 `[-0.02009, 0.05441, 0.99832]`，倾角 `3.32°`，观测通过精定位门槛；使用当前 `EndEffector` 对生成的 pre-grasp pose 做只读 IK 返回 `SUCCESS`。后续实时帧重新检测到 charger 后即可继续 `plan`/`move`。
+
+### `charger_seg_clean` / `clean_v2` 在真实腕部视角无可靠输出（2026-11-08）
+
+- **现象**：实时腕部 `detect` 在 charger 清晰可见、距离约 `0.50 m` 时返回 `not_ready`；原图 1280×720 中 charger 约 `64×87 px`，并非出框或被夹爪遮挡。换成 `charger_seg_clean_v2` 后，当前右腕的 100W 白色充电器仍为 0 框。
+- **确认原因**：模型本身已正确加载为 `YOLO11-seg / charger`，但 clean 系列对当前腕部视角和充电器表征的召回退化。2026-11-08 对同一当前右腕原图、固定 `640/iou=0.7`、把阈值降到 `0.001` 后，`yolo11n_seg_charger_v2` 最高分为 `0.593493`，`charger_seg_clean` 为 `0.092665`，`charger_seg_clean_v2` 只有 `0.030783`；只裁出充电器附近区域后 clean_v2 最高仍只有约 `0.0207`。因此不是阈值、输入裁切、目标太小或推理链路问题，而是新训练丢失了旧权重拥有的目标表征。
+- **诊断**：直接对同一保存帧运行新权重和旧 v2 权重，固定 `iou=0.7`、`conf=0.05`：
+
+  | 权重 / 输入 | 当前 charger 框 | 结果 |
+  |---|---:|---|
+  | `charger_seg_clean`, 640 | 无 | 低于 0.05 |
+  | `charger_seg_clean`, 1280 | `0.156` | 低于生产阈值 0.30 |
+  | `yolo11n_seg_charger_v2`, 640 | `0.432` | 可通过 0.30 |
+
+  该对比证明相机、D405、预处理和 YOLO 调用链均在工作，差异来自模型对该角度/距离的训练覆盖。
+
+  `clean_v2` 的离线结果也需要谨慎解读：数据集只有 54 张训练图（50 张正样本、4 张负样本）和 13 张验证图（12 张正样本、1 张负样本），且 `split.json` 是按帧随机抽取，不是按连续拍摄会话分组。640 输入下 `conf=0.20` 时验证集为 12/12，但 `conf=0.25` 时漏掉最高分为 `0.2168` 的 `charger_0026`；改到 960 输入反而只有 7/12，因此不能用“提高 imgsz”或只看随机验证集 mAP 解决真实场景召回。
+- **处理方案**：当前演示若要求立即检测，应恢复 `yolo11n_seg_charger_v2` 或做双模型/旧模型召回兜底；继续使用 clean 权重时，必须把当前腕部失败帧、不同距离、不同滚动角、插头在视野左右两侧的样本与旧数据中的有效正样本混合训练，并按拍摄会话分组验证。不要只把全局 `confidence` 降到一个很低值：它会同时引入背景误检。模型替换后必须对当前真实腕部帧做固定阈值扫描，并同时检查负样本误检，不能只看单一验证集 mAP。
+- **后续修复（2026-11-08）**：已改为 `charger_whole` 整体模型先行划定 ROI，再在 ROI 内调用 clean 上表面模型；旧模型漏检或上表面几何不可用时，保留整体掩码并随机采样有效深度点，每个采样点仍须通过局部平面 RMS、法向朝上、深度有效率、触边和 IK 检查。真实右腕冒烟中整体模型置信度 `0.496`，旧上表面模型无可接受结果，回退采样得到 `uv=[658,496]` 且深度有效率 `92.5%`。这解决“有整体目标却因旧上表面漏检直接失败”的问题。
+- **验证**：2026-11-08 用当前右腕原图和 clean 验证集完成旧/新权重对照、阈值扫描、640/960 输入对照及目标裁剪复核；clean_v2 没有达到当前生产门槛，旧 v2 在同一 640 输入下有约 `0.593` 的有效目标框。
+
+### charger `move` 在确认后重新规划失败（2026-11-08）
+
+- **现象**：操作员输入 `MOVE` 后，程序报“运动前重新规划失败：腕部已识别 charger，但该观测不满足精定位门槛”；机械臂未移动。现场看到 YOLO 置信度约 `0.84`，容易误判为无理由拒绝。
+- **确认原因**：旧交互顺序先要求输入 `MOVE`，之后才重新拍照并规划。`08:39` 的新观测置信度为 `0.8396`，但 D405 上表面法向为 `[-0.730,-0.111,0.674]`、倾斜 `47.6°`，被当时 `30°` 的最大倾斜门槛拒绝。置信度只表示分割类别可信，不代表三维表面适合顶抓。
+- **验证**：对同一保存观测直接生成 pre-grasp，并做左臂碰撞感知只读 IK，返回 `SUCCESS`、目标旋转约 `34.8°`，说明左臂可达性和运动规划不是阻碍；拒绝来自过严的表面倾角门槛。
+- **修复**：最大表面倾角从 `30°` 调整为 `50°`，仍低于此前约 `60.9°` 的侧面误检；`--stage move` 改为先重新观测、生成位姿并做 IK 预检，全部通过后才要求输入 `MOVE`。通过预检的位姿在 15 秒内直接复用，不会再因为输入确认后重新拍照导致第二次拒绝；超时后才重新规划。预检失败时直接退出，失败输出会打印嵌套观测及具体拒绝原因。
+- **验证结果与边界**：2026-11-08 本地 105 项单测通过；同一 `08:39` 观测放开到 `50°` 后几何合格，左臂碰撞感知 IK 有解。复核时实时画面已没有 charger，`move` 在预检阶段直接退出，未要求 `MOVE`，也未下发真机动作。此前一次 `moving` 拒绝是动作前状态门槛，连续复读后机器人已回到 `idle`，不是规划失败。
+
+  2026-11-08 后续真机中，`move` 反复返回“下发前机器人不是 idle：moving”。确认适配器的 `motion_state` 在底盘速度超过 `0.02 m/s` 或存在活动导航任务时为 `moving`；机械臂规划本身没有失败。处理改为有界 idle 收敛：没有活动导航任务且速度不超过放宽后的 `0.05 m/s` 时允许继续；速度更高时先调用 `stop_base`，最多等待 `3 s`，每 `0.2 s` 复读状态，持续运动或仍有活动导航任务才拒绝。新逻辑通过 39 项 HPU 相关单测；当次真机状态复读为 `idle`、`base_speed=0.0101 m/s`、无活动任务。未在复核中自动下发机械臂 `move`。
+
+### 腕部 charger 测试成功但打印 `success=None`、退出码 1 且没有观测详情（2026-11-08）
+
+- **现象**：真机 `--stage detect` 的工具结果实际为 `status=succeeded`，但脚本打印 `success=None`、进程退出码 1，并且不显示 `surface`、检测阶段或后备采样坐标；容易被误判为识别失败。
+- **确认原因**：`ToolResult.to_dict()` 按统一协议把业务字段放在 `data` 下，且顶层没有 `success`，状态字段只有 `status`。`test_charger_wrist_pregrasp.py` 仍按旧扁平结构读取 `result["surface"]` / `result["observation"]`，并用不存在的 `result["success"]` 决定退出码。
+- **诊断**：对工具返回值执行 `print(result.to_dict().keys())`，会得到固定的 `status/mode/message/task_id/data/error_code`；`status == "succeeded"` 时业务观测在 `result["data"]`，顶层 `success` 必然不存在。
+- **修复**：现场脚本统一从 `data` 读取观测、位姿和动作结果，用 `status == "succeeded"` 判断成功；新增脚本输出回归测试。修复后 `detect/plan/move` 的退出码与工具协议一致，并会打印 `target_mode`、`whole_fallback_sampling` 和采样像素。
+- **验证**：新增回归测试后本地全量 116 项单测通过。真机右腕已运行到整体掩码随机采样路径；重新部署修正版脚本后只识别阶段退出 0 并显示采样详情。
+
+### 腕部冷启动首帧偶发 `not_ready`，紧接着独立取图可正常识别（2026-11-08）
+
+- **现象**：同一场景连续执行右腕 `detect`，第一次识别成功并生成目标；随后一次 `plan` 和一次 `detect` 都在“没有候选”处返回 `not_ready`。立即用 `capture_right_wrist()` 取 Current RGB，画面中 charger 清晰可见；同一张图离线运行 `charger_whole` 得到最高置信度 `0.9088`。
+- **原因状态**：**假设**为右腕相机数据流在部分冷启动会话中尚未发布，既可能发生在新进程初始化后的首帧，也可能持续到整个会话；现有证据排除了模型权重、类别和当前场景遮挡，但尚未定位到 SDK 共享内存、相机服务或硬件连接中的具体一层，因此不把原因写成已确认。
+- **诊断**：失败时同时保存 `capture_id`、RGB 和检测报告；若紧接着的独立取图清晰且离线模型高置信度命中，检查进程启动后的前几帧，而不是立即下调生产置信度。
+- **修复**：腕部精定位把空图重试和检测重试分开。空 payload 最多尝试 20 次、间隔 `0.5 s`（约 10 秒冷启动预算）；只有拿到有效 RGB 后才计入 3 次“无候选”检测尝试，因此正常无目标不会等待 10 秒。每次重新取 RGB-D 和运行两级模型，结果记录在 `capture_attempt` / `capture_attempt_reports`；脚本在真机退出时注册 `toolhub.shutdown()`，确保下一次进程能重新初始化相机。头部交接仍只取一帧，避免改变任务时序。
+- **验证**：新增“模型首帧空”“adapter 首帧空 payload”和“有图但连续无目标只重试 3 次”三类回归测试；本地全量 118 项单测通过。部署后连续两次真机右腕 `detect` 均成功；随后 `plan` 也成功产出 pre-grasp 位姿并通过只读 IK/碰撞预检，未下发运动。之后再次冷启动时出现连续 20 次空 payload，约 10 秒重试仍未恢复；同一时刻直接调用 `capture_right_wrist()` 也返回 `False`，说明该次失败已超出本工具的单进程重试范围，更接近相机数据源或传感器服务状态问题，原因仍待现场确认。成功会话中的三次观测均为 `capture_attempt=1`。
+
+### `collision_check=True` 不等于机械臂会绕开桌子（2026-11-08）
+
+- **现象**：`move_ee_to(straight_line=False)` 带有碰撞检查参数，但仍可能选择贴近桌面的不良轨迹；现场表现为夹爪容易撞桌。
+- **确认原因**：旧实现走 `set_end_effector_pose()`，服务日志为 `MpsTask handling on traj plan`，本质是目标关节轨迹规划，不是采样式自由空间路径搜索。`collision_check` 只能拒绝与**已加载碰撞环境**相交的轨迹，不会自动把实时相机看到的桌子加入碰撞世界。
+- **诊断**：检查 `service_motion_plan` 日志中的 planner 类型。`traj plan` 表示直接轨迹规划；低层采样式避障应显示 `Start Unified Motion Planning` 和 `MpsTask handling on motion plan`。SDK 文档也明确：GalbotMotion 不自动导入实时感知，环境障碍必须通过 `add_obstacle()` / `attach_target_object()` 加载。
+- **修复**：`straight_line=False` 的绝对末端移动改为低层 `motion_plan([[MotionPlanChainTarget]], PlannerConfig)`，同时启用 `is_check_collision` 和 `enable_env_collision_check`，并允许 torso 协助；只读预检使用同一 planner 但设置 `is_direct_execute=False`，确认有完整路径后才执行。
+- **验证**：2026-11-08 在 HPU 对当前左臂 EndEffector 位姿做只读路径预检，返回 `SUCCESS`；服务日志从 `MpsTask handling on traj plan` 变为 `MpsTask handling on motion plan`。本地 105 项单测通过，未执行额外真机动作。
+- **边界**：这只保证在“已加载的碰撞环境”中搜索安全路径，不会凭空知道桌子几何。2026-11-08 在 HPU 查询 `GalbotMotion.get_built_obstacles_list()`，实际仅返回 `['ground']`，没有桌面或目标物体。因此当前 planner 会避开地面和机器人自身，但无法可靠避开未加载的桌子；仍需通过底盘观察位、提高预抓取高度，或使用 `add_obstacle()` 显式加载桌面 box/点云/深度图后再规划。
 
 ### 头部关节已动但姿态校验不变：测错 frame（2026-11-07）
 

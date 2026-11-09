@@ -14,6 +14,8 @@ __all__ = [
     "plan_wrist_camera_pose",
     "end_effector_pose_for_camera",
     "plan_end_effector_grasp_pose",
+    "plan_diagonal_observation_pose",
+    "plan_grasp_descent_pose",
     "base_point_to_map",
     "compose_map_pose_with_base_pose",
 ]
@@ -297,4 +299,199 @@ def plan_end_effector_grasp_pose(
             "y": "jaw_closing_axis",
             "z": "gripper_long_axis",
         },
+    }
+
+
+def plan_diagonal_observation_pose(
+    surface_center_base_m: typing.Sequence[float],
+    surface_normal_base: typing.Sequence[float],
+    long_edge_axis_base: typing.Sequence[float],
+    *,
+    observation_distance_m: float = 0.05,
+    tilt_from_normal_deg: float = 35.0,
+    current_end_effector_pose_base: typing.Sequence[float] | None = None,
+    min_observation_distance_m: float = 0.03,
+    max_observation_distance_m: float = 0.08,
+    tool_approach_offset_m: float = 0.0,
+) -> dict[str, typing.Any]:
+    """Plan a close diagonal observation pose whose approach ray hits center."""
+    center = np.asarray(surface_center_base_m, dtype=np.float64).reshape(3)
+    normal = _normalize(surface_normal_base)
+    if normal[2] < 0:
+        normal = -normal
+    long_axis = np.asarray(long_edge_axis_base, dtype=np.float64).reshape(3)
+    long_axis = long_axis - float(long_axis @ normal) * normal
+    if np.linalg.norm(long_axis) < 1e-9:
+        raise ValueError("long edge axis is parallel to the surface normal")
+    long_axis = _normalize(long_axis)
+    closing_axis = _normalize(np.cross(normal, long_axis))
+
+    distance = float(observation_distance_m)
+    tilt_deg = float(tilt_from_normal_deg)
+    tool_offset = float(tool_approach_offset_m)
+    reasons: list[str] = []
+    if not math.isfinite(distance):
+        reasons.append("observation_distance_not_finite")
+        distance = min(max(0.0, float(min_observation_distance_m)), 0.05)
+    elif distance < float(min_observation_distance_m):
+        reasons.append("observation_distance_below_minimum")
+    elif distance > float(max_observation_distance_m):
+        reasons.append("observation_distance_above_maximum")
+    if not math.isfinite(tilt_deg) or not 0.0 < tilt_deg < 85.0:
+        reasons.append("observation_tilt_invalid")
+        tilt_deg = 35.0
+    if not math.isfinite(tool_offset) or not 0.0 <= tool_offset <= 0.25:
+        reasons.append("tool_approach_offset_invalid")
+        tool_offset = 0.0
+
+    lateral_sign = 1.0
+    if current_end_effector_pose_base is not None:
+        current_pose = np.asarray(
+            current_end_effector_pose_base, dtype=np.float64
+        ).reshape(-1)
+        if current_pose.size == 7 and all(math.isfinite(v) for v in current_pose):
+            radial = current_pose[:3] - center
+            projection = float(radial @ closing_axis)
+            if abs(projection) > 1e-6:
+                lateral_sign = 1.0 if projection >= 0.0 else -1.0
+
+    radial_direction = float(np.cos(math.radians(tilt_deg)))
+    lateral_amount = float(np.sin(math.radians(tilt_deg)))
+    offset_direction = _normalize(
+        normal * radial_direction
+        + closing_axis * lateral_sign * lateral_amount
+    )
+    approach_axis = -offset_direction
+    tcp_position = center + offset_direction * distance
+    position = tcp_position - approach_axis * tool_offset
+    aligned_long = long_axis - float(long_axis @ approach_axis) * approach_axis
+    if np.linalg.norm(aligned_long) < 1e-9:
+        raise ValueError("long edge axis is parallel to observation approach")
+    aligned_long = _normalize(aligned_long)
+    aligned_closing = _normalize(np.cross(aligned_long, approach_axis))
+
+    candidates = [
+        np.column_stack([approach_axis, aligned_closing, aligned_long]),
+        np.column_stack([approach_axis, -aligned_closing, -aligned_long]),
+    ]
+    selected_index = 0
+    rotation_error_deg: float | None = None
+    if current_end_effector_pose_base is not None:
+        current_pose = np.asarray(
+            current_end_effector_pose_base, dtype=np.float64
+        ).reshape(-1)
+        if current_pose.size == 7 and all(math.isfinite(v) for v in current_pose):
+            current_rotation = geo.quaternion_to_matrix(*current_pose[3:7])
+            errors = [
+                _rotation_error_deg_candidates(candidate, current_rotation)
+                for candidate in candidates
+            ]
+            selected_index = int(np.argmin(errors))
+            rotation_error_deg = round(errors[selected_index], 6)
+
+    rotation = candidates[selected_index]
+    qx, qy, qz, qw = geo.matrix_to_quaternion(rotation)
+    pose = [*position.tolist(), qx, qy, qz, qw]
+    return {
+        "safe_to_plan": not reasons,
+        "reasons": reasons,
+        "frame": "base_link",
+        "target_kind": "wrist_charger_diagonal_observation",
+        "surface_center_m": [round(float(v), 7) for v in center],
+        "surface_normal_base": [round(float(v), 8) for v in normal],
+        "observation_position_m": [round(float(v), 7) for v in position],
+        "tcp_observation_position_m": [
+            round(float(v), 7) for v in tcp_position
+        ],
+        "observation_pose": [round(float(v), 7) for v in pose],
+        "observation_distance_m": round(distance, 7),
+        "tool_approach_offset_m": round(tool_offset, 7),
+        "tilt_from_normal_deg": round(tilt_deg, 6),
+        "offset_direction_base": [round(float(v), 8) for v in offset_direction],
+        "approach_axis_base": [round(float(v), 8) for v in approach_axis],
+        "gripper_long_axis_base": [
+            round(float(v), 8) for v in rotation[:, 2]
+        ],
+        "jaw_closing_axis_base": [
+            round(float(v), 8) for v in rotation[:, 1]
+        ],
+        "selected_long_axis_sign": 1.0 if selected_index == 0 else -1.0,
+        "rotation_from_current_deg": rotation_error_deg,
+        "camera_visibility": (
+            "wrist optical +z follows local +x and points at surface center"
+        ),
+    }
+
+
+def plan_grasp_descent_pose(
+    surface_center_base_m: typing.Sequence[float],
+    long_edge_axis_base: typing.Sequence[float],
+    current_end_effector_pose_base: typing.Sequence[float],
+    *,
+    clearance_m: float = 0.01,
+    min_clearance_m: float = 0.002,
+    max_clearance_m: float = 0.05,
+    max_descent_m: float = 0.12,
+    tool_approach_offset_m: float = 0.0,
+) -> dict[str, typing.Any]:
+    """Plan a short descent along the current diagonal approach axis."""
+    center = np.asarray(surface_center_base_m, dtype=np.float64).reshape(3)
+    current_pose = np.asarray(
+        current_end_effector_pose_base, dtype=np.float64
+    ).reshape(-1)
+    if current_pose.size != 7 or not all(math.isfinite(v) for v in current_pose):
+        raise ValueError("current pose must contain 7 finite values")
+    current_rotation = geo.quaternion_to_matrix(*current_pose[3:7])
+    approach_axis = _normalize(current_rotation[:, 0])
+
+    long_axis = np.asarray(long_edge_axis_base, dtype=np.float64).reshape(3)
+    long_axis = long_axis - float(long_axis @ approach_axis) * approach_axis
+    if np.linalg.norm(long_axis) < 1e-9:
+        raise ValueError("long edge axis is parallel to approach axis")
+    long_axis = _normalize(long_axis)
+    if float(long_axis @ current_rotation[:, 2]) < 0.0:
+        long_axis = -long_axis
+    closing_axis = _normalize(np.cross(long_axis, approach_axis))
+    rotation = np.column_stack([approach_axis, closing_axis, long_axis])
+
+    clearance = float(clearance_m)
+    tool_offset = float(tool_approach_offset_m)
+    tcp_target = center - approach_axis * clearance
+    target = tcp_target - approach_axis * tool_offset
+    delta = target - current_pose[:3]
+    descent_m = float(np.linalg.norm(delta))
+    surface_ahead_m = float((center - current_pose[:3]) @ approach_axis)
+    reasons: list[str] = []
+    if not math.isfinite(clearance):
+        reasons.append("descent_clearance_not_finite")
+    elif clearance < float(min_clearance_m):
+        reasons.append("descent_clearance_below_minimum")
+    elif clearance > float(max_clearance_m):
+        reasons.append("descent_clearance_above_maximum")
+    if surface_ahead_m <= 0.0:
+        reasons.append("surface_not_ahead_along_approach_axis")
+    if descent_m > float(max_descent_m):
+        reasons.append("descent_distance_above_maximum")
+    if not math.isfinite(tool_offset) or not 0.0 <= tool_offset <= 0.25:
+        reasons.append("tool_approach_offset_invalid")
+
+    qx, qy, qz, qw = geo.matrix_to_quaternion(rotation)
+    pose = [*target.tolist(), qx, qy, qz, qw]
+    return {
+        "safe_to_plan": not reasons,
+        "reasons": reasons,
+        "frame": "base_link",
+        "target_kind": "wrist_charger_descent",
+        "surface_center_m": [round(float(v), 7) for v in center],
+        "descent_pose": [round(float(v), 7) for v in pose],
+        "descent_position_m": [round(float(v), 7) for v in target],
+        "tcp_descent_position_m": [round(float(v), 7) for v in tcp_target],
+        "descent_vector_base": [round(float(v), 7) for v in delta],
+        "descent_distance_m": round(descent_m, 7),
+        "surface_ahead_m": round(surface_ahead_m, 7),
+        "clearance_m": round(clearance, 7),
+        "tool_approach_offset_m": round(tool_offset, 7),
+        "approach_axis_base": [round(float(v), 8) for v in approach_axis],
+        "gripper_long_axis_base": [round(float(v), 8) for v in long_axis],
+        "jaw_closing_axis_base": [round(float(v), 8) for v in closing_axis],
     }

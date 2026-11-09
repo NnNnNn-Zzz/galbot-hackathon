@@ -170,6 +170,7 @@ class RobotAdapter(ABC):
         pose: typing.Sequence[float],
         *,
         enable_collision_check: bool = True,
+        actuate: str = "with_torso",
     ) -> ToolResult:
         """Read-only IK preflight for an absolute ``EndEffector`` target."""
 
@@ -199,6 +200,7 @@ class RobotAdapter(ABC):
         *,
         straight_line: bool = True,
         enable_collision_check: bool = True,
+        actuate: str = "with_torso",
         timeout_s: float = 10.0,
     ) -> ToolResult:
         """把末端移到 base_link 下的**绝对**位姿 ``[x,y,z,qx,qy,qz,qw]``。

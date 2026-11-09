@@ -7,7 +7,14 @@ from pathlib import Path
 import numpy as np
 
 from sdk_wrapper.dev.adapters import MockAdapter
-from sdk_wrapper.dev.algorithms.charger_yolo import YoloInstance, analyze_charger_top
+from sdk_wrapper.dev.algorithms.charger_cascade import (
+    WholeRoiTopSurfaceBackend,
+)
+from sdk_wrapper.dev.algorithms.charger_yolo import (
+    YoloInstance,
+    analyze_charger_top,
+    analyze_charger_whole_fallback,
+)
 from sdk_wrapper.dev.contracts import ErrorCode, TaskStatus, ok
 from sdk_wrapper.dev.robot_tools.charger_yolo import ChargerYoloTool
 from sdk_wrapper.dev.robot_tools.perception import PerceptionTool
@@ -20,16 +27,19 @@ def rectangle_instance(
     y1: int,
     *,
     confidence: float = 0.9,
+    class_name: str = "charger",
+    stage: str = "refined",
 ) -> YoloInstance:
     shape = (512, 640)
     mask = np.zeros(shape, dtype=bool)
     mask[y0:y1, x0:x1] = True
     return YoloInstance(
         class_id=0,
-        class_name="charger",
+        class_name=class_name,
         confidence=confidence,
         bbox_xyxy=(float(x0), float(y0), float(x1), float(y1)),
         mask=mask,
+        stage=stage,
     )
 
 
@@ -48,6 +58,14 @@ class ConstantBackend:
 
     def predict(self, bgr):
         self.calls += 1
+        return list(self.instances)
+
+
+class FirstMissBackend(ConstantBackend):
+    def predict(self, bgr):
+        self.calls += 1
+        if self.calls == 1:
+            return []
         return list(self.instances)
 
 
@@ -192,8 +210,75 @@ class ChargerYoloGeometryTest(unittest.TestCase):
         self.assertGreaterEqual(result["surface"]["long_dimension_m"], 0.02)
         self.assertGreaterEqual(result["surface"]["short_dimension_m"], 0.015)
 
+    def test_whole_mask_fallback_randomly_samples_a_valid_local_plane(self):
+        instance = rectangle_instance(
+            180,
+            180,
+            420,
+            270,
+            class_name="charger_whole",
+            stage="whole_fallback",
+        )
+        result, mask = analyze_charger_whole_fallback(
+            instance,
+            (512, 640),
+            depth_m=np.full((512, 640), 0.45, dtype=np.float32),
+            intrinsics={"fx": 520.0, "fy": 520.0, "cx": 320.0, "cy": 256.0},
+            extrinsic=[0.35, 0.12, 0.55, 0.0, 0.0, 0.0, 1.0],
+            sample_attempts=16,
+            sample_radius_px=8,
+        )
+
+        self.assertTrue(result["eligible_for_precision"])
+        self.assertEqual(result["target_mode"], "whole_mask_random_sample")
+        self.assertTrue(result["surface"]["available"])
+        self.assertTrue(result["surface"]["sampled_target"])
+        sampled_uv = result["whole_fallback_sampling"]["sampled_uv"]
+        self.assertIsNotNone(sampled_uv)
+        self.assertTrue(mask[int(sampled_uv[1]), int(sampled_uv[0])])
+
+    def test_whole_mask_fallback_without_depth_is_rejected(self):
+        instance = rectangle_instance(
+            180,
+            180,
+            420,
+            270,
+            class_name="charger_whole",
+            stage="whole_fallback",
+        )
+        result, _ = analyze_charger_whole_fallback(
+            instance,
+            (512, 640),
+        )
+
+        self.assertFalse(result["eligible_for_precision"])
+        self.assertIn("depth_unavailable", result["rejection_reasons"])
+
 
 class ChargerYoloToolTest(unittest.TestCase):
+    def test_default_config_uses_charger_whole_backend(self):
+        tool = ChargerYoloTool(PerceptionTool(MockAdapter()))
+
+        self.assertIsInstance(tool.backend, WholeRoiTopSurfaceBackend)
+        self.assertEqual(tool.config["target_class"], "charger_whole")
+        self.assertEqual(
+            tool.config["weights"],
+            "~/yoloseg/runs/charger_seg_whole_final/weights/best.pt",
+        )
+        self.assertEqual(
+            tool.config["cascade"]["top_surface_weights"],
+            "~/yoloseg/runs/charger_seg_clean_v2/weights/best.pt",
+        )
+
+    def test_left_arm_override_switches_wrist_rgb_and_depth(self):
+        tool = ChargerYoloTool(
+            PerceptionTool(MockAdapter()),
+            arm="left",
+        )
+
+        self.assertEqual(tool.config["wrist_camera"], "left_arm")
+        self.assertEqual(tool.config["wrist_depth_camera"], "left_arm_depth")
+
     def test_wrist_tool_returns_structured_observation_and_artifacts(self):
         adapter = MockAdapter()
         perception = PerceptionTool(adapter)
@@ -219,6 +304,82 @@ class ChargerYoloToolTest(unittest.TestCase):
             self.assertEqual(result.data["depth_rgb_alignment"], "calibration_match")
             self.assertTrue(result.data["depth_alignment_verified"])
             self.assertEqual(backend.calls, 1)
+
+    def test_valid_top_surface_wins_over_higher_confidence_whole_fallback(self):
+        adapter = MockAdapter()
+        perception = PerceptionTool(adapter)
+        backend = ConstantBackend([
+            rectangle_instance(
+                160,
+                170,
+                440,
+                300,
+                confidence=0.99,
+                class_name="charger_whole",
+                stage="whole_fallback",
+            ),
+            rectangle_instance(
+                190,
+                190,
+                410,
+                270,
+                confidence=0.55,
+                class_name="charger",
+                stage="top_surface",
+            ),
+        ])
+
+        with tempfile.TemporaryDirectory() as directory:
+            tool = ChargerYoloTool(
+                perception,
+                backend=backend,
+                output_dir=Path(directory),
+            )
+            result = tool.segment_charger_top_wrist()
+
+        self.assertEqual(result.status, TaskStatus.SUCCEEDED)
+        self.assertEqual(result.data["detection_stage"], "top_surface")
+        self.assertTrue(result.data["eligible_for_precision"])
+
+    def test_whole_fallback_is_selected_when_top_surface_is_invalid(self):
+        adapter = MockAdapter()
+        perception = PerceptionTool(adapter)
+        backend = ConstantBackend([
+            rectangle_instance(
+                0,
+                0,
+                520,
+                330,
+                confidence=0.95,
+                class_name="charger",
+                stage="top_surface",
+            ),
+            rectangle_instance(
+                160,
+                170,
+                440,
+                300,
+                confidence=0.80,
+                class_name="charger_whole",
+                stage="whole_fallback",
+            ),
+        ])
+
+        with tempfile.TemporaryDirectory() as directory:
+            tool = ChargerYoloTool(
+                perception,
+                backend=backend,
+                output_dir=Path(directory),
+            )
+            result = tool.segment_charger_top_wrist()
+
+        self.assertEqual(result.status, TaskStatus.SUCCEEDED)
+        self.assertEqual(result.data["detection_stage"], "whole_fallback")
+        self.assertEqual(
+            result.data["target_mode"],
+            "whole_mask_random_sample",
+        )
+        self.assertTrue(result.data["eligible_for_precision"])
 
     def test_head_detection_can_handoff_to_wrist_without_grasp_coordinate(self):
         adapter = MockAdapter()
@@ -289,6 +450,153 @@ class ChargerYoloToolTest(unittest.TestCase):
         self.assertEqual(result.status, TaskStatus.SUCCEEDED)
         self.assertTrue(result.data["depth_alignment_verified"])
         self.assertTrue(result.data["eligible_for_precision"])
+
+    def test_wrist_tool_uses_whole_mask_random_sample_fallback(self):
+        adapter = MockAdapter()
+        perception = PerceptionTool(adapter)
+        backend = ConstantBackend([
+            rectangle_instance(
+                120,
+                360,
+                520,
+                430,
+                class_name="charger_whole",
+                stage="whole_fallback",
+            )
+        ])
+
+        with tempfile.TemporaryDirectory() as directory:
+            tool = ChargerYoloTool(
+                perception,
+                backend=backend,
+                output_dir=Path(directory),
+            )
+            result = tool.segment_charger_top_wrist()
+
+        self.assertEqual(result.status, TaskStatus.SUCCEEDED)
+        self.assertEqual(
+            result.data["target_mode"],
+            "whole_mask_random_sample",
+        )
+        self.assertTrue(result.data["eligible_for_precision"])
+        self.assertIsNotNone(
+            result.data["whole_fallback_sampling"]["sampled_uv"]
+        )
+
+    def test_precision_capture_retries_a_transient_empty_frame(self):
+        adapter = MockAdapter()
+        perception = PerceptionTool(adapter)
+        backend = FirstMissBackend([
+            rectangle_instance(
+                120,
+                360,
+                520,
+                430,
+                class_name="charger_whole",
+                stage="whole_fallback",
+            )
+        ])
+        with tempfile.TemporaryDirectory() as directory:
+            config = json.loads(
+                (
+                    Path(__file__).resolve().parents[1]
+                    / "config"
+                    / "charger_yolo.json"
+                ).read_text(encoding="utf-8")
+            )
+            config["capture_retry_delay_s"] = 0.0
+            config_path = Path(directory) / "config.json"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            tool = ChargerYoloTool(
+                perception,
+                backend=backend,
+                config_path=config_path,
+                output_dir=Path(directory),
+            )
+            result = tool.segment_charger_top_wrist()
+
+        self.assertEqual(result.status, TaskStatus.SUCCEEDED)
+        self.assertEqual(backend.calls, 2)
+        self.assertEqual(result.data["capture_attempt"], 2)
+
+    def test_precision_capture_retries_an_empty_adapter_payload(self):
+        adapter = MockAdapter()
+        original = adapter.get_rgb_data
+        state = {"failed": False}
+
+        def flaky_rgb(sensor):
+            if sensor == "RIGHT_ARM_CAMERA" and not state["failed"]:
+                state["failed"] = True
+                return None
+            return original(sensor)
+
+        adapter.get_rgb_data = flaky_rgb
+        perception = PerceptionTool(adapter)
+        backend = ConstantBackend([
+            rectangle_instance(
+                120,
+                360,
+                520,
+                430,
+                class_name="charger_whole",
+                stage="whole_fallback",
+            )
+        ])
+        with tempfile.TemporaryDirectory() as directory:
+            config = json.loads(
+                (
+                    Path(__file__).resolve().parents[1]
+                    / "config"
+                    / "charger_yolo.json"
+                ).read_text(encoding="utf-8")
+            )
+            config["capture_retry_delay_s"] = 0.0
+            config_path = Path(directory) / "config.json"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            tool = ChargerYoloTool(
+                perception,
+                backend=backend,
+                config_path=config_path,
+                output_dir=Path(directory),
+            )
+            result = tool.segment_charger_top_wrist()
+
+        self.assertEqual(result.status, TaskStatus.SUCCEEDED)
+        self.assertEqual(result.data["capture_attempt"], 2)
+        self.assertEqual(
+            result.data["capture_attempt_reports"][0]["reason"],
+            "capture_error",
+        )
+
+    def test_valid_frames_with_no_target_stop_at_detection_limit(self):
+        adapter = MockAdapter()
+        perception = PerceptionTool(adapter)
+        backend = ConstantBackend([])
+        with tempfile.TemporaryDirectory() as directory:
+            config = json.loads(
+                (
+                    Path(__file__).resolve().parents[1]
+                    / "config"
+                    / "charger_yolo.json"
+                ).read_text(encoding="utf-8")
+            )
+            config["capture_attempts"] = 20
+            config["detection_attempts"] = 3
+            config["capture_retry_delay_s"] = 0.0
+            config_path = Path(directory) / "config.json"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            tool = ChargerYoloTool(
+                perception,
+                backend=backend,
+                config_path=config_path,
+                output_dir=Path(directory),
+            )
+            result = tool.segment_charger_top_wrist()
+
+        self.assertEqual(result.status, TaskStatus.FAILED)
+        self.assertEqual(result.error_code, ErrorCode.NOT_READY)
+        self.assertEqual(backend.calls, 3)
+        self.assertEqual(result.data["capture_attempts"], 3)
 
     def test_rgbd_calibration_mismatch_blocks_precision(self):
         adapter = MockAdapter()

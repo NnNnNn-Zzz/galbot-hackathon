@@ -23,7 +23,12 @@ from sdk_wrapper.dev.algorithms.charger_yolo import (
     UltralyticsYoloBackend,
     YoloInstance,
     analyze_charger_top,
+    analyze_charger_whole_fallback,
     annotation_overlay,
+)
+from sdk_wrapper.dev.algorithms.charger_cascade import (
+    CascadeChargerSegmentationBackend,
+    WholeRoiTopSurfaceBackend,
 )
 from sdk_wrapper.dev.algorithms.calibration import compare_rgbd_calibration
 from sdk_wrapper.dev.algorithms.power_strip_yolo import (
@@ -68,22 +73,79 @@ class ChargerYoloTool:
         *,
         backend: typing.Any = None,
         stereo_tool: typing.Any = None,
+        arm: str | None = None,
         config_path: str | os.PathLike[str] = _CONFIG_PATH,
         output_dir: str | os.PathLike[str] = _DEFAULT_OUTPUT,
     ) -> None:
         self.perception = perception
         with open(config_path, encoding="utf-8") as fh:
             self.config = json.load(fh)
-        self.backend = backend or UltralyticsYoloBackend(
-            roots=self.config["model_search_roots"],
-            weights=self.config.get("weights"),
-            target_class=self.config.get("target_class", "charger"),
-            required_task=self.config.get("required_task", "segment"),
-            imgsz=int(self.config.get("imgsz", 640)),
-            confidence=float(self.config.get("confidence", 0.30)),
-            iou=float(self.config.get("iou", 0.70)),
-            device=str(self.config.get("device", "cpu")),
-        )
+        if arm is not None:
+            arm_name = str(arm)
+            if arm_name not in ("left", "right"):
+                raise ValueError(f"arm must be 'left' or 'right', got {arm_name!r}")
+            self.config["wrist_camera"] = f"{arm_name}_arm"
+            self.config["wrist_depth_camera"] = f"{arm_name}_arm_depth"
+        cascade = dict(self.config.get("cascade") or {})
+        if backend is not None:
+            self.backend = backend
+        elif cascade.get("enabled", False) and str(
+            cascade.get("strategy", "")
+        ) == "whole_roi_top_surface":
+            self.backend = WholeRoiTopSurfaceBackend(
+                roots=self.config["model_search_roots"],
+                whole_weights=self.config["weights"],
+                top_surface_weights=cascade["top_surface_weights"],
+                whole_target_class=self.config.get("target_class", "charger_whole"),
+                top_surface_target_class=cascade.get(
+                    "top_surface_target_class", "charger"
+                ),
+                whole_confidence=float(self.config.get("confidence", 0.30)),
+                top_surface_confidence=float(
+                    cascade.get("top_surface_confidence", 0.05)
+                ),
+                imgsz=int(self.config.get("imgsz", 640)),
+                iou=float(cascade.get("iou", 0.45)),
+                device=str(self.config.get("device", "cpu")),
+                roi_margin=float(cascade.get("roi_margin", 0.20)),
+                proposal_limit=int(cascade.get("proposal_limit", 3)),
+                min_bbox_iou=float(cascade.get("min_bbox_iou", 0.15)),
+                min_mask_containment=float(
+                    cascade.get("min_mask_containment", 0.50)
+                ),
+            )
+        elif cascade.get("enabled", False):
+            self.backend = CascadeChargerSegmentationBackend(
+                roots=self.config["model_search_roots"],
+                weights=self.config["weights"],
+                proposal_weights=cascade["proposal_weights"],
+                target_class=self.config.get("target_class", "charger"),
+                imgsz=int(self.config.get("imgsz", 640)),
+                refine_confidence=float(cascade.get("refine_confidence", 0.01)),
+                full_accept_confidence=float(
+                    cascade.get("full_accept_confidence", 0.20)
+                ),
+                proposal_confidence=float(
+                    cascade.get("proposal_confidence", 0.02)
+                ),
+                iou=float(cascade.get("iou", 0.45)),
+                device=str(self.config.get("device", "cpu")),
+                roi_margin=float(cascade.get("roi_margin", 0.25)),
+                proposal_limit=int(cascade.get("proposal_limit", 3)),
+                refine_limit=int(cascade.get("refine_limit", 1)),
+                min_bbox_iou=float(cascade.get("min_bbox_iou", 0.15)),
+            )
+        else:
+            self.backend = UltralyticsYoloBackend(
+                roots=self.config["model_search_roots"],
+                weights=self.config.get("weights"),
+                target_class=self.config.get("target_class", "charger"),
+                required_task=self.config.get("required_task", "segment"),
+                imgsz=int(self.config.get("imgsz", 640)),
+                confidence=float(self.config.get("confidence", 0.30)),
+                iou=float(self.config.get("iou", 0.70)),
+                device=str(self.config.get("device", "cpu")),
+            )
         if stereo_tool is None and self.mode is RunMode.REAL:
             from sdk_wrapper.dev.robot_tools.stereo_depth import StereoDepthTool
 
@@ -114,31 +176,91 @@ class ChargerYoloTool:
         default_area_ratio = 0.001 if purpose == "head_handoff" else 0.002
         default_short_edge = 18.0 if purpose == "head_handoff" else 24.0
         default_fill_ratio = 0.25 if purpose == "head_handoff" else 0.30
-        analysis, mask = analyze_charger_top(
-            instance,
-            bgr.shape[:2],
-            depth_m=depth,
-            intrinsics=intrinsics,
-            extrinsic=None if extrinsic is None else extrinsic.get("transform"),
-            min_area_px=int(quality.get("min_area_px", default_area)),
-            min_area_ratio=float(quality.get("min_area_ratio", default_area_ratio)),
-            min_short_edge_px=float(quality.get("min_short_edge_px", default_short_edge)),
-            min_mask_fill_ratio=float(quality.get("min_mask_fill_ratio", default_fill_ratio)),
-            edge_margin_px=int(quality.get("edge_margin_px", 3)),
-            min_depth_valid_ratio=float(quality.get("min_depth_valid_ratio", 0.80)),
-            max_depth_m=float(quality.get("max_depth_m", 1.5)),
-            min_long_dimension_m=float(
-                quality.get("min_long_dimension_m", 0.0)
-            ),
-            min_short_dimension_m=float(
-                quality.get("min_short_dimension_m", 0.0)
-            ),
-            max_surface_tilt_deg=float(
-                quality.get("max_surface_tilt_deg", 180.0)
-            ),
-            safe_standoff_m=float(quality.get("safe_standoff_m", 0.12)),
-            depth_sample_stride=int(quality.get("depth_sample_stride", 2)),
-        )
+        transform = None if extrinsic is None else extrinsic.get("transform")
+        if instance.stage == "whole_fallback":
+            sampling = self.config.get("whole_fallback_sampling") or {}
+            analysis, mask = analyze_charger_whole_fallback(
+                instance,
+                bgr.shape[:2],
+                depth_m=depth,
+                intrinsics=intrinsics,
+                extrinsic=transform,
+                min_area_px=int(quality.get("min_area_px", default_area)),
+                min_area_ratio=float(
+                    quality.get("min_area_ratio", default_area_ratio)
+                ),
+                min_mask_fill_ratio=float(
+                    sampling.get(
+                        "min_mask_fill_ratio",
+                        quality.get("min_mask_fill_ratio", 0.20),
+                    )
+                ),
+                edge_margin_px=int(quality.get("edge_margin_px", 3)),
+                min_depth_valid_ratio=float(
+                    sampling.get(
+                        "min_depth_valid_ratio",
+                        quality.get("min_depth_valid_ratio", 0.50),
+                    )
+                ),
+                max_depth_m=float(
+                    sampling.get(
+                        "max_depth_m",
+                        quality.get("max_depth_m", 1.5),
+                    )
+                ),
+                max_surface_tilt_deg=float(
+                    sampling.get(
+                        "max_surface_tilt_deg",
+                        quality.get("max_surface_tilt_deg", 50.0),
+                    )
+                ),
+                max_local_plane_rms_m=float(
+                    sampling.get("max_local_plane_rms_m", 0.02)
+                ),
+                safe_standoff_m=float(
+                    quality.get("safe_standoff_m", 0.12)
+                ),
+                depth_sample_stride=int(
+                    quality.get("depth_sample_stride", 2)
+                ),
+                sample_attempts=int(sampling.get("sample_attempts", 64)),
+                sample_radius_px=int(sampling.get("sample_radius_px", 12)),
+                sample_seed=int(sampling.get("sample_seed", 20261108)),
+            )
+        else:
+            analysis, mask = analyze_charger_top(
+                instance,
+                bgr.shape[:2],
+                depth_m=depth,
+                intrinsics=intrinsics,
+                extrinsic=transform,
+                min_area_px=int(quality.get("min_area_px", default_area)),
+                min_area_ratio=float(
+                    quality.get("min_area_ratio", default_area_ratio)
+                ),
+                min_short_edge_px=float(
+                    quality.get("min_short_edge_px", default_short_edge)
+                ),
+                min_mask_fill_ratio=float(
+                    quality.get("min_mask_fill_ratio", default_fill_ratio)
+                ),
+                edge_margin_px=int(quality.get("edge_margin_px", 3)),
+                min_depth_valid_ratio=float(
+                    quality.get("min_depth_valid_ratio", 0.80)
+                ),
+                max_depth_m=float(quality.get("max_depth_m", 1.5)),
+                min_long_dimension_m=float(
+                    quality.get("min_long_dimension_m", 0.0)
+                ),
+                min_short_dimension_m=float(
+                    quality.get("min_short_dimension_m", 0.0)
+                ),
+                max_surface_tilt_deg=float(
+                    quality.get("max_surface_tilt_deg", 180.0)
+                ),
+                safe_standoff_m=float(quality.get("safe_standoff_m", 0.12)),
+                depth_sample_stride=int(quality.get("depth_sample_stride", 2)),
+            )
         if extrinsic is not None:
             analysis["extrinsic_timestamp_ns"] = int(extrinsic.get("timestamp_ns") or 0)
         return analysis, mask
@@ -156,29 +278,144 @@ class ChargerYoloTool:
             model_info = self.backend.describe()
         except RuntimeError as exc:
             raise ToolError(ErrorCode.NOT_READY, f"charger YOLO backend unavailable: {exc}") from exc
-        snap = self.perception._grab(
-            camera_id,
-            include_depth=include_depth,
-            note=note,
+        cascade_predict = getattr(self.backend, "predict_cascade", None)
+        capture_attempts = max(
+            1,
+            int(self.config.get("capture_attempts", 1))
+            if purpose == "precision"
+            else 1,
         )
-        if snap.bgr is None:
-            raise ToolError(
-                ErrorCode.NOT_READY,
-                f"{camera_id} did not provide RGB data",
+        detection_attempts = max(
+            1,
+            min(
+                capture_attempts,
+                int(self.config.get("detection_attempts", 3)),
             )
-
-        instances = self.backend.predict(snap.bgr)
-        if require_mask:
-            instances = [item for item in instances if item.mask is not None]
+            if purpose == "precision"
+            else 1,
+        )
+        retry_delay_s = max(
+            0.0,
+            float(self.config.get("capture_retry_delay_s", 0.35)),
+        )
+        instances: list[YoloInstance] = []
+        cascade_report: dict[str, typing.Any] = {}
+        attempt_reports: list[dict[str, typing.Any]] = []
+        capture_attempt = 0
+        detection_failures = 0
+        snap = None
+        last_capture_error: str | None = None
+        for capture_attempt in range(1, capture_attempts + 1):
+            try:
+                snap = self.perception._grab(
+                    camera_id,
+                    include_depth=include_depth,
+                    note=note,
+                )
+            except ToolError as exc:
+                last_capture_error = exc.message
+                attempt_reports.append(
+                    {
+                        "attempt": capture_attempt,
+                        "reason": "capture_error",
+                        "error_code": exc.code.value,
+                        "message": exc.message,
+                    }
+                )
+                snap = None
+                if capture_attempt < capture_attempts:
+                    time.sleep(retry_delay_s)
+                continue
+            if snap.bgr is None:
+                detection_failures += 1
+                attempt_reports.append(
+                    {
+                        "attempt": capture_attempt,
+                        "capture_id": snap.data.get("capture_id"),
+                        "reason": "rgb_unavailable",
+                    }
+                )
+            else:
+                if callable(cascade_predict):
+                    instances = cascade_predict(snap.bgr, purpose=purpose)
+                else:
+                    instances = self.backend.predict(snap.bgr)
+                cascade_report = dict(
+                    getattr(self.backend, "last_report", {}) or {}
+                )
+                if purpose == "head_handoff":
+                    for instance in instances:
+                        if (
+                            instance.stage == "proposal_only"
+                            and instance.mask is None
+                        ):
+                            x1, y1, x2, y2 = [
+                                max(0, int(round(float(value))))
+                                for value in instance.bbox_xyxy
+                            ]
+                            x2 = min(snap.bgr.shape[1], x2)
+                            y2 = min(snap.bgr.shape[0], y2)
+                            mask = np.zeros(snap.bgr.shape[:2], dtype=bool)
+                            mask[y1:y2, x1:x2] = True
+                            instance.mask = mask
+                if purpose == "precision":
+                    instances = [
+                        item
+                        for item in instances
+                        if item.stage in {
+                            "refined",
+                            "top_surface",
+                            "whole_fallback",
+                        }
+                        and item.mask is not None
+                    ]
+                elif require_mask:
+                    instances = [
+                        item for item in instances if item.mask is not None
+                    ]
+                attempt_reports.append(
+                    {
+                        "attempt": capture_attempt,
+                        "capture_id": snap.data.get("capture_id"),
+                        "candidate_count": len(instances),
+                        "cascade": cascade_report,
+                    }
+                )
+                if not instances:
+                    detection_failures += 1
+            if instances:
+                break
+            if detection_failures >= detection_attempts:
+                break
+            if capture_attempt < capture_attempts:
+                time.sleep(retry_delay_s)
+        if snap is None:
+            return failed(
+                ErrorCode.NOT_READY,
+                f"{camera_id} 连续 {capture_attempt} 次没有可用 RGB"
+                + (f"：{last_capture_error}" if last_capture_error else ""),
+                self.mode,
+                data={
+                    "camera_id": camera_id,
+                    "capture_attempts": capture_attempt,
+                    "detection_attempts": detection_attempts,
+                    "capture_attempt_reports": attempt_reports,
+                    "model": model_info,
+                },
+            )
         if not instances:
             return failed(
                 ErrorCode.NOT_READY,
-                f"{camera_id} 中未检测到 charger 上表面",
+                f"{camera_id} 中没有通过对应阶段的 charger 候选",
                 self.mode,
                 data={
                     "camera_id": camera_id,
                     "capture_id": snap.data.get("capture_id"),
                     "model": model_info,
+                    "cascade": cascade_report,
+                    "capture_attempts": capture_attempt,
+                    "detection_attempts": detection_attempts,
+                    "capture_attempt_reports": attempt_reports,
                 },
             )
 
@@ -259,6 +496,11 @@ class ChargerYoloTool:
         analyzed.sort(
             key=lambda item: (
                 bool(item[0].get("eligible_for_precision")),
+                {
+                    "top_surface": 3,
+                    "refined": 2,
+                    "whole_fallback": 1,
+                }.get(item[1].stage, 0),
                 float(item[1].confidence),
                 float(item[0]["image_space"]["short_edge_px"]),
             ),
@@ -281,6 +523,9 @@ class ChargerYoloTool:
             raise OSError(f"failed to save {overlay_path}")
 
         selected = dict(selected)
+        selected["detection_stage"] = instance.stage
+        selected["proposal_confidence"] = instance.proposal_confidence
+        selected["cascade"] = cascade_report
         head_stereo: dict[str, typing.Any] | None = None
         if purpose == "head_handoff":
             if self.stereo_tool is None:
@@ -431,6 +676,9 @@ class ChargerYoloTool:
                 "horizontal_angle_deg": round(horizontal_angle_deg, 4),
                 "purpose": "select wrist observation; not a precision grasp point",
                 "grasp_coordinate": None,
+                "detection_stage": instance.stage,
+                "proposal_confidence": instance.proposal_confidence,
+                "cascade": cascade_report,
             }
             for key in (
                 "target_3d",
@@ -475,6 +723,8 @@ class ChargerYoloTool:
                 ),
                 "depth_calibration_check": depth_calibration,
                 "model": model_info,
+                "capture_attempt": capture_attempt,
+                "capture_attempt_reports": attempt_reports,
             }
         )
         report_path.write_text(
@@ -494,6 +744,18 @@ class ChargerYoloTool:
                     "头部已识别 charger，但还不能切换腕部："
                     + ", ".join((head_handoff or {}).get("reasons", []))
                 )
+        elif (
+            selected["eligible_for_precision"]
+            and selected.get("target_mode") == "whole_mask_random_sample"
+        ):
+            sampled_uv = (
+                selected.get("whole_fallback_sampling") or {}
+            ).get("sampled_uv")
+            message = (
+                f"上表面模型未给出可用目标，已从 charger 整体掩码随机采样："
+                f"conf={instance.confidence:.3f}, uv={sampled_uv}, "
+                f"深度有效={selected['depth']['valid_ratio']:.1%}"
+            )
         elif selected["eligible_for_precision"]:
             message = (
                 f"charger 上表面可精定位：conf={instance.confidence:.3f}, "

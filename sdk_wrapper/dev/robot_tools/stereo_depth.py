@@ -64,7 +64,7 @@ class StereoDepthTool:
             return self._perception, self._module
 
         with _SDK_LOCK:
-            from sdk_wrapper.wrapper import _sdk_bootstrap
+            from sdk_wrapper.dev.adapters.galbot_adapter import _sdk_bootstrap
 
             _sdk_bootstrap()
             from galbot_sdk.g1 import GalbotPerception, PerceptionModule

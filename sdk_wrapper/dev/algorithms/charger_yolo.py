@@ -32,6 +32,7 @@ __all__ = [
     "UltralyticsSegmentationBackend",
     "discover_latest_charger_seg_weights",
     "analyze_charger_top",
+    "analyze_charger_whole_fallback",
     "annotation_overlay",
 ]
 
@@ -46,6 +47,8 @@ class YoloInstance:
     bbox_xyxy: tuple[float, float, float, float]
     mask: np.ndarray | None = None
     track_id: int | None = None
+    stage: str = "refined"
+    proposal_confidence: float | None = None
 
 
 def _canonical_axis(vector: np.ndarray) -> np.ndarray:
@@ -404,6 +407,305 @@ def analyze_charger_top(
     return result, mask
 
 
+def analyze_charger_whole_fallback(
+    instance: YoloInstance,
+    image_shape: typing.Sequence[int],
+    *,
+    depth_m: np.ndarray | None = None,
+    intrinsics: typing.Any = None,
+    extrinsic: typing.Sequence[float] | None = None,
+    min_area_px: int = 600,
+    min_area_ratio: float = 0.002,
+    min_mask_fill_ratio: float = 0.20,
+    edge_margin_px: int = 3,
+    min_depth_valid_ratio: float = 0.50,
+    max_depth_m: float | None = 1.5,
+    max_surface_tilt_deg: float = 50.0,
+    max_local_plane_rms_m: float = 0.02,
+    safe_standoff_m: float = 0.12,
+    depth_sample_stride: int = 2,
+    sample_attempts: int = 64,
+    sample_radius_px: int = 12,
+    sample_seed: int = 20261108,
+) -> tuple[dict[str, typing.Any], np.ndarray]:
+    """Sample a target inside a whole-charger mask when top segmentation fails.
+
+    The sampler excludes the object-edge band, draws reproducible random depth
+    pixels inside the remaining mask, and accepts a point only when a local
+    plane has enough support, low residual, and an upward-facing normal. The
+    whole-mask plane axes and dimensions are retained as the best available
+    gripper orientation estimate.
+    """
+    if len(image_shape) < 2:
+        raise ValueError("image_shape must contain height and width")
+    height, width = int(image_shape[0]), int(image_shape[1])
+    if instance.mask is None:
+        raise ValueError("whole-charger fallback requires a segmentation mask")
+    mask = np.asarray(instance.mask)
+    if mask.ndim == 3:
+        mask = np.squeeze(mask)
+    if mask.ndim != 2:
+        raise ValueError(f"segmentation mask must be 2-D, got {mask.shape}")
+    mask = mask.astype(bool, copy=False)
+    if mask.shape != (height, width):
+        mask = cv2.resize(
+            mask.astype(np.uint8),
+            (width, height),
+            interpolation=cv2.INTER_NEAREST,
+        ).astype(bool)
+
+    reasons: list[str] = []
+    geom_2d = _mask_2d_geometry(mask, int(edge_margin_px))
+    if geom_2d["mask_area_px"] < int(min_area_px):
+        reasons.append("mask_area_below_minimum")
+    if geom_2d["mask_area_ratio"] < float(min_area_ratio):
+        reasons.append("mask_area_ratio_below_minimum")
+    if geom_2d["mask_fill_ratio"] < float(min_mask_fill_ratio):
+        reasons.append("mask_fill_ratio_below_minimum")
+    if not geom_2d["fully_visible"]:
+        reasons.append("target_touches_image_edge")
+
+    depth_report: dict[str, typing.Any] = {"available": False}
+    whole_surface: dict[str, typing.Any] = {"available": False}
+    sampled_surface: dict[str, typing.Any] | None = None
+    sampling_report: dict[str, typing.Any] = {
+        "strategy": "whole_mask_random_sample",
+        "seed": int(sample_seed),
+        "sample_attempts": max(1, int(sample_attempts)),
+        "sample_radius_px": max(3, int(sample_radius_px)),
+        "valid_samples": 0,
+        "sampled_uv": None,
+        "rejection_counts": {},
+    }
+    if depth_m is None:
+        reasons.append("depth_unavailable")
+    else:
+        depth = np.asarray(depth_m, dtype=np.float32)
+        if depth.shape != (height, width):
+            reasons.append("depth_rgb_shape_mismatch")
+            depth_report = {
+                "available": False,
+                "reason": "depth_rgb_shape_mismatch",
+                "depth_shape": list(depth.shape),
+                "rgb_shape": [height, width],
+            }
+        else:
+            valid = np.isfinite(depth) & (depth > 0)
+            if max_depth_m is not None:
+                valid &= depth <= float(max_depth_m)
+            inside = valid & mask
+            valid_ratio = int(inside.sum()) / float(max(1, int(mask.sum())))
+            values = depth[inside]
+            depth_report = {
+                "available": bool(values.size),
+                "valid_pixels": int(values.size),
+                "mask_pixels": int(mask.sum()),
+                "valid_ratio": round(valid_ratio, 6),
+                "min_m": round(float(values.min()), 6) if values.size else None,
+                "median_m": round(float(np.median(values)), 6) if values.size else None,
+                "max_m": round(float(values.max()), 6) if values.size else None,
+            }
+            if valid_ratio < float(min_depth_valid_ratio):
+                reasons.append("depth_valid_ratio_below_minimum")
+            if intrinsics is None or extrinsic is None:
+                reasons.append("surface_3d_intrinsics_or_extrinsics_unavailable")
+            else:
+                whole_surface = _surface_3d_geometry(
+                    depth,
+                    mask,
+                    intrinsics,
+                    extrinsic,
+                    max_depth_m=max_depth_m,
+                    safe_standoff_m=safe_standoff_m,
+                    sample_stride=depth_sample_stride,
+                )
+
+                distance = cv2.distanceTransform(
+                    mask.astype(np.uint8),
+                    cv2.DIST_L2,
+                    5,
+                )
+                radius = max(
+                    3,
+                    min(
+                        int(sample_radius_px),
+                        max(4, int(0.15 * geom_2d["short_edge_px"])),
+                    ),
+                )
+                sampling_report["sample_radius_px"] = radius
+                eligible = inside & (
+                    distance >= float(radius + max(0, int(edge_margin_px)))
+                )
+                flat_indices = np.flatnonzero(eligible.reshape(-1))
+                rng = np.random.default_rng(int(sample_seed))
+                if flat_indices.size > int(sample_attempts):
+                    flat_indices = rng.choice(
+                        flat_indices,
+                        size=max(1, int(sample_attempts)),
+                        replace=False,
+                    )
+                else:
+                    rng.shuffle(flat_indices)
+
+                yy, xx = np.ogrid[-radius : radius + 1, -radius : radius + 1]
+                disk = (xx * xx + yy * yy) <= radius * radius
+                valid_samples: list[tuple[float, dict[str, typing.Any], tuple[int, int]]] = []
+                rejection_counts: dict[str, int] = {}
+
+                def reject(reason: str) -> None:
+                    rejection_counts[reason] = rejection_counts.get(reason, 0) + 1
+
+                for flat_index in flat_indices.tolist():
+                    v = int(flat_index // width)
+                    u = int(flat_index % width)
+                    if depth[v, u] <= 0 or not math.isfinite(float(depth[v, u])):
+                        reject("invalid_center_depth")
+                        continue
+                    local_mask = np.zeros((height, width), dtype=bool)
+                    y0 = max(0, v - radius)
+                    y1 = min(height, v + radius + 1)
+                    x0 = max(0, u - radius)
+                    x1 = min(width, u + radius + 1)
+                    local_mask[y0:y1, x0:x1] = disk[
+                        y0 - (v - radius) : y1 - (v - radius),
+                        x0 - (u - radius) : x1 - (u - radius),
+                    ]
+                    local_mask &= mask
+                    local = _surface_3d_geometry(
+                        depth,
+                        local_mask,
+                        intrinsics,
+                        extrinsic,
+                        max_depth_m=max_depth_m,
+                        safe_standoff_m=safe_standoff_m,
+                        sample_stride=1,
+                    )
+                    if not local.get("available"):
+                        reject(str(local.get("reason") or "local_surface_unavailable"))
+                        continue
+                    normal_z = max(
+                        -1.0,
+                        min(1.0, float(local["surface_normal_base"][2])),
+                    )
+                    tilt_deg = math.degrees(math.acos(normal_z))
+                    if tilt_deg > float(max_surface_tilt_deg):
+                        reject("local_surface_tilt_above_maximum")
+                        continue
+                    if float(local["surface_plane_rms_m"]) > float(
+                        max_local_plane_rms_m
+                    ):
+                        reject("local_plane_rms_above_maximum")
+                        continue
+                    valid_samples.append((tilt_deg, local, (u, v)))
+
+                sampling_report["valid_samples"] = len(valid_samples)
+                sampling_report["rejection_counts"] = rejection_counts
+                if valid_samples:
+                    chosen_index = int(rng.integers(0, len(valid_samples)))
+                    tilt_deg, surface, sampled_uv = valid_samples[chosen_index]
+                    normal = _canonical_axis(
+                        np.asarray(surface["surface_normal_base"], dtype=np.float64)
+                    )
+                    if normal[2] < 0:
+                        normal = -normal
+                    long_axis = np.asarray(
+                        surface["long_edge_axis_base"],
+                        dtype=np.float64,
+                    )
+                    if whole_surface.get("available"):
+                        long_axis = np.asarray(
+                            whole_surface["long_edge_axis_base"],
+                            dtype=np.float64,
+                        )
+                    long_axis = long_axis - float(long_axis @ normal) * normal
+                    if float(np.linalg.norm(long_axis)) < 1e-8:
+                        fallback = np.array([1.0, 0.0, 0.0])
+                        if abs(float(fallback @ normal)) > 0.95:
+                            fallback = np.array([0.0, 1.0, 0.0])
+                        long_axis = fallback - float(fallback @ normal) * normal
+                    long_axis = _canonical_axis(long_axis)
+                    short_axis = _canonical_axis(np.cross(normal, long_axis))
+                    standoff = max(0.0, float(safe_standoff_m))
+                    center = np.asarray(
+                        surface["surface_center_m"],
+                        dtype=np.float64,
+                    )
+                    sampled_surface = dict(surface)
+                    sampled_surface.update(
+                        {
+                            "surface_normal_base": [
+                                round(float(v), 8) for v in normal
+                            ],
+                            "long_edge_axis_base": [
+                                round(float(v), 8) for v in long_axis
+                            ],
+                            "short_edge_axis_base": [
+                                round(float(v), 8) for v in short_axis
+                            ],
+                            "gripper_long_axis_base": [
+                                round(float(v), 8) for v in long_axis
+                            ],
+                            "jaw_closing_axis_base": [
+                                round(float(v), 8) for v in short_axis
+                            ],
+                            "long_dimension_m": whole_surface.get(
+                                "long_dimension_m",
+                                surface["long_dimension_m"],
+                            ),
+                            "short_dimension_m": whole_surface.get(
+                                "short_dimension_m",
+                                surface["short_dimension_m"],
+                            ),
+                            "tilt_from_base_up_deg": round(tilt_deg, 6),
+                            "pregrasp_position_m": [
+                                round(float(v), 6)
+                                for v in center + normal * standoff
+                            ],
+                            "safe_standoff_m": round(standoff, 6),
+                            "sampled_target": True,
+                            "dimension_source": (
+                                "whole_mask_plane_estimate"
+                                if whole_surface.get("available")
+                                else "local_sample_plane"
+                            ),
+                        }
+                    )
+                    sampling_report.update(
+                        {
+                            "sampled_uv": [int(sampled_uv[0]), int(sampled_uv[1])],
+                            "selected_local_plane_rms_m": sampled_surface[
+                                "surface_plane_rms_m"
+                            ],
+                            "selected_tilt_from_base_up_deg": round(tilt_deg, 6),
+                        }
+                    )
+                else:
+                    reasons.append("whole_fallback_sampling_failed")
+
+    surface = sampled_surface or {"available": False}
+    result = {
+        "eligible_for_precision": not reasons,
+        "rejection_reasons": reasons,
+        "target_mode": "whole_mask_random_sample",
+        "class_name": instance.class_name,
+        "class_id": int(instance.class_id),
+        "confidence": round(float(instance.confidence), 6),
+        "bbox_xyxy": [round(float(v), 3) for v in instance.bbox_xyxy],
+        "image_width": width,
+        "image_height": height,
+        "image_space": geom_2d,
+        "depth": depth_report,
+        "surface": surface,
+        "whole_fallback_sampling": sampling_report,
+        "grasp_frame_semantics": {
+            "gripper_long_axis": "whole-mask long-axis estimate projected onto the sampled local plane",
+            "jaw_closing_axis": "across the whole-mask short dimension",
+            "approach_axis": "negative sampled local surface normal",
+        },
+    }
+    return result, mask
+
+
 def annotation_overlay(
     bgr: np.ndarray,
     instance: YoloInstance,
@@ -439,9 +741,28 @@ def annotation_overlay(
     p1 = tuple(np.round(np.asarray(center) + long_axis * length).astype(int).tolist())
     cv2.arrowedLine(out, p0, p1, (255, 80, 40), 2, tipLength=0.18)
     cv2.circle(out, tuple(np.round(center).astype(int).tolist()), 3, (255, 255, 255), -1)
-    label = "charger %.3f %s" % (
+    sampling = analysis.get("whole_fallback_sampling") or {}
+    sampled_uv = sampling.get("sampled_uv")
+    if sampled_uv:
+        su, sv = [int(round(float(value))) for value in sampled_uv]
+        cv2.drawMarker(
+            out,
+            (su, sv),
+            (0, 255, 255),
+            cv2.MARKER_CROSS,
+            14,
+            2,
+        )
+    stage_label = {
+        "proposal_only": " PROPOSAL ONLY",
+        "top_surface": " TOP",
+        "whole_fallback": " WHOLE FALLBACK",
+    }.get(instance.stage, "")
+    label = "%s %.3f %s%s" % (
+        instance.class_name,
         float(instance.confidence),
         "READY" if analysis.get("eligible_for_precision") else "REJECT",
+        stage_label,
     )
     cv2.putText(
         out,
