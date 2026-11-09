@@ -16,7 +16,7 @@
 
 ```bash
 cd galbot-hackathon
-# 1) 只看编排（不发任何"动作"，打印 7 步计划）
+# 1) 只看编排（不发任何"动作"，打印 8 步计划）
 python3 scenes/scene_medicine_check/baseline_flow.py
 # 2) mock 全链路（纯内存仿真，不接任何硬件）
 MED_IO=mock python3 -c "from scenes.scene_medicine_check import baseline_flow as bf; \
@@ -86,9 +86,9 @@ print(bf.run({'io':'mock','pipeline':'medicine.expiry_demo','pause_s':0})['feedb
 ## 6. 抓取与播报接口
 
 ```python
-# 夹爪：width_m 单位米（G1 量程 0~0.11m；收放用 0.10 ↔ 0.02）
-ret = io.set_gripper(0.02, side="left", velocity_mps=0.05, effort=10.0)
-# → {"success": True, "width_m": 0.02, "holding": "box_left", "completion": "completed"}
+# 夹爪：width_m 单位米（G1 量程 0~0.11m；7.5cm 药盒收放用 0.10 ↔ 0.075）
+ret = io.set_gripper(0.075, side="right", velocity_mps=0.05, effort=10.0)
+# → {"success": True, "width_m": 0.075, "holding": "box_left", "completion": "completed"}
 #   holding 是 mock 的物理推演；真机没有夹爪反馈通道：
 io.is_holding()   # → True / False / None。真机恒 None = 无确证手段
                   #   → ctx.picked 只能写 None，禁止写成 True 糊过去
@@ -102,7 +102,7 @@ ret = io.speak("该药品已过期，帮你清理掉")
 
 ## 7. 已验证与待补数据
 
-**已验证（mock，9/9 通过）**：正常 7 步全流程；抓取失败仍归位；左移超时归位；起始里程计读不到非致命；不可判定立即全停（不发归位）；stage 抛异常 runner 兜底归位；升级版选中过期盒/无过期/日期全读不出。
+**已验证（mock，11/11 通过）**：正常 8 步全流程；抓取失败仍归位；左移超时归位；起始里程计读不到非致命；不可判定立即全停（不发归位）；stage 抛异常 runner 兜底归位；升级版选中过期盒/无过期/日期全读不出；腿部初始归位失败与头部+双臂初始归位失败均阻断抓取但仍归位。
 
 **待补（真机前必须落实，详见 `to朱宁11.6.md`）**：
 

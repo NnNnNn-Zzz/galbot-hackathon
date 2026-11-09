@@ -359,13 +359,16 @@ class MockIO(RobotIO):
         bad = self._guard("set_gripper")
         if bad:
             return bad
+        previous_width = self.gripper_width
         self.gripper_width = float(width_m)
-        if width_m < 0.05 and self.holding is None:
+        # 按运动方向判断夹/放，不能再用 5 cm 固定阈值：7.5 cm 药盒的闭合目标
+        # 本身就是 0.075 m，旧逻辑会把它误判为「张开」而永远抓不到。
+        if width_m < previous_width and self.holding is None:
             grab = self._nearest_object()
             if grab is not None:
                 self.holding = grab
                 self.table = [o for o in self.table if o is not grab]
-        elif width_m >= 0.05 and self.holding is not None:
+        elif width_m > previous_width and self.holding is not None:
             self.dropped.append(self.holding)
             self.holding = None
         return {"success": True, "message": "ok", "width_m": self.gripper_width,
@@ -471,6 +474,9 @@ class MockIO(RobotIO):
 def default_table() -> List[Dict[str, Any]]:
     """默认桌面：三盒药，按 base 系 y 从大到小 = 从左到右。
 
+    右臂作业区（2026-11-07 起全程右臂）：y 均为负值——base_link 的 y 轴
+    指向机器人左侧。左起第一盒 box_left 位于 y=-0.10，与 tuning.GRASP_POSE 对齐。
+
     expiry_date 是给队友的过期判定用的**离线固定数据**，
     真机上日期要靠 OCR/VLM 自己读，不是 io 提供的。
 
@@ -483,16 +489,16 @@ def default_table() -> List[Dict[str, Any]]:
       expiry_date —— 仅 mock 固定数据；真机无此字段，读不到就是 None
     """
     return [
-        {"id": "box_left", "label": "white", "ee_pose": [0.40, 0.30, 0.65],
-         "position_m": [0.40, 0.30, 0.65], "frame": "base_link", "unit": "m",
+        {"id": "box_left", "label": "white", "ee_pose": [0.40, -0.10, 0.77],
+         "position_m": [0.40, -0.10, 0.77], "frame": "base_link", "unit": "m",
          "image_ref": "mock_frame_0",
          "bbox": [0, 0, 60, 40], "score": 0.9, "expiry_date": "2026-08-01"},
-        {"id": "box_mid", "label": "white", "ee_pose": [0.40, 0.10, 0.65],
-         "position_m": [0.40, 0.10, 0.65], "frame": "base_link", "unit": "m",
+        {"id": "box_mid", "label": "white", "ee_pose": [0.40, -0.20, 0.77],
+         "position_m": [0.40, -0.20, 0.77], "frame": "base_link", "unit": "m",
          "image_ref": "mock_frame_0",
          "bbox": [80, 0, 60, 40], "score": 0.9, "expiry_date": "2027-12-01"},
-        {"id": "box_right", "label": "white", "ee_pose": [0.40, -0.10, 0.65],
-         "position_m": [0.40, -0.10, 0.65], "frame": "base_link", "unit": "m",
+        {"id": "box_right", "label": "white", "ee_pose": [0.40, -0.30, 0.77],
+         "position_m": [0.40, -0.30, 0.77], "frame": "base_link", "unit": "m",
          "image_ref": "mock_frame_0",
          "bbox": [160, 0, 60, 40], "score": 0.9, "expiry_date": "2028-05-01"},
     ]

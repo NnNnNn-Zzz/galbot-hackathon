@@ -1,7 +1,7 @@
 {
   "name": "medicine.baseline",
   "description": "基线：桌面最左（第一盒）药 → 播报 → 左移 0.5m → 右转 30° → 投放 → 归位",
-  "version": 3,
+  "version": 4,
   "steps": [
     {
       "id": "preflight",
@@ -9,10 +9,14 @@
       "non_fatal": true
     },
     {
+      "id": "init_pose",
+      "stage": "initialize_pose"
+    },
+    {
       "id": "grasp",
       "stage": "grasp_first_box",
       "params": {
-        "chain": "left_arm",
+        "chain": "right_arm",
         "tool": "galbot_gripper"
       }
     },

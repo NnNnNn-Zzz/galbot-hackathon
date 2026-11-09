@@ -1,7 +1,7 @@
 {
   "name": "medicine.expiry_demo",
   "description": "示例升级版：把 grasp 换成「读日期 → 判过期 → 选最左的过期盒 → 夹取」。只有 grasp 这一步和 baseline 不同",
-  "version": 2,
+  "version": 3,
   "steps": [
     {
       "id": "preflight",
@@ -9,10 +9,14 @@
       "non_fatal": true
     },
     {
+      "id": "init_pose",
+      "stage": "initialize_pose"
+    },
+    {
       "id": "grasp",
       "stage": "grasp_expired_box",
       "params": {
-        "chain": "left_arm",
+        "chain": "right_arm",
         "tool": "galbot_gripper",
         "prefer": "leftmost"
       }
