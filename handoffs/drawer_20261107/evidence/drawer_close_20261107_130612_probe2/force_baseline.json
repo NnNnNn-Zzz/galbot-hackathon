@@ -1,0 +1,19 @@
+{
+  "schema": "drawer_force_baseline/1",
+  "recorded_ns": 1794028043438701074,
+  "session": "drawer_close_20261107_130612_probe2",
+  "sensor": "RIGHT_WRIST_FORCE",
+  "calibrated": false,
+  "robot_motion_commands_sent": [],
+  "sample_count": 60,
+  "valid_for_reactive_monitor": true,
+  "mean_force_sensor_frame_N": {
+    "x": 3.2838714083035785,
+    "y": -16.432247829437255,
+    "z": 4.299462656180064
+  },
+  "max_deviation_from_mean_N": 0.7442952248025839,
+  "sample_file": "teaching/drawer_close_20261107_130612_probe2/force_baseline.ndjson",
+  "sample_sha256": "51c25d16fe8f1fbc5fe249c08c69e8a6e720fcc5016138173a7c85c098d268f5",
+  "read_error": null
+}

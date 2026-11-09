@@ -1,0 +1,8 @@
+{"seq": 1, "drug": "none", "arrangement": "drawer_pull_pre", "distance_cm": 30.0, "lighting": "demo", "kind": "head", "local_time": "2026-11-07T12:22:12"}
+{"seq": 2, "drug": "none", "arrangement": "drawer_pull_step_01", "distance_cm": 30.0, "lighting": "demo", "kind": "head", "local_time": "2026-11-07T12:28:11"}
+{"seq": 3, "drug": "none", "arrangement": "drawer_pull_step_02", "distance_cm": 30.0, "lighting": "demo", "kind": "head", "local_time": "2026-11-07T12:28:45"}
+{"seq": 4, "drug": "none", "arrangement": "drawer_pull_step_04", "distance_cm": 30.0, "lighting": "demo", "kind": "head", "local_time": "2026-11-07T12:29:44"}
+{"seq": 5, "drug": "none", "arrangement": "drawer_pull_step_05", "distance_cm": 30.0, "lighting": "demo", "kind": "head", "local_time": "2026-11-07T12:30:18"}
+{"seq": 6, "drug": "none", "arrangement": "drawer_pull_final_25cm", "distance_cm": 30.0, "lighting": "demo", "kind": "head", "local_time": "2026-11-07T12:31:22"}
+{"seq": 7, "drug": "none", "arrangement": "drawer_pull_27_5cm", "distance_cm": 30.0, "lighting": "demo", "kind": "head", "local_time": "2026-11-07T12:33:10"}
+{"seq": 8, "drug": "none", "arrangement": "drawer_pull_final_30cm", "distance_cm": 30.0, "lighting": "demo", "kind": "head", "local_time": "2026-11-07T12:34:08"}

@@ -1,0 +1,78 @@
+{
+  "schema": "medicine_capture/1",
+  "capture_session": "drawer_pull_20261107_122158",
+  "seq": 6,
+  "kind": "head",
+  "drug": "none",
+  "drug_cn": "无",
+  "arrangement": "drawer_pull_final_25cm",
+  "distance_cm": 30.0,
+  "lighting": "demo",
+  "grasp_state": "right_gripper_holding",
+  "operator_note": "After 25 cm right-arm X pull; Z deviated and right-arm controller was stopped.",
+  "captured_local": "2026-11-07T12:31:16.022",
+  "camera_info_file": "camera_info_1794025876018770800.json",
+  "label_truth": {
+    "entity_id": null,
+    "expiry": null,
+    "source": "operator_metadata_not_ocr"
+  },
+  "sources": {
+    "head_right": {
+      "file": "0006_none_drawer_pull_final_25cm_20261107T043116_022066Z_head_right.jpg",
+      "camera_id": "HEAD_RIGHT_CAMERA",
+      "frame_timestamp_ns": 1794025878892904393,
+      "host_captured_ns": 1794025878974770273,
+      "age_ms": 622.4,
+      "stale": false,
+      "jpeg_bytes": 175667,
+      "jpeg_sha256": "525ca7040f15c1d75fafa57970b4cb51be5272b59b5f10bfdb1b1c1b93f9bbaa",
+      "camera_error": null
+    },
+    "head_left": {
+      "file": "0006_none_drawer_pull_final_25cm_20261107T043116_022066Z_head_left.jpg",
+      "camera_id": "HEAD_LEFT_CAMERA",
+      "frame_timestamp_ns": 1794025881326300595,
+      "host_captured_ns": 1794025881404172329,
+      "age_ms": 593.2,
+      "stale": false,
+      "jpeg_bytes": 172985,
+      "jpeg_sha256": "975273340207035cec4ffe4fa7addc8cd9706799bd75c4fa500bde619c8b1899",
+      "camera_error": null
+    }
+  },
+  "requested_sources": [
+    "head_right",
+    "head_left"
+  ],
+  "joint_state": {
+    "joint_state": [
+      "<galbot_sdk.JointState object at 0xffff0824a0f0>",
+      "<galbot_sdk.JointState object at 0xffff7e037df0>",
+      "<galbot_sdk.JointState object at 0xffff081fc430>",
+      "<galbot_sdk.JointState object at 0xffff081fcb70>",
+      "<galbot_sdk.JointState object at 0xffff081fcfb0>",
+      "<galbot_sdk.JointState object at 0xffff081fcd30>",
+      "<galbot_sdk.JointState object at 0xffff081fc870>",
+      "<galbot_sdk.JointState object at 0xffff081fc670>",
+      "<galbot_sdk.JointState object at 0xffff081fc930>",
+      "<galbot_sdk.JointState object at 0xffff081fce70>",
+      "<galbot_sdk.JointState object at 0xffff081fc530>",
+      "<galbot_sdk.JointState object at 0xffff081fc3b0>",
+      "<galbot_sdk.JointState object at 0xffff081fcbf0>",
+      "<galbot_sdk.JointState object at 0xffff081fccf0>",
+      "<galbot_sdk.JointState object at 0xffff081fc570>",
+      "<galbot_sdk.JointState object at 0xffff081fc4f0>",
+      "<galbot_sdk.JointState object at 0xffff081fc2b0>",
+      "<galbot_sdk.JointState object at 0xffff081fcc70>",
+      "<galbot_sdk.JointState object at 0xffff081fc0f0>",
+      "<galbot_sdk.JointState object at 0xffff081fca70>",
+      "<galbot_sdk.JointState object at 0xffff081fc6b0>",
+      "<galbot_sdk.JointState object at 0xffff081fcaf0>",
+      "<galbot_sdk.JointState object at 0xffff081fcbb0>",
+      "<galbot_sdk.JointState object at 0xffff081fc8f0>",
+      "<galbot_sdk.JointState object at 0xffff081fcef0>"
+    ],
+    "timestamp_ns": 1794025876332834302
+  }
+}

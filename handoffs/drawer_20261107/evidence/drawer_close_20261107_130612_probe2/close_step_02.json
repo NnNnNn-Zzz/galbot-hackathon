@@ -1,0 +1,122 @@
+{
+  "schema": "drawer_arm_close_step/1",
+  "session": "drawer_close_20261107_130612_probe2",
+  "recorded_ns": 1794028109667634900,
+  "step": 2,
+  "target_cumulative_m": 0.015,
+  "previous_failed_attempt_session": "drawer_close_20261107_125552",
+  "before_state_path": "teaching/drawer_close_20261107_130612_probe2/close_step_02_before.json",
+  "before_tcp": [
+    0.45079050776747637,
+    -0.24484965799666122,
+    0.8074559640954019,
+    -0.705647351694098,
+    0.06688539058267101,
+    0.023768203179974103,
+    0.7049987461629313
+  ],
+  "before_gripper": {
+    "width": 0.024993478775024416,
+    "velocity": -5.247104167938232e-05,
+    "effort": 8.216300964355469,
+    "is_moving": false,
+    "timestamp_ns": 1794028109543341056
+  },
+  "before_base_map": {
+    "x": -1.1566424369812012,
+    "y": 0.0175092201679945,
+    "z": -0.0009581123013049364,
+    "qx": -2.413565656741942e-05,
+    "qy": -0.0011910453185927997,
+    "qz": -0.6882751926138767,
+    "qw": 0.7254487163548159,
+    "frame_id": "map"
+  },
+  "target_tcp_position_base_link_m": [
+    0.4657905077674764,
+    -0.24348714670866595,
+    0.8104418796315744
+  ],
+  "command": {
+    "arm": "right_arm",
+    "dx": 0.015000000000000013,
+    "dy": 0.0013625112879952772,
+    "dz": 0.0029859155361725565,
+    "roll": 0.0,
+    "pitch": 0.0,
+    "yaw": 0.0,
+    "confirmed": true
+  },
+  "raw_force_sustained_delta_limit_N": 5.0,
+  "raw_force_immediate_delta_limit_N": 8.0,
+  "sustained_sample_count": 2,
+  "force_is_calibrated": false,
+  "base_commands_sent": [],
+  "gripper_commands_sent": [],
+  "submission": "responded",
+  "force_baseline_sensor_frame_N": [
+    1.0836538821458817,
+    -16.947648906707762,
+    4.725624322891235
+  ],
+  "started_ns": 1794028116213409500,
+  "command_result": {
+    "accepted": true,
+    "dry_run": false,
+    "sdk_result": "MotionStatus.SUCCESS"
+  },
+  "last_polled_tcp": [
+    0.45078925079794074,
+    -0.24484497759129747,
+    0.8074431367923615,
+    -0.7056474639719699,
+    0.06688962843059257,
+    0.023780888032327606,
+    0.7049978039417845
+  ],
+  "error": "RuntimeError: 15 mm Cartesian target not reached within 6 seconds",
+  "target_reached": false,
+  "finished_ns": 1794028131153043200,
+  "force_samples": 298,
+  "max_raw_force_delta_N": 3.51352598835503,
+  "force_trip_reason": "Right wrist force stream ended during motion",
+  "stop_result": {
+    "accepted": true,
+    "dry_run": false,
+    "status": "CONTROLLER_STOPPED",
+    "group": "right_arm",
+    "sdk_result": "ControlStatus.SUCCESS"
+  },
+  "stop_error": null,
+  "force_stream_file": "teaching/drawer_close_20261107_130612_probe2/close_step_02_force.ndjson",
+  "force_stream_sha256": "3a1bc0d264641632a08aea475bb1799e58807faf091264ad7f8717a3eb12e0e0",
+  "after_state_path": "teaching/drawer_close_20261107_130612_probe2/close_step_02_after.json",
+  "after_errors": [],
+  "after_tcp": [
+    0.45078027005229415,
+    -0.24482938648023664,
+    0.8074566245766344,
+    -0.705631736956387,
+    0.06686357472080345,
+    0.0237656185517716,
+    0.7050165314021507
+  ],
+  "after_gripper": {
+    "width": 0.024993478775024416,
+    "velocity": -5.247104167938232e-05,
+    "effort": 8.216300964355469,
+    "is_moving": false,
+    "timestamp_ns": 1794028132543481088
+  },
+  "after_base_map": {
+    "x": -1.150605320930481,
+    "y": 0.03184046596288681,
+    "z": -0.004686051979660988,
+    "qx": 0.0005797032205105431,
+    "qy": -0.0011331617093999137,
+    "qz": -0.6880465571417879,
+    "qw": 0.7256654291710809,
+    "frame_id": "map"
+  },
+  "postcheck_error": "TCP, base, or gripper changed outside guard"
+}

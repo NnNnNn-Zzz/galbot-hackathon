@@ -1,0 +1,88 @@
+{
+  "schema": "drawer_replay_observation/1",
+  "session": "drawer_replay_20261107_185938",
+  "recorded_ns": 1794049181769142900,
+  "label": "pre_switch",
+  "state_file": "teaching/drawer_replay_20261107_185938/observation_pre_switch_1794049181769142900_state.json",
+  "controller": {
+    "group": "right_arm",
+    "active": "right_arm_pvt_ctrl_teleop",
+    "available": [
+      "CHASSIS_POSE_CTRL",
+      "CHASSIS_TWIST_CTRL",
+      "CONTROLLER_NAME_NUM",
+      "HEAD_PVT_BYPASS_CTRL",
+      "HEAD_PVT_CTRL",
+      "LEFT_ARM_PVT_BYPASS_CTRL",
+      "LEFT_ARM_PVT_CTRL",
+      "LEFT_DEXHAND_CTRL",
+      "LEFT_GRIPPER_CTRL",
+      "LEG_HEIGHT_CTRL",
+      "LEG_PVT_BYPASS_CTRL",
+      "LEG_PVT_CTRL",
+      "RIGHT_ARM_PVT_BYPASS_CTRL",
+      "RIGHT_ARM_PVT_CTRL",
+      "RIGHT_DEXHAND_CTRL",
+      "RIGHT_GRIPPER_CTRL"
+    ],
+    "dry_run": false
+  },
+  "state_errors": [],
+  "motion_commands_sent": [],
+  "state": {
+    "tcp": [
+      0.6198014425044831,
+      -0.2013446724122622,
+      0.8507525889799668,
+      -0.718971918331537,
+      0.06686066299027084,
+      0.06240357739579198,
+      0.6889955195234425
+    ],
+    "base_map": {
+      "x": -1.1597779989242554,
+      "y": 0.047277163714170456,
+      "z": -0.01823662966489792,
+      "qx": 0.0010751737814089547,
+      "qy": -0.0009805324121014104,
+      "qz": -0.6962658135734013,
+      "qw": 0.7177825571901969,
+      "frame_id": "map"
+    },
+    "right_arm_joints_rad": {
+      "right_arm_joint1": -0.7544552087783813,
+      "right_arm_joint2": 1.4788784980773926,
+      "right_arm_joint3": 0.40859028697013855,
+      "right_arm_joint4": 1.300238847732544,
+      "right_arm_joint5": -1.5284686088562012,
+      "right_arm_joint6": -0.07936011999845505,
+      "right_arm_joint7": -0.20881293714046478
+    },
+    "chassis_joints_rad": {
+      "chassis_joint1": 0.001469702124595642,
+      "chassis_joint2": -0.0005441178083419799,
+      "chassis_joint3": -0.002562638521194458,
+      "chassis_joint4": 0.0010232641696929932
+    },
+    "right_gripper": {
+      "width": 0.050003677368164065,
+      "velocity": -5.247104167938232e-05,
+      "effort": 2.914285659790039,
+      "is_moving": false,
+      "timestamp_ns": 1794049181357966080
+    },
+    "sample_finished_ns": 1794049181767275900
+  },
+  "comparison_to_recorded_pregrasp": {
+    "tcp_position_distance_m": 0.1398243578632742,
+    "tcp_delta_base_link_m": [
+      -0.13191447263049538,
+      0.03698911672910543,
+      0.027950459854819365
+    ],
+    "tcp_orientation_delta_deg": 7.0676614485306555,
+    "base_map_translation_distance_m": 0.01933840662417169,
+    "right_gripper_width_m": 0.050003677368164065
+  },
+  "read_complete": true
+}

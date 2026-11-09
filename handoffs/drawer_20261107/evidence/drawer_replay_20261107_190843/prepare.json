@@ -1,0 +1,88 @@
+{
+  "schema": "drawer_replay_phase/1",
+  "recorded_ns": 1794049725708594200,
+  "session": "drawer_replay_20261107_190843",
+  "phase": "prepare",
+  "status": "blocked",
+  "recipe": "D:\\CodexWork\\EmbodiedAI\\Junction\\galbot-hackathon\\scenes\\scene_medicine_check\\data\\recorded_drawer_pull_20261107.json",
+  "confirmations": {
+    "alignment": true,
+    "support": true,
+    "travel": true,
+    "clear_path": true,
+    "exclusive_control": true,
+    "emergency_stop_ready": true
+  },
+  "controller": {
+    "group": "right_arm",
+    "active": "right_arm_pvt_ctrl",
+    "available": [
+      "CHASSIS_POSE_CTRL",
+      "CHASSIS_TWIST_CTRL",
+      "CONTROLLER_NAME_NUM",
+      "HEAD_PVT_BYPASS_CTRL",
+      "HEAD_PVT_CTRL",
+      "LEFT_ARM_PVT_BYPASS_CTRL",
+      "LEFT_ARM_PVT_CTRL",
+      "LEFT_DEXHAND_CTRL",
+      "LEFT_GRIPPER_CTRL",
+      "LEG_HEIGHT_CTRL",
+      "LEG_PVT_BYPASS_CTRL",
+      "LEG_PVT_CTRL",
+      "RIGHT_ARM_PVT_BYPASS_CTRL",
+      "RIGHT_ARM_PVT_CTRL",
+      "RIGHT_DEXHAND_CTRL",
+      "RIGHT_GRIPPER_CTRL"
+    ],
+    "dry_run": false
+  },
+  "state_file": "teaching/drawer_replay_20261107_190843/prepare_state.json",
+  "state": {
+    "tcp": [
+      0.7516889162027787,
+      -0.23833778662302185,
+      0.8228258975950741,
+      -0.6999997234081576,
+      0.04288586133430545,
+      0.014391721813862777,
+      0.7127089647740866
+    ],
+    "base_map": {
+      "x": -1.167371153831482,
+      "y": 0.05557086691260338,
+      "z": -0.02429676055908203,
+      "qx": 0.0007112061515499047,
+      "qy": 0.0004042744024935841,
+      "qz": -0.6961793608037495,
+      "qw": 0.7178674169642333,
+      "frame_id": "map"
+    },
+    "right_arm_joints_rad": {
+      "right_arm_joint1": -0.23863013088703156,
+      "right_arm_joint2": 1.4959670305252075,
+      "right_arm_joint3": 0.4534592032432556,
+      "right_arm_joint4": 0.4053526818752289,
+      "right_arm_joint5": -1.4725743532180786,
+      "right_arm_joint6": -0.008414232172071934,
+      "right_arm_joint7": 0.27043527364730835
+    },
+    "chassis_joints_rad": {
+      "chassis_joint1": 0.0014567869901657106,
+      "chassis_joint2": -0.0005555484890937806,
+      "chassis_joint3": -0.002567636489868164,
+      "chassis_joint4": 0.0010354865789413451
+    },
+    "right_gripper": {
+      "width": 0.050003677368164065,
+      "velocity": -5.247104167938232e-05,
+      "effort": 2.914285659790039,
+      "is_moving": false,
+      "timestamp_ns": 1794049725629952256
+    },
+    "sample_finished_ns": 1794049725668824800
+  },
+  "issues": [
+    "right-arm joints differ from recorded alignment"
+  ],
+  "motion_commands_sent": []
+}

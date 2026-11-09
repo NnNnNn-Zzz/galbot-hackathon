@@ -1,0 +1,78 @@
+{
+  "schema": "drawer_regrip/1",
+  "recorded_ns": 1794028738882678700,
+  "session": "drawer_close_20261107_130612_probe2",
+  "operator_hands_clear_confirmed": true,
+  "wrist_image_session": "drawer_close_regrip_check_20261107_1316",
+  "before_state_path": "teaching/drawer_close_20261107_130612_probe2/regrip_before.json",
+  "before_tcp": [
+    0.4507795201043569,
+    -0.24485163092890017,
+    0.8074615284063774,
+    -0.7056430021543967,
+    0.06688099334154587,
+    0.023755936974444107,
+    0.7050039302717713
+  ],
+  "before_gripper": {
+    "width": 0.10000145721435547,
+    "velocity": -5.247104167938232e-05,
+    "effort": 2.914285659790039,
+    "is_moving": false,
+    "timestamp_ns": 1794028738799588096
+  },
+  "before_base_map": {
+    "x": -1.1462231874465942,
+    "y": 0.05646417662501335,
+    "z": -0.01557182613760233,
+    "qx": 0.002455129743102881,
+    "qy": 0.0004156102712302999,
+    "qz": -0.6861938707250046,
+    "qw": 0.7274144426566486,
+    "frame_id": "map"
+  },
+  "command": {
+    "side": "right",
+    "width": 0.02,
+    "speed": 0.01,
+    "effort": 10.0
+  },
+  "arm_commands_sent": [],
+  "base_commands_sent": [],
+  "submission": "responded",
+  "command_result": {
+    "accepted": true,
+    "dry_run": false,
+    "sdk_result": "ControlStatus.SUCCESS"
+  },
+  "command_finished_ns": 1794028739695376800,
+  "after_state_path": "teaching/drawer_close_20261107_130612_probe2/regrip_after.json",
+  "after_errors": [],
+  "after_tcp": [
+    0.45078830711616946,
+    -0.24485635879483222,
+    0.8074304029806575,
+    -0.7056418332385754,
+    0.06690637394032149,
+    0.023772872097289212,
+    0.7050021211756078
+  ],
+  "after_gripper": {
+    "width": 0.024790721893310545,
+    "velocity": -5.247104167938232e-05,
+    "effort": 8.216300964355469,
+    "is_moving": false,
+    "timestamp_ns": 1794028741103500800
+  },
+  "after_base_map": {
+    "x": -1.1469413042068481,
+    "y": 0.055449794977903366,
+    "z": -0.01626552827656269,
+    "qx": 0.0023690214981796783,
+    "qy": 0.0003831005849230522,
+    "qz": -0.6861488178986322,
+    "qw": 0.7274572431884865,
+    "frame_id": "map"
+  },
+  "grip_verified": true
+}

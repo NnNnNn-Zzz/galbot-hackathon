@@ -1,0 +1,23 @@
+{
+  "group": "chassis",
+  "active": "chassis_pose_ctrl",
+  "available": [
+    "CHASSIS_POSE_CTRL",
+    "CHASSIS_TWIST_CTRL",
+    "CONTROLLER_NAME_NUM",
+    "HEAD_PVT_BYPASS_CTRL",
+    "HEAD_PVT_CTRL",
+    "LEFT_ARM_PVT_BYPASS_CTRL",
+    "LEFT_ARM_PVT_CTRL",
+    "LEFT_DEXHAND_CTRL",
+    "LEFT_GRIPPER_CTRL",
+    "LEG_HEIGHT_CTRL",
+    "LEG_PVT_BYPASS_CTRL",
+    "LEG_PVT_CTRL",
+    "RIGHT_ARM_PVT_BYPASS_CTRL",
+    "RIGHT_ARM_PVT_CTRL",
+    "RIGHT_DEXHAND_CTRL",
+    "RIGHT_GRIPPER_CTRL"
+  ],
+  "dry_run": false
+}

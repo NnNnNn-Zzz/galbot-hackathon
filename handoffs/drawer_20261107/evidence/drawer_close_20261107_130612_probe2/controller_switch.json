@@ -1,0 +1,143 @@
+{
+  "schema": "drawer_controller_switch/1",
+  "recorded_ns": 1794028395761554200,
+  "session": "drawer_close_20261107_130612_probe2",
+  "operator_and_technician_confirmed": true,
+  "before_controller": {
+    "group": "right_arm",
+    "active": "right_arm_pvt_ctrl_teleop",
+    "available": [
+      "CHASSIS_POSE_CTRL",
+      "CHASSIS_TWIST_CTRL",
+      "CONTROLLER_NAME_NUM",
+      "HEAD_PVT_BYPASS_CTRL",
+      "HEAD_PVT_CTRL",
+      "LEFT_ARM_PVT_BYPASS_CTRL",
+      "LEFT_ARM_PVT_CTRL",
+      "LEFT_DEXHAND_CTRL",
+      "LEFT_GRIPPER_CTRL",
+      "LEG_HEIGHT_CTRL",
+      "LEG_PVT_BYPASS_CTRL",
+      "LEG_PVT_CTRL",
+      "RIGHT_ARM_PVT_BYPASS_CTRL",
+      "RIGHT_ARM_PVT_CTRL",
+      "RIGHT_DEXHAND_CTRL",
+      "RIGHT_GRIPPER_CTRL"
+    ],
+    "dry_run": false
+  },
+  "before_state_path": "teaching/drawer_close_20261107_130612_probe2/controller_switch_before.json",
+  "before_tcp": [
+    0.4507716536159918,
+    -0.24485433876881454,
+    0.8074695303815882,
+    -0.7056472241315149,
+    0.06688115924108302,
+    0.02375551266796301,
+    0.7049997030013123
+  ],
+  "before_gripper": {
+    "width": 0.0250564022064209,
+    "velocity": -5.247104167938232e-05,
+    "effort": 8.216300964355469,
+    "is_moving": false,
+    "timestamp_ns": 1794028395727528704
+  },
+  "before_base_map": {
+    "x": -1.1584142446517944,
+    "y": 0.028208384290337563,
+    "z": -0.008491798304021358,
+    "qx": 0.0005367339902831968,
+    "qy": -0.00042442610538054776,
+    "qz": -0.6866787820490621,
+    "qw": 0.7269606468459772,
+    "frame_id": "map"
+  },
+  "command": {
+    "controller": "RIGHT_ARM_PVT_CTRL"
+  },
+  "arm_offset_commands_sent": [],
+  "base_commands_sent": [],
+  "gripper_commands_sent": [],
+  "submission": "started",
+  "force_policy": {
+    "raw_sensor_frame": true,
+    "sustained_delta_N": 5.0,
+    "immediate_delta_N": 8.0,
+    "sustained_samples": 2
+  },
+  "force_baseline_sensor_frame_N": [
+    0.08145156940445304,
+    -20.83668718338013,
+    8.7836665391922
+  ],
+  "command_started_ns": 1794028400965213500,
+  "error": "HTTPError: HTTP Error 422: Unprocessable Entity",
+  "controller_verified": false,
+  "command_finished_ns": 1794028415940061800,
+  "force_samples": 298,
+  "max_raw_force_delta_N": 1.585040407156534,
+  "force_trip_reason": null,
+  "stop_result": {
+    "accepted": true,
+    "dry_run": false,
+    "status": "CONTROLLER_STOPPED",
+    "group": "right_arm",
+    "sdk_result": "ControlStatus.SUCCESS"
+  },
+  "stop_error": null,
+  "force_stream_file": "teaching/drawer_close_20261107_130612_probe2/controller_switch_force.ndjson",
+  "force_stream_sha256": "e525d26120c918bb1a98a2070c514520107d8f4065c14e4a1f9f0448d664df73",
+  "after_controller": {
+    "group": "right_arm",
+    "active": "right_arm_pvt_ctrl_teleop",
+    "available": [
+      "CHASSIS_POSE_CTRL",
+      "CHASSIS_TWIST_CTRL",
+      "CONTROLLER_NAME_NUM",
+      "HEAD_PVT_BYPASS_CTRL",
+      "HEAD_PVT_CTRL",
+      "LEFT_ARM_PVT_BYPASS_CTRL",
+      "LEFT_ARM_PVT_CTRL",
+      "LEFT_DEXHAND_CTRL",
+      "LEFT_GRIPPER_CTRL",
+      "LEG_HEIGHT_CTRL",
+      "LEG_PVT_BYPASS_CTRL",
+      "LEG_PVT_CTRL",
+      "RIGHT_ARM_PVT_BYPASS_CTRL",
+      "RIGHT_ARM_PVT_CTRL",
+      "RIGHT_DEXHAND_CTRL",
+      "RIGHT_GRIPPER_CTRL"
+    ],
+    "dry_run": false
+  },
+  "after_state_path": "teaching/drawer_close_20261107_130612_probe2/controller_switch_after.json",
+  "after_errors": [],
+  "after_tcp": [
+    0.4507784550389262,
+    -0.2448550970247146,
+    0.8074587516436569,
+    -0.705655639097871,
+    0.06688994599266414,
+    0.02377158182382328,
+    0.7049899049150046
+  ],
+  "after_gripper": {
+    "width": 0.0250564022064209,
+    "velocity": -5.247104167938232e-05,
+    "effort": 8.216300964355469,
+    "is_moving": false,
+    "timestamp_ns": 1794028418015345920
+  },
+  "after_base_map": {
+    "x": -1.155805230140686,
+    "y": 0.03270967677235603,
+    "z": -0.003263454418629408,
+    "qx": 0.0007276292845405976,
+    "qy": -0.000579428631239502,
+    "qz": -0.6866891013854024,
+    "qw": 0.726950626147742,
+    "frame_id": "map"
+  },
+  "postcheck_error": "Requested right-arm controller not active"
+}

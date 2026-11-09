@@ -1,5 +1,20 @@
 # G1 真机调试经验文档
 
+## 抽屉示教复现被关节配置门控拒绝（2026-11-07）
+
+- **现象**：手部 TCP 看似回到把手处，但 `replay_drawer_pull.prepare` 返回 `blocked`，没有下发拉屉命令。
+- **确认原因**：`drawer_replay_20261107_190843/prepare.json` 唯一问题为 `right-arm joints differ from recorded alignment`。与配方相比 TCP 位置差约 0.036 mm，但右臂 joint3、joint5 分别差 +0.315664、−0.317870 rad，超过逐关节 0.12 rad 门槛。相同末端位置不保证相同关节解。
+- **诊断**：对照 prepare.json 的 `state.right_arm_joints_rad` 与配方 `alignment_right_arm_joints_rad`，计算每关节差值；同时检查 `issues` 和 `motion_commands_sent`。不要把准备阶段拒绝误判为拉力不足。
+- **处理**：采集实际关节配置关键点，核对初始/终点和基座条件，再生成、验证点间路径；或在当前已验证姿态上重新示教。不要仅放宽门槛。
+- **验证结果**：已从日志确认拒绝原因；本轮已有 P0/P1/P2 三个静止点，但原始终点尚未被现场明确确认，点间回放未做真机验收。完整证据和其他失败分类见 [抽屉交接失败总结](../handoffs/drawer_20261107/FAILURES.md)。
+
+## 抽屉控制器切换前力基线超时（2026-11-07）
+
+- **现象**：`drawer_replay_20261107_185938/controller_switch.json` 报 `Right wrist force baseline did not arrive`。
+- **确认原因**：力监控未在就绪期限内返回可用基线，`submission=not_started`；前后均为 `right_arm_pvt_ctrl_teleop`。最终日志有 299 个样本，不证明命令前基线已及时就绪。
+- **诊断/处理**：分开记录 SSH 连接、SDK 初始化、首帧和基线完成时间，核对设备时间戳及新鲜度；只有明确耗时来源后才调整等待，不跳过保护。SSH/SDK 启动慢目前为解释假设，不等同传感器故障。
+- **验证结果**：日志证明保护阻止了切换；该次未发送运动，尚无此原因修复后的独立真机复测结论。
+
 > 每次任务开始前先 `git pull` 拉最新版本文档；调试中遇到新坑请追加到对应章节并 `git push`。
 
 ## 速查：机器人怎么连、怎么跑

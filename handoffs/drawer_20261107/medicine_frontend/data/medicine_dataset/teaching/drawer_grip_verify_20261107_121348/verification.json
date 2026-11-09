@@ -1,0 +1,89 @@
+{
+  "schema": "drawer_grip_verification/1",
+  "session": "drawer_grip_verify_20261107_121348",
+  "baseline_session": "drawer_final_20261107_121006",
+  "precondition": {
+    "base_shift_m": 0.005734301166768424,
+    "tcp_shift_m": 3.883604977169761e-05,
+    "max_right_joint_change_rad": 2.4437904357910156e-05,
+    "right_gripper_before": {
+      "width": 0.05001082992553711,
+      "velocity": -5.247104167938232e-05,
+      "effort": 2.914285659790039,
+      "is_moving": false,
+      "timestamp_ns": 1794024995399429376
+    }
+  },
+  "command": {
+    "service": "robot",
+    "method": "set_gripper_command",
+    "side": "right",
+    "width": 0.02,
+    "speed": 0.02,
+    "effort": 10.0
+  },
+  "command_submission": "responded",
+  "command_started_ns": 1794024995553272000,
+  "arm_or_base_motion_commands_sent": [],
+  "command_result": {
+    "accepted": true,
+    "dry_run": false,
+    "sdk_result": "ControlStatus.SUCCESS"
+  },
+  "command_finished_ns": 1794024996264959600,
+  "post_state_path": "teaching/drawer_grip_verify_20261107_121348/post_command_state.json",
+  "post_state_errors": [],
+  "right_gripper_after": {
+    "width": 0.024266365051269532,
+    "velocity": -5.247104167938232e-05,
+    "effort": 8.216300964355469,
+    "is_moving": false,
+    "timestamp_ns": 1794024997303330304
+  },
+  "base_shift_after_m": 0.009465165368146186,
+  "tcp_shift_after_m": 6.071748039344948e-05,
+  "max_right_joint_change_after_rad": 0.00012043118476867676,
+  "stability_state_path": "teaching/drawer_grip_verify_20261107_121348/stability_state.json",
+  "right_gripper_stable": {
+    "width": 0.024266365051269532,
+    "velocity": -5.247104167938232e-05,
+    "effort": 8.278552055358887,
+    "is_moving": false,
+    "timestamp_ns": 1794025034127494400
+  },
+  "width_change_stability_m": 0.0,
+  "post_camera_frames": [
+    {
+      "source": "head_right",
+      "image_path": "raw/head/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_084939Z_head_right.jpg",
+      "depth_path": null,
+      "capture_id": "2eb8bb75-8de5-5eca-8e7c-0db9428714b4"
+    },
+    {
+      "source": "head_left",
+      "image_path": "raw/head/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_084939Z_head_left.jpg",
+      "depth_path": null,
+      "capture_id": "2eb8bb75-8de5-5eca-8e7c-0db9428714b4"
+    },
+    {
+      "source": "wrist_right",
+      "image_path": "raw/wrist/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_083939Z_wrist_right.jpg",
+      "depth_path": "raw/wrist/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_083939Z_wrist_right_depth.bin",
+      "capture_id": "9911437c-e01f-5656-9524-9d7e4c62da60"
+    },
+    {
+      "source": "wrist_left",
+      "image_path": "raw/wrist/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_083939Z_wrist_left.jpg",
+      "depth_path": "raw/wrist/drawer_grip_verify_20261107_121348/0002_none_drawer_grip_post_20261107T041656_083939Z_wrist_left_depth.bin",
+      "capture_id": "9911437c-e01f-5656-9524-9d7e4c62da60"
+    }
+  ],
+  "assessment": {
+    "right_gripper_command_succeeded": true,
+    "handle_between_fingers_on_right_wrist_image": true,
+    "contact_consistent_with_width_and_effort": true,
+    "closure_stable_in_second_read": true,
+    "drawer_pull_or_load_test_performed": false,
+    "grip_under_pull_verified": false
+  }
+}

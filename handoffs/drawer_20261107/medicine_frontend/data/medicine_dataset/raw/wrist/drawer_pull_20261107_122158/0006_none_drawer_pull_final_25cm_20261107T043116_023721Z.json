@@ -1,0 +1,106 @@
+{
+  "schema": "medicine_capture/1",
+  "capture_session": "drawer_pull_20261107_122158",
+  "seq": 6,
+  "kind": "wrist",
+  "drug": "none",
+  "drug_cn": "无",
+  "arrangement": "drawer_pull_final_25cm",
+  "distance_cm": 30.0,
+  "lighting": "demo",
+  "grasp_state": "right_gripper_holding",
+  "operator_note": "After 25 cm right-arm X pull; Z deviated and right-arm controller was stopped.",
+  "captured_local": "2026-11-07T12:31:16.023",
+  "camera_info_file": "camera_info_1794025876020415000.json",
+  "label_truth": {
+    "entity_id": null,
+    "expiry": null,
+    "source": "operator_metadata_not_ocr"
+  },
+  "sources": {
+    "wrist_right": {
+      "file": "0006_none_drawer_pull_final_25cm_20261107T043116_023721Z_wrist_right.jpg",
+      "camera_id": "RIGHT_ARM_CAMERA",
+      "frame_timestamp_ns": 1794025876497884672,
+      "host_captured_ns": 1794025876513315191,
+      "age_ms": 124.6,
+      "stale": false,
+      "jpeg_bytes": 28344,
+      "jpeg_sha256": "ef25a0fb33fc28d8c4a3e4944cbad88ac3c8d2b9795e36ffa07941a1b68caca5",
+      "camera_error": null,
+      "depth": {
+        "width": 640,
+        "height": 360,
+        "depth_scale": 10000.0,
+        "pixel_format": "16UC1",
+        "camera_id": "RIGHT_ARM_DEPTH_CAMERA",
+        "frame_timestamp_ns": 1794025876497884672,
+        "host_captured_ns": 1794025876520810553,
+        "age_ms": 1021.0,
+        "rgb_depth_skew_ms": 7.5,
+        "units": "metres = raw / depth_scale",
+        "file": "0006_none_drawer_pull_final_25cm_20261107T043116_023721Z_wrist_right_depth.bin",
+        "sha256": "62aa94ee0efc50b07197b82c273363ae49e0a5add9715c16c4305a18e5e22878"
+      }
+    },
+    "wrist_left": {
+      "file": "0006_none_drawer_pull_final_25cm_20261107T043116_023721Z_wrist_left.jpg",
+      "camera_id": "LEFT_ARM_CAMERA",
+      "frame_timestamp_ns": 1794025878304597760,
+      "host_captured_ns": 1794025878327836969,
+      "age_ms": 403.9,
+      "stale": false,
+      "jpeg_bytes": 50278,
+      "jpeg_sha256": "bdd004fdf3b5eb70e462884c8833917909eb4eb69666e1b5513c641e65c6551d",
+      "camera_error": null,
+      "depth": {
+        "width": 640,
+        "height": 360,
+        "depth_scale": 10000.0,
+        "pixel_format": "16UC1",
+        "camera_id": "LEFT_ARM_DEPTH_CAMERA",
+        "frame_timestamp_ns": 1794025878037865472,
+        "host_captured_ns": 1794025878066821634,
+        "age_ms": 1296.3,
+        "rgb_depth_skew_ms": -261.0,
+        "units": "metres = raw / depth_scale",
+        "file": "0006_none_drawer_pull_final_25cm_20261107T043116_023721Z_wrist_left_depth.bin",
+        "sha256": "e96f957bb64b3805e60f73c17f31be787c52045f4d3c37b734da8c3dc5816595"
+      }
+    }
+  },
+  "requested_sources": [
+    "wrist_right",
+    "wrist_left"
+  ],
+  "joint_state": {
+    "joint_state": [
+      "<galbot_sdk.JointState object at 0xffff7e0109f0>",
+      "<galbot_sdk.JointState object at 0xffff0824a0f0>",
+      "<galbot_sdk.JointState object at 0xffff081fc730>",
+      "<galbot_sdk.JointState object at 0xffff081fcdf0>",
+      "<galbot_sdk.JointState object at 0xffff081fcdb0>",
+      "<galbot_sdk.JointState object at 0xffff081fc470>",
+      "<galbot_sdk.JointState object at 0xffff081fc5b0>",
+      "<galbot_sdk.JointState object at 0xffff081fcf70>",
+      "<galbot_sdk.JointState object at 0xffff081fccb0>",
+      "<galbot_sdk.JointState object at 0xffff081fce70>",
+      "<galbot_sdk.JointState object at 0xffff081fc530>",
+      "<galbot_sdk.JointState object at 0xffff081fc3b0>",
+      "<galbot_sdk.JointState object at 0xffff081fcbf0>",
+      "<galbot_sdk.JointState object at 0xffff081fccf0>",
+      "<galbot_sdk.JointState object at 0xffff081fc570>",
+      "<galbot_sdk.JointState object at 0xffff081fc4f0>",
+      "<galbot_sdk.JointState object at 0xffff081fc2b0>",
+      "<galbot_sdk.JointState object at 0xffff081fcc70>",
+      "<galbot_sdk.JointState object at 0xffff081fc0f0>",
+      "<galbot_sdk.JointState object at 0xffff081fca70>",
+      "<galbot_sdk.JointState object at 0xffff081fc6b0>",
+      "<galbot_sdk.JointState object at 0xffff081fcaf0>",
+      "<galbot_sdk.JointState object at 0xffff081fcbb0>",
+      "<galbot_sdk.JointState object at 0xffff081fc8f0>",
+      "<galbot_sdk.JointState object at 0xffff081fcef0>"
+    ],
+    "timestamp_ns": 1794025876334184353
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "point": "P2",
+  "session": "pregrasp_to_initial_20261107_200135_P2",
+  "results": {
+    "state": {
+      "samples": 20,
+      "exit_code": 0,
+      "joint_count": 25,
+      "errors": []
+    },
+    "cameras": {
+      "wrist": 0,
+      "head": 0
+    }
+  },
+  "frames": [
+    {
+      "source": "wrist_right",
+      "image_path": "raw/wrist/pregrasp_to_initial_20261107_200135_P2/0001_none_return_waypoint_P2_20261107T121554_452383Z_wrist_right.jpg",
+      "depth_path": "raw/wrist/pregrasp_to_initial_20261107_200135_P2/0001_none_return_waypoint_P2_20261107T121554_452383Z_wrist_right_depth.bin",
+      "quality_flags": [
+        "rgb_depth_skew",
+        "depth_error_or_stale",
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ]
+    },
+    {
+      "source": "wrist_left",
+      "image_path": "raw/wrist/pregrasp_to_initial_20261107_200135_P2/0001_none_return_waypoint_P2_20261107T121554_452383Z_wrist_left.jpg",
+      "depth_path": "raw/wrist/pregrasp_to_initial_20261107_200135_P2/0001_none_return_waypoint_P2_20261107T121554_452383Z_wrist_left_depth.bin",
+      "quality_flags": [
+        "rgb_depth_skew",
+        "depth_error_or_stale",
+        "joint_state_not_numeric",
+        "geometry_calibration_unverified"
+      ]
+    },
+    {
+      "source": "head_right",
+      "image_path": "raw/head/pregrasp_to_initial_20261107_200135_P2/0001_none_return_waypoint_P2_20261107T121804_947567Z_head_right.jpg",
+      "depth_path": null,
+      "quality_flags": [
+        "stale_rgb"
+      ]
+    },
+    {
+      "source": "head_left",
+      "image_path": "raw/head/pregrasp_to_initial_20261107_200135_P2/0001_none_return_waypoint_P2_20261107T121804_947567Z_head_left.jpg",
+      "depth_path": null,
+      "quality_flags": [
+        "stale_rgb"
+      ]
+    }
+  ],
+  "motion_commands_sent": [],
+  "capture_synchronized": false
+}

@@ -1,0 +1,125 @@
+{
+  "schema": "drawer_arm_pull_record/1",
+  "session": "drawer_pull_20261107_122158",
+  "requested_motion": "right TCP backward 25 cm, then additional 5 cm; base fixed; other TCP axes and orientation targeted unchanged",
+  "actual_tcp_delta_base_link_m": [
+    -0.30114311259313925,
+    -0.0071944722372747905,
+    -0.017028009259356658
+  ],
+  "actual_orientation_change_deg": 3.3915809013478255,
+  "base_map_position_change_m": 0.009765944760195999,
+  "base_commands_sent": [],
+  "right_gripper_final": {
+    "width": 0.02448311424255371,
+    "velocity": -5.247104167938232e-05,
+    "effort": 8.216300964355469,
+    "is_moving": false,
+    "timestamp_ns": 1794026047295378432
+  },
+  "right_arm_controller_stopped_after_final_step": true,
+  "endpoint_constraints_met": false,
+  "drawer_appears_open_in_head_camera": true,
+  "exact_drawer_travel_measured": false,
+  "steps": [
+    {
+      "record_path": "teaching/drawer_pull_20261107_122158/arm_pull_step_01.json",
+      "step": 1,
+      "sequence": "original_pull",
+      "requested_total_x_m": 0.02,
+      "sdk_result": "MotionStatus.SUCCESS",
+      "target_reached_with_other_axes_tolerance": true,
+      "stop_result": null
+    },
+    {
+      "record_path": "teaching/drawer_pull_20261107_122158/arm_pull_step_02.json",
+      "step": 2,
+      "sequence": "original_pull",
+      "requested_total_x_m": 0.07,
+      "sdk_result": "MotionStatus.SUCCESS",
+      "target_reached_with_other_axes_tolerance": true,
+      "stop_result": null
+    },
+    {
+      "record_path": "teaching/drawer_pull_20261107_122158/arm_pull_step_03.json",
+      "step": 3,
+      "sequence": "original_pull",
+      "requested_total_x_m": 0.12,
+      "sdk_result": "MotionStatus.SUCCESS",
+      "target_reached_with_other_axes_tolerance": true,
+      "stop_result": null
+    },
+    {
+      "record_path": "teaching/drawer_pull_20261107_122158/arm_pull_step_04.json",
+      "step": 4,
+      "sequence": "original_pull",
+      "requested_total_x_m": 0.17,
+      "sdk_result": "MotionStatus.SUCCESS",
+      "target_reached_with_other_axes_tolerance": true,
+      "stop_result": null
+    },
+    {
+      "record_path": "teaching/drawer_pull_20261107_122158/arm_pull_step_05.json",
+      "step": 5,
+      "sequence": "original_pull",
+      "requested_total_x_m": 0.22,
+      "sdk_result": "MotionStatus.SUCCESS",
+      "target_reached_with_other_axes_tolerance": true,
+      "stop_result": null
+    },
+    {
+      "record_path": "teaching/drawer_pull_20261107_122158/arm_pull_step_06.json",
+      "step": 6,
+      "sequence": "original_pull",
+      "requested_total_x_m": 0.25,
+      "sdk_result": "MotionStatus.SUCCESS",
+      "target_reached_with_other_axes_tolerance": false,
+      "stop_result": "ControlStatus.SUCCESS"
+    },
+    {
+      "record_path": "teaching/drawer_pull_20261107_122158/arm_extend_step_01.json",
+      "step": 1,
+      "sequence": "current_height_extension",
+      "requested_total_x_m": 0.275,
+      "sdk_result": "MotionStatus.SUCCESS",
+      "target_reached_with_other_axes_tolerance": true,
+      "stop_result": null
+    },
+    {
+      "record_path": "teaching/drawer_pull_20261107_122158/arm_extend_step_02.json",
+      "step": 2,
+      "sequence": "current_height_extension",
+      "requested_total_x_m": 0.3,
+      "sdk_result": "MotionStatus.SUCCESS",
+      "target_reached_with_other_axes_tolerance": false,
+      "stop_result": "ControlStatus.SUCCESS"
+    }
+  ],
+  "final_state_path": "teaching/drawer_pull_20261107_122158/final_state.json",
+  "final_frames": [
+    {
+      "source": "head_right",
+      "image_path": "raw/head/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_527328Z_head_right.jpg",
+      "depth_path": null
+    },
+    {
+      "source": "head_left",
+      "image_path": "raw/head/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_527328Z_head_left.jpg",
+      "depth_path": null
+    },
+    {
+      "source": "wrist_right",
+      "image_path": "raw/wrist/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_528327Z_wrist_right.jpg",
+      "depth_path": "raw/wrist/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_528327Z_wrist_right_depth.bin"
+    },
+    {
+      "source": "wrist_left",
+      "image_path": "raw/wrist/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_528327Z_wrist_left.jpg",
+      "depth_path": "raw/wrist/drawer_pull_20261107_122158/0008_none_drawer_pull_final_30cm_20261107T043406_528327Z_wrist_left_depth.bin"
+    }
+  ],
+  "limitations": [
+    "Pose-goal API does not guarantee exact Cartesian line between endpoints.",
+    "Final Y, Z and orientation deviated from initial values under load; do not label as fixed-axis teaching trajectory."
+  ]
+}

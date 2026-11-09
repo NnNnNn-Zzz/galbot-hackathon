@@ -1,0 +1,78 @@
+{
+  "schema": "medicine_capture/1",
+  "capture_session": "drawer_pull_20261107_122158",
+  "seq": 1,
+  "kind": "head",
+  "drug": "none",
+  "drug_cn": "无",
+  "arrangement": "drawer_pull_pre",
+  "distance_cm": 30.0,
+  "lighting": "demo",
+  "grasp_state": "right_gripper_closed",
+  "operator_note": "Pre-pull capture; user confirmed human support and clear rear path.",
+  "captured_local": "2026-11-07T12:22:09.120",
+  "camera_info_file": "camera_info_1794025329118465600.json",
+  "label_truth": {
+    "entity_id": null,
+    "expiry": null,
+    "source": "operator_metadata_not_ocr"
+  },
+  "sources": {
+    "head_right": {
+      "file": "0001_none_drawer_pull_pre_20261107T042209_120471Z_head_right.jpg",
+      "camera_id": "HEAD_RIGHT_CAMERA",
+      "frame_timestamp_ns": 1794025331712320739,
+      "host_captured_ns": 1794025331792516034,
+      "age_ms": 591.7,
+      "stale": false,
+      "jpeg_bytes": 172845,
+      "jpeg_sha256": "1c5e9e6cbf1cbf9c31c09b9d022c1d157d7fc800a9890b8fd72278c6f5c4c1e7",
+      "camera_error": null
+    },
+    "head_left": {
+      "file": "0001_none_drawer_pull_pre_20261107T042209_120471Z_head_left.jpg",
+      "camera_id": "HEAD_LEFT_CAMERA",
+      "frame_timestamp_ns": 1794025332178999983,
+      "host_captured_ns": 1794025332257603231,
+      "age_ms": 381.2,
+      "stale": false,
+      "jpeg_bytes": 171732,
+      "jpeg_sha256": "81088abac7bf10b2d88a7cfeddf66875b7381f89eb794ef79fb5364443427d41",
+      "camera_error": null
+    }
+  },
+  "requested_sources": [
+    "head_right",
+    "head_left"
+  ],
+  "joint_state": {
+    "joint_state": [
+      "<galbot_sdk.JointState object at 0xffff7e0022b0>",
+      "<galbot_sdk.JointState object at 0xffff7e017070>",
+      "<galbot_sdk.JointState object at 0xffff7e017f70>",
+      "<galbot_sdk.JointState object at 0xffff7e0170b0>",
+      "<galbot_sdk.JointState object at 0xffff7e017730>",
+      "<galbot_sdk.JointState object at 0xffff08274bf0>",
+      "<galbot_sdk.JointState object at 0xffff08274670>",
+      "<galbot_sdk.JointState object at 0xffff08274730>",
+      "<galbot_sdk.JointState object at 0xffff082747b0>",
+      "<galbot_sdk.JointState object at 0xffff08274ef0>",
+      "<galbot_sdk.JointState object at 0xffff082743b0>",
+      "<galbot_sdk.JointState object at 0xffff08274770>",
+      "<galbot_sdk.JointState object at 0xffff082741f0>",
+      "<galbot_sdk.JointState object at 0xffff082744f0>",
+      "<galbot_sdk.JointState object at 0xffff08274170>",
+      "<galbot_sdk.JointState object at 0xffff08274f70>",
+      "<galbot_sdk.JointState object at 0xffff08274630>",
+      "<galbot_sdk.JointState object at 0xffff08274af0>",
+      "<galbot_sdk.JointState object at 0xffff082745f0>",
+      "<galbot_sdk.JointState object at 0xffff08274cf0>",
+      "<galbot_sdk.JointState object at 0xffff08274b30>",
+      "<galbot_sdk.JointState object at 0xffff082740f0>",
+      "<galbot_sdk.JointState object at 0xffff08273b70>",
+      "<galbot_sdk.JointState object at 0xffff08273cf0>",
+      "<galbot_sdk.JointState object at 0xffff08273d30>"
+    ],
+    "timestamp_ns": 1794025329367371183
+  }
+}

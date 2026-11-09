@@ -1,0 +1,18 @@
+{
+  "purpose": "scene_reference_only_not_executable_motion_config",
+  "handle_outer_length_m": 0.17,
+  "handle_outer_length_source": "user_confirmed_matches_cad",
+  "drawer_target_travel_m": 0.30,
+  "drawer_target_travel_source": "user_specified_initial_0.25_m_plus_0.05_m_extension_2026-11-07",
+  "opening_mechanism": "horizontal_translation",
+  "handle_cad_outer_dimensions_m": [0.17, 0.07, 0.025],
+  "handle_cad_opening_nominal_m": [0.15, 0.05],
+  "cad_dimensions_note": "local geometry; rounded corners; not robot-frame coordinates",
+  "g1_documented_gripper_inner_width_range_m": [0.0, 0.12],
+  "gripper_source": "https://developer.galbot.com/docs/SDK/1.10.0/g1/zh/api_python_reference/",
+  "gripper_finger_thickness_m": null,
+  "gripper_effective_insertion_length_m": null,
+  "drawer_axis_in_robot_frame": null,
+  "pregrasp_pose_in_robot_frame": null,
+  "hardware_validated": false
+}
